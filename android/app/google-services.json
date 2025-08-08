@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "311055895923",
+    "project_id": "terratrack-f4255",
+    "storage_bucket": "terratrack-f4255.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:311055895923:android:0b016b07be106176a58906",
+        "android_client_info": {
+          "package_name": "com.terratrack"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPPIZ8vc2FpcjEAxoRsQuBj2rwWViSxXE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
