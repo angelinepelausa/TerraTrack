@@ -1,16 +1,6 @@
 import React from 'react';
-import {Text, View} from 'react-native';
+import LoginScreen from './screens/LoginScreen';
 
-const HelloWorldApp = () => {
-  return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}>
-      <Text>Hello, world!</Text>
-    </View>
-  );
-};
-export default HelloWorldApp;
+export default function App() {
+  return <LoginScreen />;
+}
