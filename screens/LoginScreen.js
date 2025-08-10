@@ -22,7 +22,7 @@ const LoginScreen = ({ navigation }) => {
     try {
       await auth().signInWithEmailAndPassword(email.trim(), password);
       Alert.alert('Success', `Welcome ${email}`);
-      navigation.replace('HomeScreen');
+      navigation.replace('Onboarding');
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Something went wrong');
     }
@@ -40,7 +40,7 @@ const LoginScreen = ({ navigation }) => {
     await auth().signInWithCredential(googleCredential);
 
     Alert.alert('Welcome', 'Signed in with Google');
-    navigation.replace('HomeScreen');
+    navigation.replace('Onboarding');
   } catch (err) {
     console.error('Google Sign-In error:', err);
     Alert.alert('Sign-In Failed', err.message || 'Something went wrong');
