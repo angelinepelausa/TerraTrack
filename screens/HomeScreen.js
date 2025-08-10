@@ -1,0 +1,27 @@
+// src/screens/HomeScreen.js
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+
+const HomeScreen = () => {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.text}>Welcome to TerraTrack!</Text>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#131313',
+  },
+  text: {
+    color: '#709775',
+    fontSize: 24,
+    fontFamily: 'DMSans-Bold',
+  },
+});
+
+export default HomeScreen;

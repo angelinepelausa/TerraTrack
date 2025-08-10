@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useContext } from 'react';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
 import { onboardingQuestions, REFERRAL_STEP } from '../services/onboardingService';
 import OptionButton from '../components/OptionButton';
 import ProgressIndicator from '../components/ProgressIndicator';
+import { saveOnboardingPreferences } from '../repositories/onboardingRepository';
+import { useAuth } from '../context/AuthContext';
 
 const OnboardingScreen = ({ navigation }) => {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [referralCode, setReferralCode] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const MULTI_SELECT_QUESTIONS = [0, 2, 3];
   const isReferralStep = currentStep === REFERRAL_STEP;
@@ -31,9 +35,38 @@ const OnboardingScreen = ({ navigation }) => {
     }
   };
 
+  const formatAnswersForFirestore = () => ({
+    transportationOptions: answers[0] || [],
+    commuteDistance: answers[1] || null,
+    energyControl: answers[2] || [],
+    dietType: answers[3] || [],
+    budgetLevel: answers[4] || null,
+    referredBy: referralCode || null
+  });
+
+  const handleSubmit = async () => {
+  if (isSubmitting) return;
+  setIsSubmitting(true);
+  
+  try {
+    const preferences = formatAnswersForFirestore();
+    await saveOnboardingPreferences(preferences);
+    navigation.replace('HomeScreen');
+  } catch (error) {
+    console.error('Submission error:', error);
+    Alert.alert(
+      'Save Failed',
+      error.message || 'Failed to save preferences. Please try again.',
+      [{ text: 'OK' }]
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
   const handleNext = () => {
     if (isReferralStep) {
-      navigation.replace('HomeScreen');
+      handleSubmit();
       return;
     }
 
@@ -58,6 +91,14 @@ const OnboardingScreen = ({ navigation }) => {
       : currentAnswer === option;
   };
 
+  if (!user) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#709775" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
@@ -65,7 +106,8 @@ const OnboardingScreen = ({ navigation }) => {
           <>
             <TouchableOpacity
               style={styles.skipButton}
-              onPress={handleNext}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
             >
               <Text style={styles.skipButtonText}>Skip</Text>
             </TouchableOpacity>
@@ -90,14 +132,23 @@ const OnboardingScreen = ({ navigation }) => {
               />
 
               <TouchableOpacity
-                style={[styles.button, { 
-                  width: scale(308), 
-                  height: vScale(53), 
-                  marginTop: vScale(20) 
-                }]}
-                onPress={handleNext}
+                style={[
+                  styles.button, 
+                  { 
+                    width: scale(308), 
+                    height: vScale(53), 
+                    marginTop: vScale(20),
+                    opacity: isSubmitting ? 0.7 : 1
+                  }
+                ]}
+                onPress={handleSubmit}
+                disabled={isSubmitting}
               >
-                <Text style={styles.buttonText}>Submit</Text>
+                {isSubmitting ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={styles.buttonText}>Submit</Text>
+                )}
               </TouchableOpacity>
             </View>
           </>
@@ -118,8 +169,9 @@ const OnboardingScreen = ({ navigation }) => {
             </View>
 
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, { opacity: isSubmitting ? 0.7 : 1 }]}
               onPress={handleNext}
+              disabled={isSubmitting}
             >
               <Text style={styles.buttonText}>
                 {currentStep === onboardingQuestions.length - 1 ? 'Continue' : 'Next'}
