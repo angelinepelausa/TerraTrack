@@ -13,6 +13,7 @@ const OnboardingScreen = ({ navigation }) => {
   const [answers, setAnswers] = useState({});
   const [referralCode, setReferralCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCarbonFootprintScreen, setShowCarbonFootprintScreen] = useState(false);
   
   const MULTI_SELECT_QUESTIONS = [0, 2, 3];
   const isReferralStep = currentStep === REFERRAL_STEP;
@@ -45,24 +46,24 @@ const OnboardingScreen = ({ navigation }) => {
   });
 
   const handleSubmit = async () => {
-  if (isSubmitting) return;
-  setIsSubmitting(true);
-  
-  try {
-    const preferences = formatAnswersForFirestore();
-    await saveOnboardingPreferences(preferences);
-    navigation.replace('HomeScreen');
-  } catch (error) {
-    console.error('Submission error:', error);
-    Alert.alert(
-      'Save Failed',
-      error.message || 'Failed to save preferences. Please try again.',
-      [{ text: 'OK' }]
-    );
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    try {
+      const preferences = formatAnswersForFirestore();
+      await saveOnboardingPreferences(preferences);
+      setShowCarbonFootprintScreen(true);
+    } catch (error) {
+      console.error('Submission error:', error);
+      Alert.alert(
+        'Save Failed',
+        error.message || 'Failed to save preferences. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleNext = () => {
     if (isReferralStep) {
@@ -91,10 +92,53 @@ const OnboardingScreen = ({ navigation }) => {
       : currentAnswer === option;
   };
 
+  const handleProceed = () => {
+    navigation.replace('cfCalculator');
+  };
+
   if (!user) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#709775" />
+      </View>
+    );
+  }
+
+  if (showCarbonFootprintScreen) {
+    return (
+      <View style={[styles.container, { paddingVertical: vScale(40) }]}>
+        <View style={styles.centeredContent}>
+          <View style={styles.textContainer}>
+            <Text style={[styles.head, { 
+              fontSize: scale(32),
+              lineHeight: vScale(36),
+              marginBottom: vScale(20)
+            }]}>
+              Almost there!
+            </Text>
+            <Text style={[styles.subhead, {
+              fontSize: scale(12),
+              lineHeight: vScale(18),
+              marginBottom: vScale(40)
+            }]}>
+              Calculate your personal carbon footprint and find out how efficient you are!
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.button, 
+              { 
+                width: scale(308), 
+                height: vScale(53),
+                marginTop: vScale(20)
+              }
+            ]}
+            onPress={handleProceed}
+          >
+            <Text style={styles.buttonText}>Proceed</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -272,6 +316,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     textDecorationLine: 'underline',
+  },
+
+  textContainer: {
+    alignItems: 'center',
+  },
+  head: {
+    color: '#709775',
+    textAlign: 'center',
+    fontFamily: 'DMSans-Bold',
+  },
+  subhead: {
+    color: '#CCCCCC',
+    textAlign: 'center',
+    fontFamily: 'DMSans-Bold',
   },
 });
 

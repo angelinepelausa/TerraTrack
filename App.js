@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider } from './context/AuthContext';
+import SplashScreen from './screens/Splash';
 import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
 import Onboarding from './screens/Onboarding';
@@ -14,16 +15,21 @@ const App = () => {
     <AuthProvider>
       <NavigationContainer>
         <Stack.Navigator 
-          initialRouteName="LoginScreen"
+          initialRouteName="SplashScreen"
           screenOptions={{ 
             headerShown: false,
-            animation: 'fade' // Optional: adds smooth transition between screens
+            animation: 'fade'
           }}
         >
           <Stack.Screen 
+            name="SplashScreen" 
+            component={SplashScreen}
+            options={{ gestureEnabled: false }}
+          />
+          <Stack.Screen 
             name="LoginScreen" 
             component={LoginScreen} 
-            options={{ gestureEnabled: false }} // Prevent swipe back on login
+            options={{ gestureEnabled: false }}
           />
           <Stack.Screen 
             name="SignupScreen" 
@@ -32,12 +38,12 @@ const App = () => {
           <Stack.Screen 
             name="Onboarding" 
             component={Onboarding} 
-            options={{ gestureEnabled: false }} // Prevent swipe back during onboarding
+            options={{ gestureEnabled: false }}
           />
           <Stack.Screen 
             name="OnboardingScreen" 
             component={OnboardingScreen}
-            options={{ gestureEnabled: false }} // Prevent swipe back during onboarding
+            options={{ gestureEnabled: false }}
           />
         </Stack.Navigator>
       </NavigationContainer>

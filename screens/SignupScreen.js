@@ -1,57 +1,80 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
 import { signUpWithEmail } from '../services/authService';
+import { validateSignUp, authErrorMessages } from '../services/validationService';
 
 const SignUpScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
     email: '',
     username: '',
-    phoneNumber: '+639',
+    phoneNumber: '',
     password: '',
     confirmPassword: ''
   });
+  const [errorMessages, setErrorMessages] = useState({});
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleInputChange = (name, value) => {
-    if (name === 'phoneNumber' && !value.startsWith('+639')) {
-      value = value.length < 4 ? '+639' : `+639${value.substring(4)}`;
-    }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSignUp = async () => {
-    if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
+    const { isValid, errors } = validateSignUp(formData);
+    setErrorMessages(errors);
+
+    if (!isValid) return;
 
     setLoading(true);
-    const { email, password, confirmPassword, ...userData } = formData;
+    const { email, password, ...userData } = formData;
 
     const { success, error, code } = await signUpWithEmail(email, password, userData);
-
     setLoading(false);
 
     if (success) {
-      Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => navigation.navigate('Home') }
-      ]);
+      setShowSuccess(true);
     } else {
-      if (code === 'permission-denied') {
-        Alert.alert(
-          'Permission Error',
-          'Cannot create account. Please make sure you have the latest app version.',
-          [{ text: 'OK' }]
-        );
+      let newErrors = {};
+      if (authErrorMessages[code]) {
+        if (code.includes('username')) {
+          newErrors.username = authErrorMessages[code];
+        } else if (code.includes('email')) {
+          newErrors.email = authErrorMessages[code];
+        } else {
+          newErrors.general = authErrorMessages[code];
+        }
       } else {
-        Alert.alert('Error', error);
+        newErrors.general = error || 'Something went wrong';
       }
+      setErrorMessages(prev => ({ ...prev, ...newErrors }));
     }
   };
 
   const inputWidth = scale(308);
   const inputHeight = vScale(53);
+
+  if (showSuccess) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center' }]}>
+        <Image
+          source={require('../assets/images/SplashImage.png')}
+          style={{ width: scale(300), height: scale(300), marginBottom: vScale(30) }}
+          resizeMode="contain"
+        />
+        <Text style={[styles.title, { fontSize: scale(32), marginBottom: vScale(10) }]}>Account Created!</Text>
+        <Text style={[styles.subtitle, { fontSize: scale(15), marginBottom: vScale(80), textAlign: 'center' }]}>
+          Your account has been created successfully.
+        </Text>
+        <TouchableOpacity
+          style={[styles.button, { width: inputWidth, height: inputHeight }]}
+          onPress={() => navigation.navigate('LoginScreen')}
+        >
+          <Text style={styles.buttonText}>Continue to Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingVertical: vScale(40) }]}>
@@ -63,7 +86,7 @@ const SignUpScreen = ({ navigation }) => {
       </Text>
 
       <TextInput
-        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14), marginBottom: vScale(20) }]}
+        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
         placeholder="Email"
         placeholderTextColor="#424242"
         value={formData.email}
@@ -71,42 +94,51 @@ const SignUpScreen = ({ navigation }) => {
         keyboardType="email-address"
         autoCapitalize="none"
       />
+      {errorMessages.email && <Text style={styles.errorText}>{errorMessages.email}</Text>}
 
       <TextInput
-        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14), marginBottom: vScale(20) }]}
+        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
         placeholder="Username"
         placeholderTextColor="#424242"
         value={formData.username}
         onChangeText={(text) => handleInputChange('username', text)}
         autoCapitalize="none"
       />
+      {errorMessages.username && <Text style={styles.errorText}>{errorMessages.username}</Text>}
 
       <TextInput
-        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14), marginBottom: vScale(20) }]}
+        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
         placeholder="Phone Number"
         placeholderTextColor="#424242"
         value={formData.phoneNumber}
         onChangeText={(text) => handleInputChange('phoneNumber', text)}
         keyboardType="phone-pad"
       />
+      {errorMessages.phoneNumber && <Text style={styles.errorText}>{errorMessages.phoneNumber}</Text>}
 
       <TextInput
-        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14), marginBottom: vScale(20) }]}
+        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
         placeholder="Password"
         placeholderTextColor="#424242"
         value={formData.password}
         onChangeText={(text) => handleInputChange('password', text)}
         secureTextEntry={true}
       />
+      {errorMessages.password && <Text style={styles.errorText}>{errorMessages.password}</Text>}
 
       <TextInput
-        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14), marginBottom: vScale(20) }]}
+        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
         placeholder="Confirm Password"
         placeholderTextColor="#424242"
         value={formData.confirmPassword}
         onChangeText={(text) => handleInputChange('confirmPassword', text)}
         secureTextEntry={true}
       />
+      {errorMessages.confirmPassword && <Text style={styles.errorText}>{errorMessages.confirmPassword}</Text>}
+
+      {errorMessages.general && (
+        <Text style={[styles.errorText, { textAlign: 'center', marginTop: vScale(10) }]}>{errorMessages.general}</Text>
+      )}
 
       <TouchableOpacity
         style={[
@@ -135,9 +167,7 @@ const SignUpScreen = ({ navigation }) => {
         Or continue with
       </Text>
 
-      <TouchableOpacity
-        style={[styles.button, { width: inputWidth, height: inputHeight }]}
-      >
+      <TouchableOpacity style={[styles.button, { width: inputWidth, height: inputHeight }]}>
         <Text style={styles.buttonText}>Google</Text>
       </TouchableOpacity>
     </View>
@@ -148,7 +178,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#131313',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     paddingHorizontal: 20,
     alignItems: 'center',
   },
@@ -168,6 +198,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     color: '#424242',
     fontWeight: '700',
+    marginBottom: vScale(20),
   },
   button: {
     backgroundColor: '#415D43',
@@ -199,6 +230,16 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
     fontWeight: '700',
     textAlign: 'center',
+  },
+  errorText: {
+    color: '#FF4D4F',
+    fontSize: scale(12),
+    fontStyle: 'italic',
+    fontWeight: '500',
+    width: scale(308),
+    textAlign: 'left',
+    marginTop: -vScale(15),
+    marginBottom: vScale(10),
   },
 });
 

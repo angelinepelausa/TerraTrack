@@ -8,7 +8,6 @@ export const onboardingQuestions = [
       "Bike",
       "Drive own car",
       "Public transport",
-      "Ride-share (Grab, Uber)",
       "Physical/mobility limitations",
     ],
   },
