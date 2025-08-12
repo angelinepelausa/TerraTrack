@@ -7,6 +7,7 @@ import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
 import Onboarding from './screens/Onboarding';
 import OnboardingScreen from './screens/OnboardingScreen';
+import Calculator from './screens/Calculator';
 
 const Stack = createNativeStackNavigator();
 
@@ -43,6 +44,11 @@ const App = () => {
           <Stack.Screen 
             name="OnboardingScreen" 
             component={OnboardingScreen}
+            options={{ gestureEnabled: false }}
+          />
+          <Stack.Screen 
+            name="Calculator" 
+            component={Calculator} 
             options={{ gestureEnabled: false }}
           />
         </Stack.Navigator>

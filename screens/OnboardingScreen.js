@@ -93,7 +93,7 @@ const OnboardingScreen = ({ navigation }) => {
   };
 
   const handleProceed = () => {
-    navigation.replace('cfCalculator');
+    navigation.replace('Calculator');
   };
 
   if (!user) {
