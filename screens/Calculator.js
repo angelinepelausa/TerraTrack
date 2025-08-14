@@ -4,6 +4,7 @@ import { scale, vScale } from '../utils/scaling';
 import OptionButton from '../components/OptionButton';
 import ProgressIndicator from '../components/ProgressIndicator';
 import { calculatorBaseQuestions } from '../services/calculatorService';
+import { saveCarbonFootprint } from '../repositories/calculatorRepository';
 
 const Calculator = ({ navigation }) => {
   const [answers, setAnswers] = useState({});
@@ -99,11 +100,14 @@ const Calculator = ({ navigation }) => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      console.log('Collected Answers:', answers);
-      Alert.alert('Done', 'Answers collected. (No backend yet)');
+      const results = await saveCarbonFootprint(answers);
+      Alert.alert(
+        'Calculation Complete',
+        `Monthly: ${results.totalMonthly} kg CO₂\nAnnual: ${results.totalAnnual} kg CO₂`
+      );
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Something went wrong.');
+      Alert.alert('Error', 'Something went wrong while saving your results.');
     } finally {
       setIsSubmitting(false);
     }
