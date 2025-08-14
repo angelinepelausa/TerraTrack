@@ -3,9 +3,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PH_AVERAGE = 2.9; // tonnes annual average
-const MAX_BAR_HEIGHT = SCREEN_HEIGHT * 0.25; // Max bar height is 25% of screen height
+const MAX_BAR_HEIGHT = vScale(210); // instead of SCREEN_HEIGHT * 0.25
 
 const ResultsScreen = ({ route, navigation }) => {
   const { results } = route.params;
@@ -31,25 +30,25 @@ const ResultsScreen = ({ route, navigation }) => {
       <View style={styles.chartContainer}>
         {/* Your Carbon Footprint Bar */}
         <View style={styles.barWrapper}>
-        <View style={[styles.bar, { height: scaleHeight(totalAnnualTonnes) }]}>
+          <View style={[styles.bar, { height: scaleHeight(totalAnnualTonnes) }]}>
             {/* Transport Section */}
             <View style={[styles.section, { flex: transportTonnes, backgroundColor: '#264d36' }]}>
-            <Text style={styles.segmentLabel}>Transport</Text>
+              <Text style={styles.segmentLabel}>Transport</Text>
             </View>
 
             {/* Electricity Section */}
             <View style={[styles.section, { flex: electricityTonnes, backgroundColor: '#4d6b54' }]}>
-            <Text style={styles.segmentLabel}>Electricity</Text>
+              <Text style={styles.segmentLabel}>Electricity</Text>
             </View>
 
             {/* Diet Section */}
             <View style={[styles.section, { flex: dietTonnes, backgroundColor: '#709775' }]}>
-            <Text style={styles.segmentLabel}>Diet</Text>
+              <Text style={styles.segmentLabel}>Diet</Text>
             </View>
-        </View>
+          </View>
 
-        <Text style={styles.barLabel}>{totalAnnualTonnes.toFixed(2)} Tonnes</Text>
-        <Text style={styles.xLabel}>Your Carbon Footprint</Text>
+          <Text style={styles.barLabel}>{totalAnnualTonnes.toFixed(2)} Tonnes</Text>
+          <Text style={styles.xLabel}>Your Carbon Footprint</Text>
         </View>
 
         {/* PH Average Bar with Bear */}
@@ -66,7 +65,6 @@ const ResultsScreen = ({ route, navigation }) => {
           <Text style={styles.xLabel}>Philippines Average</Text>
         </View>
       </View>
-
 
       {/* Info */}
       <Text style={styles.info}>
@@ -97,7 +95,7 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-Bold',
     fontSize: scale(24),
     color: '#709775',
-    marginTop: vScale(100),
+    marginTop: vScale(80),
     marginBottom: vScale(10),
   },
   subtitle: {
@@ -110,14 +108,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
-    marginVertical: vScale(40),
+    marginVertical: vScale(30),
   },
   barWrapper: {
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
   bar: {
-    width: scale(90),
+    width: scale(80),
     flexDirection: 'column',
     justifyContent: 'flex-start',
     borderRadius: 6,
@@ -128,8 +126,9 @@ const styles = StyleSheet.create({
   },
   barLabel: {
     color: '#fff',
-    marginTop: 5,
+    marginTop: vScale(5),
     fontFamily: 'DMSans-Bold',
+    fontSize: scale(11),
   },
   xLabel: {
     color: '#ccc',
@@ -139,23 +138,23 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-Medium',
   },
   bearImage: {
-    marginBottom: -18, // moves bear closer to bar
-    width: 150,
-    height: 150,
+    marginBottom: vScale(-15),
+    width: scale(120),
+    height: vScale(120),
   },
   info: {
     color: '#ccc',
     fontSize: scale(12),
     textAlign: 'center',
-    marginBottom: vScale(50),
+    marginBottom: vScale(40),
     marginTop: vScale(20),
     paddingHorizontal: scale(20),
     fontFamily: 'DMSans-Bold',
   },
   continueButton: {
     backgroundColor: '#415D43',
-    paddingVertical: vScale(14),
-    paddingHorizontal: scale(100),
+    paddingVertical: vScale(12),
+    paddingHorizontal: scale(80),
     borderRadius: 30,
   },
   continueText: {
@@ -165,12 +164,12 @@ const styles = StyleSheet.create({
   },
   segmentLabel: {
     color: '#fff',
-    fontSize: scale(10),
+    fontSize: scale(9),
     fontFamily: 'DMSans-Bold',
     textAlign: 'center',
     width: '100%',
     position: 'absolute',
     top: '50%',
-    transform: [{ translateY: -7 }] 
-},
+    transform: [{ translateY: -6 }],
+  },
 });
