@@ -9,6 +9,7 @@ export const createUserDocument = async (userData) => {
         email: userData.email,
         phoneNumber: userData.phoneNumber,
         username: userData.username,
+        terraCoins: 0, // Initialize TerraCoins
         createdAt: firestore.FieldValue.serverTimestamp()
       }, { merge: true }); 
     return { success: true };

@@ -21,3 +21,26 @@ export const saveOnboardingPreferences = async (preferences) => {
     throw error;
   }
 };
+
+/**
+ * Only return true if the doc exists AND has at least one field.
+ * This avoids false positives from an empty doc.
+ */
+export const checkOnboardingStatus = async (userId) => {
+  try {
+    const snap = await firestore()
+      .collection('users')
+      .doc(userId)
+      .collection('onboarding')
+      .doc('preferences')
+      .get();
+
+    if (!snap.exists) return false;
+
+    const data = snap.data() || {};
+    return Object.keys(data).length > 0; // onboarded only if there is content
+  } catch (error) {
+    console.error('Error checking onboarding status:', error);
+    return false; // fail-safe to show onboarding
+  }
+};
