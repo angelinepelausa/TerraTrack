@@ -7,18 +7,22 @@ export const getCommunityProgress = async () => {
     const year = now.getFullYear();
     const docId = `${year}-Q${quarter}`;
 
-    const snap = await firestore()
+    console.log('Fetching community progress for docId:', docId);
+
+    const doc = await firestore()
       .collection('community_progress')
       .doc(docId)
       .get();
 
-    if (!snap.exists) {
+    if (!doc.exists) {
+      console.warn('Community progress document not found.');
       return null;
     }
 
-    return snap.data();
+    console.log('Community progress data:', doc.data());
+    return doc.data();
   } catch (error) {
     console.error('Error fetching community progress:', error);
-    return null;
+    throw error;
   }
 };

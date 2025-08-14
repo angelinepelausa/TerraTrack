@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
 import { getCommunityProgress } from '../repositories/communityProgressRepository';
 import { getUserTerraCoins } from '../repositories/userRepository';
 import ProgressBar from '../components/ProgressBar';
@@ -13,15 +13,29 @@ const CARD_WIDTH = (width - PADDING * 2 - GAP) / 2;
 const HomeScreen = () => {
   const [terraCoins, setTerraCoins] = useState(0);
   const [communityProgress, setCommunityProgress] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      const coins = await getUserTerraCoins();
-      setTerraCoins(coins);
+      try {
+        setLoading(true);
+        setError(null);
 
-      const progress = await getCommunityProgress();
-      setCommunityProgress(progress);
+        const progress = await getCommunityProgress();
+        if (progress) {
+          setCommunityProgress(progress);
+        } else {
+          setError('No community progress data found.');
+        }
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load data.');
+      } finally {
+        setLoading(false);
+      }
     };
+
     fetchData();
   }, []);
 
@@ -48,9 +62,16 @@ const HomeScreen = () => {
     },
   ];
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#415D43" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Top Bar */}
       <View style={styles.topBar}>
         <View style={styles.coinBox}>
           <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
@@ -58,22 +79,21 @@ const HomeScreen = () => {
         </View>
       </View>
 
-      {/* Content */}
       <View style={styles.content}>
-        {/* Grid */}
+        {error && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
         <View style={styles.grid}>
           {features.map((item, index) => (
             <TouchableOpacity key={index} style={styles.card}>
-              {/* Text area */}
               <View style={styles.cardTextArea}>
                 <Text style={styles.cardTitle}>{item.title}</Text>
                 <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
               </View>
-
-              {/* Fixed bottom-left image */}
               <Image source={item.image} style={styles.cardImage} />
-
-              {/* Fixed bottom-right earn button */}
               <TouchableOpacity style={styles.earnButton}>
                 <Text style={styles.earnText}>Earn</Text>
                 <Image source={require('../assets/images/TerraCoin.png')} style={styles.earnCoin} />
@@ -82,7 +102,6 @@ const HomeScreen = () => {
           ))}
         </View>
 
-        {/* Shop */}
         <TouchableOpacity style={styles.shopBox}>
           <Text style={styles.shopText}>
             Buy exclusive avatars and rewards from{'\n'}our partners from the Terra Shop!
@@ -90,33 +109,25 @@ const HomeScreen = () => {
           <Image source={require('../assets/images/TerraShop.png')} style={styles.shopImage} />
         </TouchableOpacity>
 
-        {/* Community Progress */}
-        <View style={styles.communityBox}>
-          <Text style={styles.communityTitle}>
-            {communityProgress
-              ? `Finish ${communityProgress.goal} tasks`
-              : 'Loading...'}
-          </Text>
-
-          {communityProgress && (
-            <Text style={styles.communityTask}>
-              {communityProgress.current}/{communityProgress.goal}
+        {communityProgress && (
+          <View style={styles.communityBox}>
+            <Text style={styles.communityHeader}>Community Progress</Text>
+            <Text style={styles.communityTitle}>
+              Finish {communityProgress.goal} tasks
             </Text>
-          )}
-
-          <View style={{ marginTop: vScale(8), width: '90%' }}>
-            <ProgressBar
-              progress={
-                communityProgress && communityProgress.goal > 0
-                  ? (communityProgress.current / communityProgress.goal) * 100
-                  : 0
-              }
-            />
+            <View style={{ marginTop: vScale(8), width: '90%' }}>
+              <ProgressBar
+                progress={
+                  communityProgress.goal > 0
+                    ? (communityProgress.current / communityProgress.goal) * 100
+                    : 0
+                }
+              />
+            </View>
           </View>
-        </View>
+        )}
       </View>
 
-      {/* Bottom Nav */}
       <View style={styles.bottomNav}>
         {['Home', 'Routine', 'Leaderboards', 'Profile'].map((item) => (
           <TouchableOpacity key={item} style={styles.navItem}>
@@ -138,6 +149,9 @@ const HomeScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
+  loadingContainer: { justifyContent: 'center', alignItems: 'center' },
+  errorBanner: { backgroundColor: 'red', padding: 10, borderRadius: 5, marginBottom: 10 },
+  errorText: { color: '#fff', textAlign: 'center' },
 
   topBar: {
     height: vScale(110),
@@ -160,16 +174,8 @@ const styles = StyleSheet.create({
   coinImage: { width: scale(20), height: scale(20), marginRight: scale(5), resizeMode: 'contain' },
   coinText: { color: '#131313', fontWeight: 'bold', fontSize: scale(12) },
 
-  content: {
-    flex: 1,
-    padding: PADDING,
-  },
-
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
+  content: { flex: 1, padding: PADDING },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   card: {
     width: CARD_WIDTH,
     backgroundColor: '#FFFFFF',
@@ -181,25 +187,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardTextArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: vScale(75),
-  },
-  cardTitle: {
-    color: '#131313',
-    fontSize: scale(13),
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  cardSubtitle: {
-    color: '#415D43',
-    fontSize: scale(10),
-    textAlign: 'center',
-    marginTop: vScale(4),
-  },
-
+  cardTextArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: vScale(75) },
+  cardTitle: { color: '#131313', fontSize: scale(13), fontWeight: 'bold', textAlign: 'center' },
+  cardSubtitle: { color: '#415D43', fontSize: scale(10), textAlign: 'center', marginTop: vScale(4) },
   cardImage: {
     width: scale(110),
     height: scale(110),
@@ -208,7 +198,6 @@ const styles = StyleSheet.create({
     bottom: scale(0),
     left: scale(10),
   },
-
   earnButton: {
     flexDirection: 'row',
     backgroundColor: '#415D43',
@@ -239,14 +228,20 @@ const styles = StyleSheet.create({
   shopImage: { width: scale(40), height: scale(40), resizeMode: 'contain' },
 
   communityBox: {
-    height: vScale(120),
+    height: vScale(140),
     backgroundColor: '#CCCCCC',
-    borderRadius: scale(10),
+    borderRadius: scale(25),
     padding: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  communityTitle: { fontWeight: 'bold', fontSize: scale(14), marginBottom: vScale(4), color: '#131313' },
+  communityHeader: {
+    fontWeight: 'bold',
+    fontSize: scale(20),
+    marginBottom: vScale(8),
+    color: '#131313',
+  },
+  communityTitle: { fontWeight: 'bold', fontSize: scale(15), marginBottom: vScale(4), color: '#415D43' },
   communityTask: { fontSize: scale(12), color: '#131313' },
 
   bottomNav: {

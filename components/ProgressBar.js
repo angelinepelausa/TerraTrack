@@ -20,6 +20,7 @@ const styles = StyleSheet.create({
   fill: {
     height: '100%',
     backgroundColor: '#415D43',
+    borderRadius: 20,
   },
 });
 
