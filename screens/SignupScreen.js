@@ -1,94 +1,175 @@
-// src/screens/HomeScreen.js
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import { signUpWithEmail } from '../services/authService';
+import { validateSignUp, authErrorMessages } from '../services/validationService';
 
-const HomeScreen = () => {
-  const [terraCoins, setTerraCoins] = useState(0);
+const SignUpScreen = ({ navigation }) => {
+  const [formData, setFormData] = useState({
+    email: '',
+    username: '',
+    phoneNumber: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [errorMessages, setErrorMessages] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  useEffect(() => {
-    const uid = auth().currentUser?.uid;
-    if (uid) {
-      const unsubscribe = firestore()
-        .collection('users')
-        .doc(uid)
-        .onSnapshot(doc => {
-          if (doc.exists) {
-            setTerraCoins(doc.data()?.terraCoins || 0);
-          }
-        });
-      return () => unsubscribe();
+  const handleInputChange = (name, value) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSignUp = async () => {
+    const { isValid, errors } = validateSignUp(formData);
+    setErrorMessages(errors);
+
+    if (!isValid) return;
+
+    setLoading(true);
+    const { email, password, ...userData } = formData;
+
+    const { success, error, code } = await signUpWithEmail(email, password, userData);
+    setLoading(false);
+
+    if (success) {
+      setShowSuccess(true);
+    } else {
+      let newErrors = {};
+      if (authErrorMessages[code]) {
+        if (code.includes('username')) {
+          newErrors.username = authErrorMessages[code];
+        } else if (code.includes('email')) {
+          newErrors.email = authErrorMessages[code];
+        } else {
+          newErrors.general = authErrorMessages[code];
+        }
+      } else {
+        newErrors.general = error || 'Something went wrong';
+      }
+      setErrorMessages(prev => ({ ...prev, ...newErrors }));
     }
-  }, []);
+  };
 
-  const gridItems = [
-    { title: 'Weekly Quiz', desc: 'Answer the weekly quiz to\nearn Terra Points and Coins!' },
-    { title: 'Achievements', desc: 'Accomplish achievements to\nearn Terra Points and Coins!' },
-    { title: 'Read', desc: 'Read and answer the quiz to\nearn Terra Points and Coins!' },
-    { title: 'Invite', desc: 'Invite friends to TerraTrack to\nearn Terra Coins and Points!' },
-  ];
+  const inputWidth = scale(308);
+  const inputHeight = vScale(53);
+
+  if (showSuccess) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center' }]}>
+        <Image
+          source={require('../assets/images/SplashImage.png')}
+          style={{ width: scale(300), height: scale(300), marginBottom: vScale(30) }}
+          resizeMode="contain"
+        />
+        <Text style={[styles.title, { fontSize: scale(32), marginBottom: vScale(10) }]}>Account Created!</Text>
+        <Text style={[styles.subtitle, { fontSize: scale(15), marginBottom: vScale(80), textAlign: 'center' }]}>
+          Your account has been created successfully.
+        </Text>
+        <TouchableOpacity
+          style={[styles.button, { width: inputWidth, height: inputHeight }]}
+          onPress={() => navigation.navigate('LoginScreen')}
+        >
+          <Text style={styles.buttonText}>Continue to Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+    <View style={[styles.container, { paddingVertical: vScale(40) }]}>
+      <Text style={[styles.title, { fontSize: scale(32), marginBottom: vScale(20) }]}>
+        Create account
+      </Text>
+      <Text style={[styles.subtitle, { fontSize: scale(15), marginBottom: vScale(40), lineHeight: vScale(20) }]}>
+        Create an account to start maximizing{"\n"}your environmental impact!
+      </Text>
+
+      <TextInput
+        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
+        placeholder="Email"
+        placeholderTextColor="#424242"
+        value={formData.email}
+        onChangeText={(text) => handleInputChange('email', text)}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      {errorMessages.email && <Text style={styles.errorText}>{errorMessages.email}</Text>}
+
+      <TextInput
+        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
+        placeholder="Username"
+        placeholderTextColor="#424242"
+        value={formData.username}
+        onChangeText={(text) => handleInputChange('username', text)}
+        autoCapitalize="none"
+      />
+      {errorMessages.username && <Text style={styles.errorText}>{errorMessages.username}</Text>}
+
+      <TextInput
+        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
+        placeholder="Phone Number"
+        placeholderTextColor="#424242"
+        value={formData.phoneNumber}
+        onChangeText={(text) => handleInputChange('phoneNumber', text)}
+        keyboardType="phone-pad"
+      />
+      {errorMessages.phoneNumber && <Text style={styles.errorText}>{errorMessages.phoneNumber}</Text>}
+
+      <TextInput
+        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
+        placeholder="Password"
+        placeholderTextColor="#424242"
+        value={formData.password}
+        onChangeText={(text) => handleInputChange('password', text)}
+        secureTextEntry={true}
+      />
+      {errorMessages.password && <Text style={styles.errorText}>{errorMessages.password}</Text>}
+
+      <TextInput
+        style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
+        placeholder="Confirm Password"
+        placeholderTextColor="#424242"
+        value={formData.confirmPassword}
+        onChangeText={(text) => handleInputChange('confirmPassword', text)}
+        secureTextEntry={true}
+      />
+      {errorMessages.confirmPassword && <Text style={styles.errorText}>{errorMessages.confirmPassword}</Text>}
+
+      {errorMessages.general && (
+        <Text style={[styles.errorText, { textAlign: 'center', marginTop: vScale(10) }]}>{errorMessages.general}</Text>
+      )}
+
+      <TouchableOpacity
+        style={[
+          styles.button,
+          { width: inputWidth, height: inputHeight, marginTop: vScale(20) },
+          loading && styles.disabledButton
+        ]}
+        onPress={handleSignUp}
+        disabled={loading}
       >
-        {/* Header with TerraCoins */}
-        <View style={styles.header}>
-          <View style={styles.coinBox}>
-            <Image
-              source={require('../assets/images/TerraCoin.png')}
-              style={styles.coinImage}
-              resizeMode="contain"
-            />
-            <Text style={styles.coinText}>{terraCoins}</Text>
-          </View>
-        </View>
+        {loading ? (
+          <ActivityIndicator color="white" />
+        ) : (
+          <Text style={styles.buttonText}>Sign up</Text>
+        )}
+      </TouchableOpacity>
 
-        {/* 2x2 Grid */}
-        <View style={styles.grid}>
-          {gridItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.gridItem}>
-              <Text style={styles.gridTitle}>{item.title}</Text>
-              <Text style={styles.gridDesc}>{item.desc}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Terra Shop */}
-        <TouchableOpacity style={styles.shopContainer}>
-          <Image
-            source={require('../assets/images/TerraShop.png')}
-            style={styles.shopImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.shopText}>
-            Buy exclusive avatars and rewards from{'\n'}our partners from the Terra Shop!
-          </Text>
+      <View style={[styles.loginTextContainer, { marginTop: vScale(30) }]}>
+        <Text style={[styles.loginPrompt, { fontSize: scale(13) }]}>Already have an account? </Text>
+        <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')}>
+          <Text style={[styles.loginLink, { fontSize: scale(13) }]}>Login</Text>
         </TouchableOpacity>
-
-        {/* Community Progress */}
-        <View style={styles.communityContainer}>
-          <Text style={styles.communityTitle}>Community Progress</Text>
-          <Text style={styles.communityTask}>Sample Task from Admin</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '50%' }]} />
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        {['Home', 'Routine', 'Leaderboards', 'Profile'].map((item, index) => (
-          <TouchableOpacity key={index} style={styles.navItem}>
-            <Text style={[styles.navText, item === 'Home' && styles.activeNav]}>{item}</Text>
-            {item === 'Home' && <View style={styles.activeIndicator} />}
-          </TouchableOpacity>
-        ))}
       </View>
+
+      <Text style={[styles.orContinueText, { fontSize: scale(13), marginTop: vScale(30), marginBottom: vScale(20) }]}>
+        Or continue with
+      </Text>
+
+      <TouchableOpacity style={[styles.button, { width: inputWidth, height: inputHeight }]}>
+        <Text style={styles.buttonText}>Google</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -97,141 +178,69 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#131313',
-  },
-  scrollContent: {
-    paddingBottom: vScale(20),
-  },
-  header: {
-    width: '100%',
-    height: vScale(143),
-    backgroundColor: '#415D43',
-    borderBottomLeftRadius: scale(20),
-    borderBottomRightRadius: scale(20),
-    paddingHorizontal: scale(20),
-    justifyContent: 'flex-end',
-    alignItems: 'flex-end',
-    paddingBottom: vScale(15),
-  },
-  coinBox: {
-    width: scale(79),
-    height: vScale(32),
-    backgroundColor: '#DDDDDD',
-    borderRadius: scale(30),
-    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  coinImage: {
-    width: scale(20),
-    height: scale(20),
-    marginRight: scale(5),
-  },
-  coinText: {
-    color: '#131313',
-    fontWeight: '700',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(20),
-    marginTop: vScale(20),
-    gap: vScale(20),
-  },
-  gridItem: {
-    width: scale(174),
-    height: vScale(168),
-    backgroundColor: '#1F1F1F',
-    borderRadius: scale(15),
-    padding: scale(10),
-    justifyContent: 'center',
-  },
-  gridTitle: {
+  title: {
     color: '#709775',
-    fontSize: scale(16),
+    textAlign: 'center',
     fontWeight: '700',
-    marginBottom: vScale(5),
   },
-  gridDesc: {
+  subtitle: {
     color: '#CCCCCC',
-    fontSize: scale(12),
-    fontWeight: '500',
-    lineHeight: vScale(16),
-  },
-  shopContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#415D43',
-    width: scale(371),
-    height: vScale(90),
-    borderRadius: scale(25),
-    paddingHorizontal: scale(15),
-    marginTop: vScale(25),
-    alignSelf: 'center',
-  },
-  shopImage: {
-    width: scale(50),
-    height: scale(50),
-    marginRight: scale(15),
-  },
-  shopText: {
-    color: '#CCCCCC',
-    fontSize: scale(12),
-    fontWeight: '500',
-  },
-  communityContainer: {
-    backgroundColor: '#CCCCCC',
-    width: scale(371),
-    borderRadius: scale(15),
-    padding: scale(15),
-    marginTop: vScale(25),
-    alignSelf: 'center',
-  },
-  communityTitle: {
-    color: '#131313',
-    fontSize: scale(16),
+    textAlign: 'center',
     fontWeight: '700',
-    marginBottom: vScale(5),
   },
-  communityTask: {
-    color: '#131313',
-    fontSize: scale(12),
-    marginBottom: vScale(10),
+  input: {
+    backgroundColor: '#CBCBCB',
+    borderRadius: 30,
+    paddingHorizontal: 30,
+    color: '#424242',
+    fontWeight: '700',
+    marginBottom: vScale(20),
   },
-  progressBar: {
-    width: scale(281),
-    height: vScale(41),
-    backgroundColor: '#FFFDFD',
-    borderRadius: scale(20),
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
+  button: {
     backgroundColor: '#415D43',
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#415D43',
-    paddingVertical: vScale(10),
-  },
-  navItem: {
+    borderRadius: 30,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  navText: {
-    color: '#DDDDDD',
-    fontSize: scale(12),
-    fontWeight: '600',
+  disabledButton: {
+    opacity: 0.7,
   },
-  activeNav: {
+  buttonText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: 'bold',
   },
-  activeIndicator: {
-    marginTop: vScale(4),
-    height: scale(2),
-    width: '100%',
-    backgroundColor: '#DDDDDD',
+  loginTextContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  loginPrompt: {
+    color: '#CCCCCC',
+    fontWeight: '700',
+  },
+  loginLink: {
+    color: '#709775',
+    fontWeight: '700',
+  },
+  orContinueText: {
+    color: '#CCCCCC',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  errorText: {
+    color: '#FF4D4F',
+    fontSize: scale(12),
+    fontStyle: 'italic',
+    fontWeight: '500',
+    width: scale(308),
+    textAlign: 'left',
+    marginTop: -vScale(15),
+    marginBottom: vScale(10),
   },
 });
 
-export default HomeScreen;
+export default SignUpScreen;

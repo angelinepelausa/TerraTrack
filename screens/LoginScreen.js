@@ -3,6 +3,7 @@ import { Text, View, StyleSheet, TextInput, TouchableOpacity, Alert } from 'reac
 import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { checkOnboardingStatus } from '../repositories/onboardingRepository';
+import { scale, vScale } from '../utils/scaling';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -105,46 +106,87 @@ const LoginScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', backgroundColor: '#131313' },
-  headContainer: { padding: '4.5%', marginTop: '35%', alignItems: 'center' },
-  head: { fontSize: 30, color: '#709775', marginBottom: '6%', fontFamily: 'DMSans-Bold' },
-  subhead: { fontSize: 14, color: '#CCCCCC', fontFamily: 'DMSans-Bold', textAlign: 'center' },
-  inputcontainer: { width: '75%', marginTop: '10%' },
+  container: { 
+    flex: 1, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    backgroundColor: '#131313' 
+  },
+  content: {
+    width: '85%',
+    alignItems: 'center',
+  },
+  headContainer: { 
+    padding: scale(18), 
+    alignItems: 'center',
+    marginBottom: vScale(20) 
+  },
+  head: { 
+    fontSize: scale(30), 
+    color: '#709775', 
+    marginBottom: vScale(10), 
+    fontFamily: 'DMSans-Bold' 
+  },
+  subhead: { 
+    fontSize: scale(14), 
+    color: '#CCCCCC', 
+    fontFamily: 'DMSans-Bold', 
+    textAlign: 'center' 
+  },
+  inputcontainer: { 
+    width: '80%', 
+    marginTop: vScale(20), 
+    alignItems: 'center' 
+  },
   input: {
     backgroundColor: '#CBCBCB',
     fontFamily: 'DMSans-Bold',
-    borderRadius: 30,
-    height: 50,
-    marginBottom: 15,
-    fontSize: 11,
-    paddingLeft: 20,
+    borderRadius: scale(30),
+    height: vScale(50),
+    marginBottom: vScale(15),
+    fontSize: scale(11),
+    paddingLeft: scale(20),
+    width: '100%',
   },
   loginButton: {
     backgroundColor: '#415D43',
     fontFamily: 'DMSans-Bold',
-    borderRadius: 30,
-    height: 50,
-    marginTop: '13%',
+    borderRadius: scale(30),
+    height: vScale(50),
+    marginTop: vScale(15),
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
   },
-  loginButtonText: { fontFamily: 'DMSans-Bold', color: '#DDDDDD' },
+  loginButtonText: { 
+    fontFamily: 'DMSans-Bold', 
+    color: '#DDDDDD', 
+    fontSize: scale(12) 
+  },
   signupText: {
     color: '#CCCCCC',
     fontFamily: 'DMSans-Bold',
-    fontSize: 11,
+    fontSize: scale(11),
     textAlign: 'center',
-    marginBottom: '7%',
-    marginTop: '8%',
+    marginTop: vScale(35),
+    marginBottom: vScale(15),
   },
-  signupNow: { color: '#709775', fontFamily: 'DMSans-Bold', fontSize: 11 },
-  texts: { marginTop: 30, width: '75%', alignItems: 'center' },
+  signupNow: { 
+    color: '#709775', 
+    fontFamily: 'DMSans-Bold', 
+    fontSize: scale(11) 
+  },
+  texts: { 
+    marginTop: vScale(15), 
+    width: '80%', 
+    alignItems: 'center' 
+  },
   googleButton: {
     backgroundColor: '#415D43',
     fontFamily: 'DMSans-Bold',
-    borderRadius: 30,
-    height: 50,
-    marginTop: 10,
+    borderRadius: scale(30),
+    height: vScale(50),
+    marginTop: vScale(10),
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
