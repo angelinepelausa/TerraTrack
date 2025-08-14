@@ -127,22 +127,6 @@ const HomeScreen = () => {
           </View>
         )}
       </View>
-
-      <View style={styles.bottomNav}>
-        {['Home', 'Routine', 'Leaderboards', 'Profile'].map((item) => (
-          <TouchableOpacity key={item} style={styles.navItem}>
-            <Text
-              style={[
-                styles.navText,
-                item === 'Home' && styles.navTextActive,
-              ]}
-            >
-              {item}
-            </Text>
-            {item === 'Home' && <View style={styles.activeUnderline} />}
-          </TouchableOpacity>
-        ))}
-      </View>
     </View>
   );
 };
