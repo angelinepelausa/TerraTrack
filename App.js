@@ -10,6 +10,7 @@ import OnboardingScreen from './screens/OnboardingScreen';
 import Calculator from './screens/Calculator';
 import HomeScreen from './screens/HomeScreen';
 import MainTabs from './navigation/MainTabs';
+import ResultsScreen from './screens/ResultsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -62,6 +63,11 @@ const App = () => {
             name="MainTabs"
             component={MainTabs}
             options={{ gestureEnabled: false }}
+          />
+          <Stack.Screen
+            name="ResultsScreen"
+            component={ResultsScreen}
+            options={{ headerShown: false }}
           />
         </Stack.Navigator>
       </NavigationContainer>

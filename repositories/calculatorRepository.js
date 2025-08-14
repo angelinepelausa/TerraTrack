@@ -31,10 +31,10 @@ const DISTANCE_VALUES = {
 
 const DIET_VALUES = {
   '1–10 meals/month': 10,
-  '11–20 meals/month': 20,
-  '21–40 meals/month': 40,
-  '41–60 meals/month': 60,
-  '61–90 meals/month': 90
+  '11–20 meals/month': 15,
+  '21–40 meals/month': 30,
+  '41–60 meals/month': 50,
+  '61–90 meals/month': 70
 };
 
 // Emissions per meal (kg CO₂ per meal)
@@ -49,7 +49,7 @@ const GRID_EMISSION_FACTOR = 0.7288; // kg CO₂/kWh
 
 // --- MAIN CALCULATION ---
 export const calculateCarbonFootprint = (answers) => {
-  let transportEmission = 0;
+  let transportEmissionMonthly = 0;
 
   // Public transportation
   if (answers.publicTransportType) {
@@ -58,7 +58,7 @@ export const calculateCarbonFootprint = (answers) => {
       const distKey = `publicTransportDistance_${type}`;
       const frequency = FREQUENCY_VALUES[answers[freqKey]] || 0;
       const distance = DISTANCE_VALUES[answers[distKey]] || 0;
-      transportEmission += frequency * distance * TRANSPORT_EMISSION_FACTORS[type];
+      transportEmissionMonthly += frequency * distance * TRANSPORT_EMISSION_FACTORS[type];
     });
   }
 
@@ -69,7 +69,7 @@ export const calculateCarbonFootprint = (answers) => {
       const distKey = `vehicleDistance_${vehicle}`;
       const frequency = FREQUENCY_VALUES[answers[freqKey]] || 0;
       const distance = DISTANCE_VALUES[answers[distKey]] || 0;
-      transportEmission += frequency * distance * TRANSPORT_EMISSION_FACTORS[vehicle];
+      transportEmissionMonthly += frequency * distance * TRANSPORT_EMISSION_FACTORS[vehicle];
     });
   }
 
@@ -79,28 +79,33 @@ export const calculateCarbonFootprint = (answers) => {
   const electricityBill = parseFloat(answers.electricityBill) || 0;
 
   const monthlyKWh = electricityBill / electricityRate;
-  const electricityEmission = (monthlyKWh * GRID_EMISSION_FACTOR) / householdSize;
+  const electricityEmissionMonthly = (monthlyKWh * GRID_EMISSION_FACTOR) / householdSize;
 
   // Diet
   const meatMeals = DIET_VALUES[answers.meatMeals] || 0;
   const dairyMeals = DIET_VALUES[answers.dairyMeals] || 0;
   const fishMeals = DIET_VALUES[answers.fishMeals] || 0;
 
-  const dietEmission =
+  const dietEmissionMonthly =
     (meatMeals * MEAL_EMISSIONS.meat) +
     (dairyMeals * MEAL_EMISSIONS.dairy) +
     (fishMeals * MEAL_EMISSIONS.fish);
 
-  // Total
-  const totalMonthly = transportEmission + electricityEmission + dietEmission;
-  const totalAnnual = totalMonthly * 12;
+  // Totals
+  const totalMonthly = transportEmissionMonthly + electricityEmissionMonthly + dietEmissionMonthly;
 
   return {
-    transportEmission: parseFloat(transportEmission.toFixed(2)),
-    electricityEmission: parseFloat(electricityEmission.toFixed(2)),
-    dietEmission: parseFloat(dietEmission.toFixed(2)),
+    // Monthly
+    transportEmissionMonthly: parseFloat(transportEmissionMonthly.toFixed(2)),
+    electricityEmissionMonthly: parseFloat(electricityEmissionMonthly.toFixed(2)),
+    dietEmissionMonthly: parseFloat(dietEmissionMonthly.toFixed(2)),
     totalMonthly: parseFloat(totalMonthly.toFixed(2)),
-    totalAnnual: parseFloat(totalAnnual.toFixed(2))
+
+    // Annual
+    transportEmissionAnnual: parseFloat((transportEmissionMonthly * 12).toFixed(2)),
+    electricityEmissionAnnual: parseFloat((electricityEmissionMonthly * 12).toFixed(2)),
+    dietEmissionAnnual: parseFloat((dietEmissionMonthly * 12).toFixed(2)),
+    totalAnnual: parseFloat((totalMonthly * 12).toFixed(2))
   };
 };
 

@@ -97,21 +97,18 @@ const Calculator = ({ navigation }) => {
     }
   };
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      const results = await saveCarbonFootprint(answers);
-      Alert.alert(
-        'Calculation Complete',
-        `Monthly: ${results.totalMonthly} kg CO₂\nAnnual: ${results.totalAnnual} kg CO₂`
-      );
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert('Error', 'Something went wrong while saving your results.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+const handleSubmit = async () => {
+  setIsSubmitting(true);
+  try {
+    const results = await saveCarbonFootprint(answers);
+
+    navigation.navigate('ResultsScreen', { results });
+  } catch (error) {
+    Alert.alert('Error', 'Something went wrong while saving your results.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   if (!currentQuestion) {
     return (
