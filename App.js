@@ -11,6 +11,9 @@ import Calculator from './screens/Calculator';
 import HomeScreen from './screens/HomeScreen';
 import MainTabs from './navigation/MainTabs';
 import ResultsScreen from './screens/ResultsScreen';
+import EducationalScreen from './screens/EducationalScreen';
+import EducationalDetailScreen from './screens/EducationalDetailScreen';
+import EducationalQuizScreen from './screens/EducationalQuizScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -67,7 +70,18 @@ const App = () => {
           <Stack.Screen
             name="ResultsScreen"
             component={ResultsScreen}
-            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="EducationalScreen" 
+            component={EducationalScreen}
+          />
+          <Stack.Screen 
+            name="EducationalDetailScreen" 
+            component={EducationalDetailScreen}
+          />
+          <Stack.Screen 
+            name="EducationalQuizScreen" 
+            component={EducationalQuizScreen}
           />
         </Stack.Navigator>
       </NavigationContainer>

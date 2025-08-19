@@ -10,7 +10,7 @@ const PADDING = scale(20);
 const GAP = scale(20);
 const CARD_WIDTH = (width - PADDING * 2 - GAP) / 2;
 
-const HomeScreen = () => {
+const HomeScreen = ({ navigation }) => {
   const [terraCoins, setTerraCoins] = useState(0);
   const [communityProgress, setCommunityProgress] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -88,7 +88,15 @@ const HomeScreen = () => {
 
         <View style={styles.grid}>
           {features.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.card}>
+            <TouchableOpacity
+              key={index}
+              style={styles.card}
+              onPress={() => {
+                if (item.title === 'Read') {
+                  navigation.navigate('EducationalScreen');
+                }
+              }}
+            >
               <View style={styles.cardTextArea}>
                 <Text style={styles.cardTitle}>{item.title}</Text>
                 <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
