@@ -5,6 +5,7 @@ import { tasksRepository } from '../repositories/tasksRepository';
 import Button from '../components/Button';
 import TaskCard from '../components/taskCard';
 import { scale, vScale } from '../utils/scaling';
+import { getUserTerraCoins } from '../repositories/userRepository';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +39,24 @@ const RoutineScreen = () => {
   useEffect(() => {
     fetchAllTasks();
   }, [user]);
+
+  useEffect(() => {
+        if (user) {
+          fetchTerraCoins();
+        }
+      }, [user]);
+    
+      const fetchTerraCoins = async () => {
+        try {
+          const result = await getUserTerraCoins(user.uid); 
+          if (result.success) {
+            setTerraCoins(result.terraCoins);
+          }
+        } catch (error) {
+          console.error('Error fetching TerraCoins:', error);
+        }
+      };
+  
 
   const tasks = activeTab === 'easy' ? easyTasks : hardTasks;
 

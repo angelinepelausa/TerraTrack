@@ -4,6 +4,7 @@ import { getCommunityProgress } from '../repositories/communityProgressRepositor
 import { getUserTerraCoins } from '../repositories/userRepository';
 import ProgressBar from '../components/ProgressBar';
 import { scale, vScale } from '../utils/scaling';
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 const PADDING = scale(20);
@@ -15,6 +16,7 @@ const HomeScreen = ({ navigation }) => {
   const [communityProgress, setCommunityProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,6 +64,23 @@ const HomeScreen = ({ navigation }) => {
     },
   ];
 
+  useEffect(() => {
+      if (user) {
+        fetchTerraCoins();
+      }
+    }, [user]);
+  
+    const fetchTerraCoins = async () => {
+      try {
+        const result = await getUserTerraCoins(user.uid); 
+        if (result.success) {
+          setTerraCoins(result.terraCoins);
+        }
+      } catch (error) {
+        console.error('Error fetching TerraCoins:', error);
+      }
+    };
+
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -94,6 +113,9 @@ const HomeScreen = ({ navigation }) => {
               onPress={() => {
                 if (item.title === 'Read') {
                   navigation.navigate('EducationalScreen');
+                }
+                else if (item.title === 'Weekly Quiz') {
+                  navigation.navigate('WeeklyQuizScreen');
                 }
               }}
             >

@@ -14,6 +14,7 @@ import ResultsScreen from './screens/ResultsScreen';
 import EducationalScreen from './screens/EducationalScreen';
 import EducationalDetailScreen from './screens/EducationalDetailScreen';
 import EducationalQuizScreen from './screens/EducationalQuizScreen';
+import WeeklyQuizScreen from './screens/WeeklyQuizScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -82,6 +83,10 @@ const App = () => {
           <Stack.Screen 
             name="EducationalQuizScreen" 
             component={EducationalQuizScreen}
+          />
+          <Stack.Screen 
+            name="WeeklyQuizScreen" 
+            component={WeeklyQuizScreen}
           />
         </Stack.Navigator>
       </NavigationContainer>
