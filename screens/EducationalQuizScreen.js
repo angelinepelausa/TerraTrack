@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import auth from '@react-native-firebase/auth';
+import { addUserRewards } from '../repositories/userRepository';
 
 const EducationalQuizScreen = ({ route, navigation }) => {
   const { content } = route.params;
@@ -10,8 +12,19 @@ const EducationalQuizScreen = ({ route, navigation }) => {
   const questions = content.quiz.questions;
   const question = questions[currentQuestion];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setSubmitted(true);
+
+    if (selectedAnswer === question.correctIndex) {
+      try {
+        const userId = auth().currentUser?.uid;
+        if (userId) {
+          await addUserRewards(userId, 5, 10); 
+        }
+      } catch (error) {
+        console.error("Failed to add rewards:", error);
+      }
+    }
   };
 
   const handleContinue = () => {
