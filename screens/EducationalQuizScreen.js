@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import { addUserRewards } from '../repositories/userRepository';
+import { saveQuizAttempt } from '../repositories/quizAttemptsRepository';
 
 const EducationalQuizScreen = ({ route, navigation }) => {
   const { content } = route.params;
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [score, setScore] = useState({ correct: 0, total: 0 });
 
   const questions = content.quiz.questions;
   const question = questions[currentQuestion];
@@ -15,11 +17,18 @@ const EducationalQuizScreen = ({ route, navigation }) => {
   const handleSubmit = async () => {
     setSubmitted(true);
 
-    if (selectedAnswer === question.correctIndex) {
+    const isCorrect = selectedAnswer === question.correctIndex;
+    const newScore = {
+      correct: score.correct + (isCorrect ? 1 : 0),
+      total: score.total + 1
+    };
+    setScore(newScore);
+
+    if (isCorrect) {
       try {
         const userId = auth().currentUser?.uid;
         if (userId) {
-          await addUserRewards(userId, 5, 10); 
+          await addUserRewards(userId, 1, 10); 
         }
       } catch (error) {
         console.error("Failed to add rewards:", error);
@@ -27,12 +36,24 @@ const EducationalQuizScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
       setSelectedAnswer(null);
       setSubmitted(false);
     } else {
+      try {
+        await saveQuizAttempt({
+          contentId: content.id,
+          correctAnswers: score.correct,
+          totalQuestions: score.total,
+          coinsEarned: score.correct * 5,
+          pointsEarned: score.correct * 10,
+          timeTaken: 0,
+        });
+      } catch (error) {
+        console.error('Failed to save quiz attempt:', error);
+      }
       navigation.goBack();
     }
   };

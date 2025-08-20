@@ -1,15 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useAuth } from '../context/AuthContext';
+import { getUserTerraCoins } from '../repositories/userRepository'; 
 
 const EducationalDetailScreen = ({ route, navigation }) => {
   const { content } = route.params;
+  const { user } = useAuth();
+  const [terraCoins, setTerraCoins] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      fetchTerraCoins();
+    }
+  }, [user]);
+
+  const fetchTerraCoins = async () => {
+    try {
+      const result = await getUserTerraCoins(user.uid); 
+      if (result.success) {
+        setTerraCoins(result.terraCoins);
+      }
+    } catch (error) {
+      console.error('Error fetching TerraCoins:', error);
+    }
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
         <View style={styles.coinBox}>
           <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
-          <Text style={styles.coinText}>0</Text>
+          <Text style={styles.coinText}>{terraCoins}</Text>
         </View>
       </View>
 
@@ -22,13 +43,13 @@ const EducationalDetailScreen = ({ route, navigation }) => {
           <View style={styles.detailContainer}>
             <Text style={styles.detailTitle}>{content.title}</Text>
             <Text style={styles.detailDescription}>{content.description}</Text>
-            
+
             <View style={styles.contentBox}>
               <Text style={styles.contentText}>{content.content}</Text>
             </View>
 
-            <TouchableOpacity 
-              style={styles.quizButton} 
+            <TouchableOpacity
+              style={styles.quizButton}
               onPress={() => {
                 console.log("Navigating to EducationalQuizScreen with content:", content);
                 navigation.navigate('EducationalQuizScreen', { content });
@@ -44,14 +65,14 @@ const EducationalDetailScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#131313' 
+  container: {
+    flex: 1,
+    backgroundColor: '#131313',
   },
-  content: { 
-    flex: 1, 
-    paddingHorizontal: 16, 
-    paddingTop: 16 
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   topBar: {
     height: 90,
@@ -77,24 +98,24 @@ const styles = StyleSheet.create({
     marginRight: 6,
     resizeMode: 'contain',
   },
-  coinText: { 
-    color: '#131313', 
-    fontWeight: 'bold', 
-    fontSize: 12 
+  coinText: {
+    color: '#131313',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
-  backBtn: { 
-    marginBottom: 16 
+  backBtn: {
+    marginBottom: 16,
   },
-  backText: { 
-    color: '#CCCCCC', 
-    fontSize: 20, 
-    fontWeight: 'bold' 
+  backText: {
+    color: '#CCCCCC',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   detailWrapper: {
     flex: 1,
-    justifyContent: 'center',   
-    alignItems: 'center', 
-    marginTop: -80,     
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: -80,
   },
   detailContainer: {
     width: '100%',
@@ -131,7 +152,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#415D43',
     paddingVertical: 14,
     borderRadius: 30,
-    width: '100%', 
+    width: '100%',
   },
   quizButtonText: {
     color: '#CCCCCC',

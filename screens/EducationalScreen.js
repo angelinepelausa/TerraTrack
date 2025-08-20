@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Dimensions, ActivityIndicator, Image } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { educationalContentRepository } from '../repositories/educationalContentRepository';
+import { getUserTerraCoins } from '../repositories/userRepository';
+import { hasAttemptedQuiz } from '../repositories/quizAttemptsRepository';
 
 const { width } = Dimensions.get('window');
 
@@ -10,20 +12,29 @@ const EducationalScreen = ({ navigation }) => {
   const [content, setContent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [terraCoins, setTerraCoins] = useState(0); 
+  const [terraCoins, setTerraCoins] = useState(0);
 
   useEffect(() => {
-    fetchEducationalContent();
+    if (user) {
+      fetchEducationalContent();
+      fetchTerraCoins();
+    }
   }, [user]);
 
   const fetchEducationalContent = async () => {
-    if (!user) return;
     setLoading(true);
     try {
       const contentData = await educationalContentRepository.getAllContent();
-      setContent(contentData);
 
-      setTerraCoins(0);
+      const filteredData = [];
+      for (const item of contentData) {
+        const attempted = await hasAttemptedQuiz(item.id);
+        if (!attempted) {
+          filteredData.push(item);
+        }
+      }
+
+      setContent(filteredData);
     } catch (error) {
       console.error('Error loading educational content:', error);
     } finally {
@@ -31,7 +42,18 @@ const EducationalScreen = ({ navigation }) => {
     }
   };
 
-  const filteredContent = content.filter(item => 
+  const fetchTerraCoins = async () => {
+    try {
+      const result = await getUserTerraCoins(user.uid);
+      if (result.success) {
+        setTerraCoins(result.terraCoins || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching TerraCoins:', error);
+    }
+  };
+
+  const filteredContent = content.filter(item =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -55,7 +77,8 @@ const EducationalScreen = ({ navigation }) => {
 
       <View style={styles.content}>
         <Text style={styles.header}>Educational Materials</Text>
-        
+
+        {/* Search */}
         <View style={styles.searchContainer}>
           <Image source={require('../assets/images/Search.png')} style={styles.searchIcon} />
           <TextInput
@@ -74,7 +97,7 @@ const EducationalScreen = ({ navigation }) => {
             data={filteredContent}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.contentCard}
                 onPress={() => navigation.navigate('EducationalDetailScreen', { content: item })}
               >
@@ -91,19 +114,19 @@ const EducationalScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#131313' 
+  container: {
+    flex: 1,
+    backgroundColor: '#131313',
   },
-  content: { 
-    flex: 1, 
-    paddingHorizontal: 16, 
-    paddingTop: 16 
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
-  centered: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   topBar: {
     height: 90,
@@ -128,17 +151,17 @@ const styles = StyleSheet.create({
     marginRight: 6,
     resizeMode: 'contain',
   },
-  coinText: { 
-    color: '#131313', 
-    fontWeight: 'bold', 
-    fontSize: 12 
+  coinText: {
+    color: '#131313',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
   header: {
     color: '#709775',
     fontSize: 20,
     fontFamily: 'DMSans-Bold',
     marginBottom: 12,
-    textAlign: 'left', 
+    textAlign: 'left',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -175,7 +198,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardDescription: {
-    color: '#415D43', 
+    color: '#415D43',
     fontSize: 14,
     fontFamily: 'DMSans-Regular',
   },
@@ -183,7 +206,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#CCCCCC',
     marginTop: 20,
-  }
+  },
 });
 
 export default EducationalScreen;

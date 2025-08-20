@@ -41,3 +41,32 @@ export const addUserRewards = async (userId, coinsEarned, pointsEarned) => {
     return { success: false, error: error.message };
   }
 };
+
+export const getUserTerraCoins = async (userId) => {
+  try {
+    const userDoc = await firestore()
+      .collection('users')
+      .doc(userId)
+      .get();
+
+    if (userDoc.exists) {
+      const { terraCoins = 0, terraPoints = 0 } = userDoc.data();
+      return { 
+        success: true, 
+        terraCoins, 
+        terraPoints 
+      };
+    } else {
+      return { 
+        success: false, 
+        error: 'User not found' 
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching terraCoins:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+};
