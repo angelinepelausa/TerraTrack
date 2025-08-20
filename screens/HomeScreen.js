@@ -117,6 +117,9 @@ const HomeScreen = ({ navigation }) => {
                 else if (item.title === 'Weekly Quiz') {
                   navigation.navigate('WeeklyQuizScreen');
                 }
+                else if (item.title === 'Invite') {
+                  navigation.navigate('InviteScreen');
+                }
               }}
             >
               <View style={styles.cardTextArea}>
