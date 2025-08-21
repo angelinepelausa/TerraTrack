@@ -4,6 +4,7 @@ import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import { addUserRewards } from '../repositories/userRepository';
 import { hasAttemptedQuiz, saveQuizAttempt } from '../repositories/quizAttemptsRepository';
+import QuizResult from '../components/QuizResult';
 
 // ✅ Get Monday of current week (YYYY-MM-DD)
 const getMondayDate = () => {
@@ -20,6 +21,7 @@ const WeeklyQuizScreen = ({ navigation }) => {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [alreadyAttempted, setAlreadyAttempted] = useState(false);
+  const [rewards, setRewards] = useState(null); // ✅ For QuizResult
 
   const mondayDate = getMondayDate();
 
@@ -57,12 +59,20 @@ const WeeklyQuizScreen = ({ navigation }) => {
     setSubmitted(true);
 
     const isCorrect = selectedAnswer === quiz.correctIndex;
+    const earnedCoins = isCorrect ? 5 : 0;
+    const earnedPoints = isCorrect ? 50 : 0;
+
+    // ✅ Save rewards state
+    setRewards({
+      coins: earnedCoins,
+      points: earnedPoints,
+    });
 
     if (isCorrect) {
       try {
         const userId = auth().currentUser?.uid;
         if (userId) {
-          await addUserRewards(userId, 5, 50);
+          await addUserRewards(userId, earnedCoins, earnedPoints);
         }
       } catch (error) {
         console.error("Failed to add rewards:", error);
@@ -74,18 +84,14 @@ const WeeklyQuizScreen = ({ navigation }) => {
         contentId: `weekly_${mondayDate}`,
         correctAnswers: isCorrect ? 1 : 0,
         totalQuestions: 1,
-        coinsEarned: isCorrect ? 5 : 0,
-        pointsEarned: isCorrect ? 50 : 0,
+        coinsEarned: earnedCoins,
+        pointsEarned: earnedPoints,
         timeTaken: 0,
         type: "weekly"
       });
     } catch (error) {
       console.error("Failed to save weekly quiz attempt:", error);
     }
-  };
-
-  const handleFinish = () => {
-    navigation.goBack();
   };
 
   if (loading) {
@@ -102,9 +108,9 @@ const WeeklyQuizScreen = ({ navigation }) => {
         <Text style={styles.infoText}>You already completed this week's quiz.</Text>
         <TouchableOpacity
           style={[styles.optionButton, styles.continueButton, styles.fixedButton]}
-          onPress={handleFinish}
+          onPress={() => navigation.navigate("HomeScreen")}
         >
-          <Text style={styles.submitText}>Go Back</Text>
+          <Text style={styles.submitText}>Go Home</Text>
         </TouchableOpacity>
       </View>
     );
@@ -116,13 +122,19 @@ const WeeklyQuizScreen = ({ navigation }) => {
         <Text style={styles.infoText}>No weekly quiz found.</Text>
         <TouchableOpacity
           style={[styles.optionButton, styles.continueButton, styles.fixedButton]}
-          onPress={handleFinish}
+          onPress={() => navigation.navigate("HomeScreen")}
         >
-          <Text style={styles.submitText}>Go Back</Text>
+          <Text style={styles.submitText}>Go Home</Text>
         </TouchableOpacity>
       </View>
     );
   }
+
+// ✅ Show QuizResult after submission
+if (submitted && rewards) {
+  return <QuizResult rewards={rewards} navigation={navigation} redirectTo="HomeScreen" />;
+}
+
 
   return (
     <View style={styles.container}>
@@ -181,15 +193,6 @@ const WeeklyQuizScreen = ({ navigation }) => {
           onPress={handleSubmit}
         >
           <Text style={styles.submitText}>Submit</Text>
-        </TouchableOpacity>
-      )}
-
-      {submitted && (
-        <TouchableOpacity
-          style={[styles.optionButton, styles.continueButton, styles.fixedButton]}
-          onPress={handleFinish}
-        >
-          <Text style={styles.submitText}>Finish</Text>
         </TouchableOpacity>
       )}
 

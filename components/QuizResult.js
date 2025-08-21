@@ -1,7 +1,8 @@
+// components/QuizResult.js
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 
-const QuizResult = ({ rewards, navigation }) => {
+const QuizResult = ({ rewards, navigation, redirectTo = "EducationalScreen" }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.resultTitle}>Congratulations on{"\n"}Completing the Quiz!</Text>
@@ -9,31 +10,31 @@ const QuizResult = ({ rewards, navigation }) => {
 
       <View style={styles.rewardsBox}>
         <View style={styles.rewardRow}>
-          <Image 
-            source={require('../assets/images/TerraCoin.png')} 
-            style={styles.rewardIcon} 
+          <Image
+            source={require('../assets/images/TerraCoin.png')}
+            style={styles.rewardIcon}
           />
           <Text style={styles.rewardText}>
             {rewards.coins} Terra Coin{rewards.coins !== 1 ? 's' : ''}
           </Text>
         </View>
         <View style={styles.rewardRow}>
-          <Image 
-            source={require('../assets/images/TerraPoint.png')} 
-            style={styles.rewardIcon} 
+          <Image
+            source={require('../assets/images/TerraPoint.png')}
+            style={styles.rewardIcon}
           />
           <Text style={styles.rewardText}>{rewards.points} Terra Points</Text>
         </View>
 
-        <Image 
-          source={require('../assets/images/BearResult.png')} 
-          style={styles.bearResult} 
+        <Image
+          source={require('../assets/images/BearResult.png')}
+          style={styles.bearResult}
         />
       </View>
 
-      <TouchableOpacity 
-        style={[styles.optionButton, styles.continueButton, styles.resultButton]} 
-        onPress={() => navigation.navigate("EducationalScreen")}
+      <TouchableOpacity
+        style={[styles.optionButton, styles.continueButton, styles.resultButton]}
+        onPress={() => navigation.navigate(redirectTo)}
       >
         <Text style={styles.resultButtonText}>Continue</Text>
       </TouchableOpacity>
