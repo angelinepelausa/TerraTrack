@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import { addUserRewards } from '../repositories/userRepository';
 import { saveQuizAttempt } from '../repositories/quizAttemptsRepository';
+import QuizResult from '../components/QuizResult';
 
 const EducationalQuizScreen = ({ route, navigation }) => {
   const { content } = route.params;
@@ -10,6 +11,8 @@ const EducationalQuizScreen = ({ route, navigation }) => {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0 });
+  const [quizFinished, setQuizFinished] = useState(false);
+  const [rewards, setRewards] = useState({ coins: 0, points: 0 });
 
   const questions = content.quiz.questions;
   const question = questions[currentQuestion];
@@ -43,20 +46,29 @@ const EducationalQuizScreen = ({ route, navigation }) => {
       setSubmitted(false);
     } else {
       try {
+        const coinsEarned = score.correct * 5;
+        const pointsEarned = score.correct * 10;
+
         await saveQuizAttempt({
           contentId: content.id,
           correctAnswers: score.correct,
           totalQuestions: score.total,
-          coinsEarned: score.correct * 5,
-          pointsEarned: score.correct * 10,
+          coinsEarned,
+          pointsEarned,
           timeTaken: 0,
         });
+
+        setRewards({ coins: coinsEarned, points: pointsEarned });
+        setQuizFinished(true);
       } catch (error) {
         console.error('Failed to save quiz attempt:', error);
       }
-      navigation.goBack();
     }
   };
+
+  if (quizFinished) {
+    return <QuizResult rewards={rewards} navigation={navigation} />;
+  }
 
   return (
     <View style={styles.container}>
@@ -143,9 +155,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#131313',
     paddingHorizontal: 16,
     paddingTop: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backBtn: { 
-    marginBottom: 16 
+    marginBottom: 16,
+    alignSelf: 'flex-start'
   },
   backText: { 
     color: '#CCCCCC', 
