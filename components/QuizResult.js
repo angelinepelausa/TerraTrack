@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   rewardsBox: {
     backgroundColor: '#CCCCCC',
     borderRadius: 25,
-    paddingVertical: 20, 
+    paddingVertical: 40, 
     paddingHorizontal: 40, 
     width: '90%', 
     alignItems: 'center', 
@@ -78,7 +78,6 @@ const styles = StyleSheet.create({
   rewardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
   },
   rewardIcon: {
     width: 40,

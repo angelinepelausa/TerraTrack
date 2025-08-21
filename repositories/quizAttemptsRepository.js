@@ -22,6 +22,7 @@ export const saveQuizAttempt = async ({
   coinsEarned,
   pointsEarned,
   timeTaken,
+  type = 'educational', // 👈 default type is educational
 }) => {
   const user = auth().currentUser;
   if (!user) throw new Error('User not logged in');
@@ -39,7 +40,7 @@ export const saveQuizAttempt = async ({
 
   const attemptData = {
     contentId,
-    type: 'educational',
+    type,
     date: firestore.FieldValue.serverTimestamp(),
     correctAnswers,
     totalQuestions,
@@ -49,6 +50,12 @@ export const saveQuizAttempt = async ({
   };
 
   if (!querySnapshot.empty) {
+    // ✅ Prevent retries for weekly quizzes
+    if (type === 'weekly') {
+      throw new Error("You have already completed this week's quiz.");
+    }
+
+    // ✅ Allow retries for educational quizzes
     const docId = querySnapshot.docs[0].id;
     await attemptsRef.doc(docId).update(attemptData);
     return docId;

@@ -46,7 +46,7 @@ const EducationalQuizScreen = ({ route, navigation }) => {
       setSubmitted(false);
     } else {
       try {
-        const coinsEarned = score.correct * 5;
+        const coinsEarned = score.correct * 1;
         const pointsEarned = score.correct * 10;
 
         await saveQuizAttempt({
