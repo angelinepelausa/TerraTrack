@@ -54,8 +54,52 @@ const getUserPreferences = async (userId) => {
   }
 };
 
+export const validateAndApplyReferral = async (referralCode) => {
+  try {
+    const currentUser = auth().currentUser;
+    if (!currentUser) throw new Error('User not authenticated');
+
+    const querySnap = await firestore()
+      .collection('users')
+      .where('referralCode', '==', referralCode)
+      .limit(1)
+      .get();
+
+    if (querySnap.empty) {
+      throw new Error('Invalid referral code');
+    }
+
+    const referrerDoc = querySnap.docs[0];
+    const referrerId = referrerDoc.id;
+
+    await firestore()
+      .collection('users')
+      .doc(currentUser.uid)
+      .set({ referredBy: referrerId }, { merge: true });
+
+    await firestore()
+      .collection('users')
+      .doc(referrerId)
+      .collection('invites')
+      .doc(currentUser.uid)
+      .set({
+        taskFinished: 0,
+        weeklyQuizFinished: 0,
+        educationalQuizFinished: 0,
+        rewardsClaimed: false,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+      });
+
+    return true;
+  } catch (error) {
+    console.error('Referral validation error:', error);
+    throw error;
+  }
+};
+
 export const onboardingRepository = {
   saveOnboardingPreferences,
   checkOnboardingStatus,
   getUserPreferences,
+  validateAndApplyReferral,
 };

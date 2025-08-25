@@ -49,7 +49,6 @@ const LeaderboardsScreen = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Leaderboards</Text>
 
-      {/* Podium */}
       <View style={styles.podium}>
         {top3[1] && (
           <View style={[styles.podiumItem, { marginTop: 30 }]}>

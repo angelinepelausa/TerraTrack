@@ -4,7 +4,7 @@ import { scale, vScale } from '../utils/scaling';
 import { onboardingQuestions, REFERRAL_STEP } from '../services/onboardingService';
 import OptionButton from '../components/OptionButton';
 import ProgressIndicator from '../components/ProgressIndicator';
-import { saveOnboardingPreferences } from '../repositories/onboardingRepository';
+import { onboardingRepository, saveOnboardingPreferences } from '../repositories/onboardingRepository';
 import { useAuth } from '../context/AuthContext';
 
 const OnboardingScreen = ({ navigation }) => {
@@ -14,7 +14,7 @@ const OnboardingScreen = ({ navigation }) => {
   const [referralCode, setReferralCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCarbonFootprintScreen, setShowCarbonFootprintScreen] = useState(false);
-  
+
   const MULTI_SELECT_QUESTIONS = [0, 2, 3];
   const isReferralStep = currentStep === REFERRAL_STEP;
   const isMultiSelect = MULTI_SELECT_QUESTIONS.includes(currentStep);
@@ -48,10 +48,21 @@ const OnboardingScreen = ({ navigation }) => {
   const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    
+
     try {
+      if (referralCode) {
+        try {
+          await onboardingRepository.validateAndApplyReferral(referralCode);
+        } catch (err) {
+          Alert.alert('Invalid Code', err.message || 'This referral code is not valid.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const preferences = formatAnswersForFirestore();
       await saveOnboardingPreferences(preferences);
+
       setShowCarbonFootprintScreen(true);
     } catch (error) {
       console.error('Submission error:', error);
@@ -71,8 +82,8 @@ const OnboardingScreen = ({ navigation }) => {
       return;
     }
 
-    if ((isMultiSelect && currentAnswer.length === 0) || 
-        (!isMultiSelect && !currentAnswer)) {
+    if ((isMultiSelect && currentAnswer.length === 0) ||
+      (!isMultiSelect && !currentAnswer)) {
       Alert.alert('Error', 'Please select at least one option');
       return;
     }
@@ -87,7 +98,7 @@ const OnboardingScreen = ({ navigation }) => {
   };
 
   const isOptionSelected = (option) => {
-    return isMultiSelect 
+    return isMultiSelect
       ? currentAnswer.includes(option)
       : currentAnswer === option;
   };
@@ -109,7 +120,7 @@ const OnboardingScreen = ({ navigation }) => {
       <View style={[styles.container, { paddingVertical: vScale(40) }]}>
         <View style={styles.centeredContent}>
           <View style={styles.textContainer}>
-            <Text style={[styles.head, { 
+            <Text style={[styles.head, {
               fontSize: scale(32),
               lineHeight: vScale(36),
               marginBottom: vScale(20)
@@ -127,9 +138,9 @@ const OnboardingScreen = ({ navigation }) => {
 
           <TouchableOpacity
             style={[
-              styles.button, 
-              { 
-                width: scale(308), 
+              styles.button,
+              {
+                width: scale(308),
                 height: vScale(53),
                 marginTop: vScale(20)
               }
@@ -177,10 +188,10 @@ const OnboardingScreen = ({ navigation }) => {
 
               <TouchableOpacity
                 style={[
-                  styles.button, 
-                  { 
-                    width: scale(308), 
-                    height: vScale(53), 
+                  styles.button,
+                  {
+                    width: scale(308),
+                    height: vScale(53),
                     marginTop: vScale(20),
                     opacity: isSubmitting ? 0.7 : 1
                   }
@@ -226,10 +237,10 @@ const OnboardingScreen = ({ navigation }) => {
       </View>
 
       {!isReferralStep && (
-        <ProgressIndicator 
-          currentStep={currentStep} 
-          totalSteps={onboardingQuestions.length} 
-          onStepPress={handleStepPress} 
+        <ProgressIndicator
+          currentStep={currentStep}
+          totalSteps={onboardingQuestions.length}
+          onStepPress={handleStepPress}
           answers={answers}
         />
       )}
