@@ -9,6 +9,7 @@ import {
   Dimensions,
   Image,
   Alert,
+  PermissionsAndroid,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { tasksRepository } from '../repositories/tasksRepository';
@@ -17,7 +18,7 @@ import TaskCard from '../components/taskCard';
 import { scale, vScale } from '../utils/scaling';
 import { getUserTerraCoins, addUserRewards } from '../repositories/userRepository';
 import firestore from '@react-native-firebase/firestore';
-import { launchCamera } from 'react-native-image-picker';   
+import { launchCamera } from 'react-native-image-picker';
 
 const { width } = Dimensions.get('window');
 
@@ -73,27 +74,40 @@ const RoutineScreen = () => {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      fetchTerraCoins();
-    }
+    if (user) fetchTerraCoins();
   }, [user]);
 
   const fetchTerraCoins = async () => {
     try {
       const result = await getUserTerraCoins(user.uid);
-      if (result.success) {
-        setTerraCoins(result.terraCoins);
-      }
+      if (result.success) setTerraCoins(result.terraCoins);
     } catch (error) {
       console.error('Error fetching TerraCoins:', error);
     }
   };
 
   const handleTaskSelect = (task, isSelected) => {
-    if (isSelected) {
-      setSelectedTasks((prev) => [...prev, task]);
-    } else {
-      setSelectedTasks((prev) => prev.filter((t) => t.id !== task.id));
+    if (isSelected) setSelectedTasks((prev) => [...prev, task]);
+    else setSelectedTasks((prev) => prev.filter((t) => t.id !== task.id));
+  };
+
+  // REQUEST CAMERA PERMISSION FOR ANDROID
+  const requestCameraPermission = async () => {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: 'Camera Permission',
+          message: 'We need camera access to verify tasks',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        }
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (err) {
+      console.warn(err);
+      return false;
     }
   };
 
@@ -103,65 +117,66 @@ const RoutineScreen = () => {
       return;
     }
 
-    launchCamera(
-      { mediaType: 'photo', saveToPhotos: true },
-      async (response) => {
-        if (response.didCancel) {
-          console.log('User cancelled camera');
-          return;
-        } else if (response.errorCode) {
-          console.error('Camera error: ', response.errorMessage);
-          Alert.alert('Error', 'Unable to open camera.');
-          return;
-        }
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) {
+      Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
+      return;
+    }
 
-        try {
-          const today = new Date().toISOString().split('T')[0];
-          const tasksFinishedRef = firestore()
-            .collection('users')
-            .doc(user.uid)
-            .collection('tasks_finished')
-            .doc(today);
-
-          const batch = firestore().batch();
-
-          selectedTasks.forEach((task) => {
-            batch.set(
-              tasksFinishedRef,
-              {
-                [task.id]: {
-                  pointsEarned: 10,
-                  coinsEarned: 1,
-                  finishedAt: firestore.FieldValue.serverTimestamp(),
-                  photoUri: response.assets?.[0]?.uri || null, 
-                },
-              },
-              { merge: true }
-            );
-          });
-
-          await batch.commit();
-
-          await addUserRewards(user.uid, selectedTasks.length * 1, selectedTasks.length * 10);
-
-          setTerraCoins((prev) => prev + selectedTasks.length * 1);
-
-          setEasyTasks((prev) =>
-            prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
-          );
-          setHardTasks((prev) =>
-            prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
-          );
-
-          setSelectedTasks([]);
-
-          Alert.alert('Success', 'Tasks verified and rewards added!');
-        } catch (error) {
-          console.error('Error verifying tasks:', error);
-          Alert.alert('Error', 'Something went wrong verifying tasks.');
-        }
+    launchCamera({ mediaType: 'photo', saveToPhotos: true }, async (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled camera');
+        return;
+      } else if (response.errorCode) {
+        console.error('Camera error: ', response.errorMessage);
+        Alert.alert('Error', 'Unable to open camera.');
+        return;
       }
-    );
+
+      try {
+        const photoUri = response.assets?.[0]?.uri || null;
+        const today = new Date().toISOString().split('T')[0];
+        const tasksFinishedRef = firestore()
+          .collection('users')
+          .doc(user.uid)
+          .collection('tasks_finished')
+          .doc(today);
+
+        const batch = firestore().batch();
+
+        selectedTasks.forEach((task) => {
+          batch.set(
+            tasksFinishedRef,
+            {
+              [task.id]: {
+                pointsEarned: 10,
+                coinsEarned: 1,
+                finishedAt: firestore.FieldValue.serverTimestamp(),
+                photoUri,
+              },
+            },
+            { merge: true }
+          );
+        });
+
+        await batch.commit();
+        await addUserRewards(user.uid, selectedTasks.length * 1, selectedTasks.length * 10);
+        setTerraCoins((prev) => prev + selectedTasks.length * 1);
+
+        setEasyTasks((prev) =>
+          prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
+        );
+        setHardTasks((prev) =>
+          prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
+        );
+
+        setSelectedTasks([]);
+        Alert.alert('Success', 'Tasks verified and rewards added!');
+      } catch (error) {
+        console.error('Error verifying tasks:', error);
+        Alert.alert('Error', 'Something went wrong verifying tasks.');
+      }
+    });
   };
 
   const tasks = activeTab === 'easy' ? easyTasks : hardTasks;
@@ -169,13 +184,9 @@ const RoutineScreen = () => {
   if (selectedTask) {
     return (
       <View style={styles.detailContainer}>
-        <TouchableOpacity
-          onPress={() => setSelectedTask(null)}
-          style={styles.backBtn}
-        >
+        <TouchableOpacity onPress={() => setSelectedTask(null)} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-
         <View style={styles.descWrapper}>
           <View style={styles.descBox}>
             <Text style={styles.detailTitle}>{selectedTask.title}</Text>
@@ -187,11 +198,7 @@ const RoutineScreen = () => {
   }
 
   const renderTask = ({ item }) => (
-    <TaskCard
-      task={item}
-      onPress={(task) => setSelectedTask(task)}
-      onAdd={handleTaskSelect}
-    />
+    <TaskCard task={item} onPress={(task) => setSelectedTask(task)} onAdd={handleTaskSelect} />
   );
 
   if (loading) {
@@ -206,10 +213,7 @@ const RoutineScreen = () => {
     <View style={styles.container}>
       <View style={styles.topBar}>
         <View style={styles.coinBox}>
-          <Image
-            source={require('../assets/images/TerraCoin.png')}
-            style={styles.coinImage}
-          />
+          <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
           <Text style={styles.coinText}>{terraCoins}</Text>
         </View>
       </View>
@@ -224,12 +228,7 @@ const RoutineScreen = () => {
               style={[styles.tab, activeTab === tab && styles.activeTab]}
               onPress={() => setActiveTab(tab)}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab && styles.activeTabText,
-                ]}
-              >
+              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
                 {tab.toUpperCase()}
               </Text>
             </TouchableOpacity>
@@ -239,25 +238,14 @@ const RoutineScreen = () => {
         {tasks.length === 0 ? (
           <Text style={styles.emptyText}>No {activeTab} tasks available</Text>
         ) : (
-          <FlatList
-            data={tasks}
-            keyExtractor={(item) => item.id}
-            renderItem={renderTask}
-            contentContainerStyle={styles.list}
-          />
+          <FlatList data={tasks} keyExtractor={(item) => item.id} renderItem={renderTask} contentContainerStyle={styles.list} />
         )}
       </View>
 
       <View style={styles.verifyWrapper}>
         <Button
           title="Verify Action"
-          style={[
-            styles.verifyBtn,
-            {
-              backgroundColor:
-                selectedTasks.length > 0 ? '#415D43' : '#6A6A6A',
-            },
-          ]}
+          style={[styles.verifyBtn, { backgroundColor: selectedTasks.length > 0 ? '#415D43' : '#6A6A6A' }]}
           textStyle={styles.verifyText}
           onPress={handleVerifyAction}
         />
@@ -270,7 +258,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
   content: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
   topBar: {
     height: vScale(90),
     backgroundColor: '#415D43',
@@ -290,86 +277,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  coinImage: {
-    width: scale(20),
-    height: scale(20),
-    marginRight: scale(5),
-    resizeMode: 'contain',
-  },
+  coinImage: { width: scale(20), height: scale(20), marginRight: scale(5), resizeMode: 'contain' },
   coinText: { color: '#131313', fontWeight: 'bold', fontSize: scale(12) },
-
-  header: {
-    color: '#CCCCCC',
-    fontSize: 20,
-    fontFamily: 'DMSans-Bold',
-    marginBottom: 12,
-  },
-
-  tabContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 16,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    marginHorizontal: 5,
-    borderRadius: 20,
-    backgroundColor: '#CCCCCC',
-    alignItems: 'center',
-  },
+  header: { color: '#CCCCCC', fontSize: 20, fontFamily: 'DMSans-Bold', marginBottom: 12 },
+  tabContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
+  tab: { flex: 1, paddingVertical: 10, marginHorizontal: 5, borderRadius: 20, backgroundColor: '#CCCCCC', alignItems: 'center' },
   activeTab: { backgroundColor: '#415D43' },
   tabText: { color: '#131313', fontWeight: 'bold' },
   activeTabText: { color: '#FFFFFF' },
-
   list: { paddingBottom: 100 },
   emptyText: { textAlign: 'center', color: '#aaa', marginTop: 20 },
-
-  verifyWrapper: {
-    position: 'absolute',
-    bottom: 20,
-    left: 16,
-    right: 16,
-  },
-  verifyBtn: {
-    paddingVertical: 18,
-    borderRadius: 30,
-  },
+  verifyWrapper: { position: 'absolute', bottom: 20, left: 16, right: 16 },
+  verifyBtn: { paddingVertical: 18, borderRadius: 30 },
   verifyText: { color: '#CCCCCC' },
-
-  detailContainer: {
-    flex: 1,
-    backgroundColor: '#131313',
-    padding: 16,
-  },
+  detailContainer: { flex: 1, backgroundColor: '#131313', padding: 16 },
   backBtn: { marginTop: 20 },
   backText: { color: '#CCCCCC', fontSize: 14 },
-
-  descWrapper: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  descBox: {
-    backgroundColor: '#CCCCCC',
-    borderRadius: 10,
-    padding: 20,
-    width: '85%',
-    alignItems: 'center',
-  },
-  detailTitle: {
-    fontSize: 18,
-    fontFamily: 'DMSans-Bold',
-    color: '#415D43',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  detailDesc: {
-    fontSize: 14,
-    color: '#131313',
-    fontFamily: 'DMSans-Regular',
-    textAlign: 'center',
-  },
+  descWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  descBox: { backgroundColor: '#CCCCCC', borderRadius: 10, padding: 20, width: '85%', alignItems: 'center' },
+  detailTitle: { fontSize: 18, fontFamily: 'DMSans-Bold', color: '#415D43', marginBottom: 12, textAlign: 'center' },
+  detailDesc: { fontSize: 14, color: '#131313', fontFamily: 'DMSans-Regular', textAlign: 'center' },
 });
 
 export default RoutineScreen;
