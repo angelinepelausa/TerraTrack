@@ -4,12 +4,14 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { getUserReferralCode, addUserRewards } from '../repositories/userRepository';
 import { scale, vScale } from '../utils/scaling';
+import Toast from '../components/Toast';
 
 const InviteScreen = ({ navigation }) => {
   const [referralCode, setReferralCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [invites, setInvites] = useState([]);
   const [error, setError] = useState(null);
+  const [toastVisible, setToastVisible] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,7 +84,7 @@ const InviteScreen = ({ navigation }) => {
         .update({ rewardsClaimed: true });
 
       setInvites(prev => prev.map(inv => inv.id === inviteId ? { ...inv, rewardsClaimed: true } : inv));
-      Alert.alert('Rewards Claimed');
+      setToastVisible(true);
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Failed to claim prize');
@@ -106,7 +108,6 @@ const InviteScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.contentContainer}>
         <Text style={styles.title}>Invite a friend</Text>
 
-        {/* Referral Code */}
         <View style={styles.referralContainer}>
           <Image source={require('../assets/images/BearInvite.png')} style={styles.bearImage} />
           <View style={styles.referralCard}>
@@ -120,7 +121,6 @@ const InviteScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Rewards */}
         <View style={styles.rewardsCard}>
           <Text style={styles.rewardsTitle}>Earn rewards by inviting a{'\n'}friend to join TerraTrack</Text>
           <View style={styles.rewardItem}>
@@ -133,7 +133,6 @@ const InviteScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Invites Section */}
         <Text style={[styles.title, { marginTop: vScale(30) }]}>Your Invites</Text>
         {invites.length === 0 ? (
           <Text style={{ color: '#CCCCCC', marginTop: vScale(10) }}>No invites yet</Text>
@@ -184,6 +183,12 @@ const InviteScreen = ({ navigation }) => {
 
         {error && <Text style={styles.errorText}>{error}</Text>}
       </ScrollView>
+
+      <Toast
+        message="Rewards Claimed"
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
+      />
     </View>
   );
 };

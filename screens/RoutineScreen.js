@@ -17,6 +17,7 @@ import TaskCard from '../components/taskCard';
 import { scale, vScale } from '../utils/scaling';
 import { getUserTerraCoins, addUserRewards } from '../repositories/userRepository';
 import firestore from '@react-native-firebase/firestore';
+import { launchCamera } from 'react-native-image-picker';   
 
 const { width } = Dimensions.get('window');
 
@@ -102,50 +103,65 @@ const RoutineScreen = () => {
       return;
     }
 
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const tasksFinishedRef = firestore()
-        .collection('users')
-        .doc(user.uid)
-        .collection('tasks_finished')
-        .doc(today);
+    launchCamera(
+      { mediaType: 'photo', saveToPhotos: true },
+      async (response) => {
+        if (response.didCancel) {
+          console.log('User cancelled camera');
+          return;
+        } else if (response.errorCode) {
+          console.error('Camera error: ', response.errorMessage);
+          Alert.alert('Error', 'Unable to open camera.');
+          return;
+        }
 
-      const batch = firestore().batch();
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const tasksFinishedRef = firestore()
+            .collection('users')
+            .doc(user.uid)
+            .collection('tasks_finished')
+            .doc(today);
 
-      selectedTasks.forEach((task) => {
-        batch.set(
-          tasksFinishedRef,
-          {
-            [task.id]: {
-              pointsEarned: 10,
-              coinsEarned: 1,
-              finishedAt: firestore.FieldValue.serverTimestamp(),
-            },
-          },
-          { merge: true }
-        );
-      });
+          const batch = firestore().batch();
 
-      await batch.commit();
+          selectedTasks.forEach((task) => {
+            batch.set(
+              tasksFinishedRef,
+              {
+                [task.id]: {
+                  pointsEarned: 10,
+                  coinsEarned: 1,
+                  finishedAt: firestore.FieldValue.serverTimestamp(),
+                  photoUri: response.assets?.[0]?.uri || null, 
+                },
+              },
+              { merge: true }
+            );
+          });
 
-      await addUserRewards(user.uid, selectedTasks.length * 1, selectedTasks.length * 10);
+          await batch.commit();
 
-      setTerraCoins((prev) => prev + selectedTasks.length * 1);
+          await addUserRewards(user.uid, selectedTasks.length * 1, selectedTasks.length * 10);
 
-      setEasyTasks((prev) =>
-        prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
-      );
-      setHardTasks((prev) =>
-        prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
-      );
+          setTerraCoins((prev) => prev + selectedTasks.length * 1);
 
-      setSelectedTasks([]);
+          setEasyTasks((prev) =>
+            prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
+          );
+          setHardTasks((prev) =>
+            prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
+          );
 
-      Alert.alert('Success', 'Tasks verified and rewards added!');
-    } catch (error) {
-      console.error('Error verifying tasks:', error);
-      Alert.alert('Error', 'Something went wrong verifying tasks.');
-    }
+          setSelectedTasks([]);
+
+          Alert.alert('Success', 'Tasks verified and rewards added!');
+        } catch (error) {
+          console.error('Error verifying tasks:', error);
+          Alert.alert('Error', 'Something went wrong verifying tasks.');
+        }
+      }
+    );
   };
 
   const tasks = activeTab === 'easy' ? easyTasks : hardTasks;
