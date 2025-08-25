@@ -65,21 +65,21 @@ const HomeScreen = ({ navigation }) => {
   ];
 
   useEffect(() => {
-      if (user) {
-        fetchTerraCoins();
+    if (user) {
+      fetchTerraCoins();
+    }
+  }, [user]);
+
+  const fetchTerraCoins = async () => {
+    try {
+      const result = await getUserTerraCoins(user.uid); 
+      if (result.success) {
+        setTerraCoins(result.terraCoins);
       }
-    }, [user]);
-  
-    const fetchTerraCoins = async () => {
-      try {
-        const result = await getUserTerraCoins(user.uid); 
-        if (result.success) {
-          setTerraCoins(result.terraCoins);
-        }
-      } catch (error) {
-        console.error('Error fetching TerraCoins:', error);
-      }
-    };
+    } catch (error) {
+      console.error('Error fetching TerraCoins:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -143,7 +143,10 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {communityProgress && (
-          <View style={styles.communityBox}>
+          <TouchableOpacity
+            style={styles.communityBox}
+            onPress={() => navigation.navigate('CommunityProgressScreen')}
+          >
             <Text style={styles.communityHeader}>Community Progress</Text>
             <Text style={styles.communityTitle}>
               Finish {communityProgress.goal} tasks
@@ -157,7 +160,7 @@ const HomeScreen = ({ navigation }) => {
                 }
               />
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       </View>
     </View>

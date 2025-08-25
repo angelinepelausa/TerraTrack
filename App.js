@@ -16,6 +16,7 @@ import EducationalDetailScreen from './screens/EducationalDetailScreen';
 import EducationalQuizScreen from './screens/EducationalQuizScreen';
 import WeeklyQuizScreen from './screens/WeeklyQuizScreen';
 import InviteScreen from './screens/InviteScreen';
+import CommunityProgressScreen from './screens/CommunityProgressScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -92,6 +93,10 @@ const App = () => {
           <Stack.Screen 
             name="InviteScreen" 
             component={InviteScreen}
+          />
+          <Stack.Screen 
+            name="CommunityProgressScreen" 
+            component={CommunityProgressScreen}
           />
         </Stack.Navigator>
       </NavigationContainer>
