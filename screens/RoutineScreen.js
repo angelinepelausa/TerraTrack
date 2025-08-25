@@ -1,11 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  ActivityIndicator,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+  Image,
+  Alert,
+} from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { tasksRepository } from '../repositories/tasksRepository';
 import Button from '../components/Button';
 import TaskCard from '../components/taskCard';
 import { scale, vScale } from '../utils/scaling';
-import { getUserTerraCoins } from '../repositories/userRepository';
+import { getUserTerraCoins, addUserRewards } from '../repositories/userRepository';
+import firestore from '@react-native-firebase/firestore';
 
 const { width } = Dimensions.get('window');
 
@@ -16,7 +27,7 @@ const RoutineScreen = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('easy');
   const [selectedTask, setSelectedTask] = useState(null);
-  const [verifyEnabled, setVerifyEnabled] = useState(false);
+  const [selectedTasks, setSelectedTasks] = useState([]);
   const [terraCoins, setTerraCoins] = useState(0);
 
   const fetchAllTasks = async () => {
@@ -27,8 +38,28 @@ const RoutineScreen = () => {
         tasksRepository.getEasyTasks(),
         tasksRepository.getHardTasks(),
       ]);
-      setEasyTasks(easy);
-      setHardTasks(hard);
+
+      const today = new Date().toISOString().split('T')[0];
+      const finishedRef = firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('tasks_finished')
+        .doc(today);
+
+      const finishedSnapshot = await finishedRef.get();
+
+      let finishedData = {};
+      if (!finishedSnapshot.exists) {
+        await finishedRef.set({});
+        finishedData = {};
+      } else {
+        finishedData = finishedSnapshot.data() || {};
+      }
+
+      const finishedTasks = Object.keys(finishedData);
+
+      setEasyTasks(easy.filter((task) => !finishedTasks.includes(task.id)));
+      setHardTasks(hard.filter((task) => !finishedTasks.includes(task.id)));
     } catch (error) {
       console.error('Error loading tasks:', error);
     } finally {
@@ -41,29 +72,91 @@ const RoutineScreen = () => {
   }, [user]);
 
   useEffect(() => {
-        if (user) {
-          fetchTerraCoins();
-        }
-      }, [user]);
-    
-      const fetchTerraCoins = async () => {
-        try {
-          const result = await getUserTerraCoins(user.uid); 
-          if (result.success) {
-            setTerraCoins(result.terraCoins);
-          }
-        } catch (error) {
-          console.error('Error fetching TerraCoins:', error);
-        }
-      };
-  
+    if (user) {
+      fetchTerraCoins();
+    }
+  }, [user]);
+
+  const fetchTerraCoins = async () => {
+    try {
+      const result = await getUserTerraCoins(user.uid);
+      if (result.success) {
+        setTerraCoins(result.terraCoins);
+      }
+    } catch (error) {
+      console.error('Error fetching TerraCoins:', error);
+    }
+  };
+
+  const handleTaskSelect = (task, isSelected) => {
+    if (isSelected) {
+      setSelectedTasks((prev) => [...prev, task]);
+    } else {
+      setSelectedTasks((prev) => prev.filter((t) => t.id !== task.id));
+    }
+  };
+
+  const handleVerifyAction = async () => {
+    if (selectedTasks.length === 0) {
+      Alert.alert('No Task Selected', 'Please select at least one task to verify.');
+      return;
+    }
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const tasksFinishedRef = firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('tasks_finished')
+        .doc(today);
+
+      const batch = firestore().batch();
+
+      selectedTasks.forEach((task) => {
+        batch.set(
+          tasksFinishedRef,
+          {
+            [task.id]: {
+              pointsEarned: 10,
+              coinsEarned: 1,
+              finishedAt: firestore.FieldValue.serverTimestamp(),
+            },
+          },
+          { merge: true }
+        );
+      });
+
+      await batch.commit();
+
+      await addUserRewards(user.uid, selectedTasks.length * 1, selectedTasks.length * 10);
+
+      setTerraCoins((prev) => prev + selectedTasks.length * 1);
+
+      setEasyTasks((prev) =>
+        prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
+      );
+      setHardTasks((prev) =>
+        prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
+      );
+
+      setSelectedTasks([]);
+
+      Alert.alert('Success', 'Tasks verified and rewards added!');
+    } catch (error) {
+      console.error('Error verifying tasks:', error);
+      Alert.alert('Error', 'Something went wrong verifying tasks.');
+    }
+  };
 
   const tasks = activeTab === 'easy' ? easyTasks : hardTasks;
 
   if (selectedTask) {
     return (
       <View style={styles.detailContainer}>
-        <TouchableOpacity onPress={() => setSelectedTask(null)} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => setSelectedTask(null)}
+          style={styles.backBtn}
+        >
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
 
@@ -81,7 +174,7 @@ const RoutineScreen = () => {
     <TaskCard
       task={item}
       onPress={(task) => setSelectedTask(task)}
-      onAdd={() => setVerifyEnabled((prev) => !prev)}
+      onAdd={handleTaskSelect}
     />
   );
 
@@ -97,7 +190,10 @@ const RoutineScreen = () => {
     <View style={styles.container}>
       <View style={styles.topBar}>
         <View style={styles.coinBox}>
-          <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
+          <Image
+            source={require('../assets/images/TerraCoin.png')}
+            style={styles.coinImage}
+          />
           <Text style={styles.coinText}>{terraCoins}</Text>
         </View>
       </View>
@@ -106,13 +202,18 @@ const RoutineScreen = () => {
         <Text style={styles.header}>Routine</Text>
 
         <View style={styles.tabContainer}>
-          {['easy', 'hard'].map(tab => (
+          {['easy', 'hard'].map((tab) => (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
-              onPress={() => setActiveTab(tab === 'easy' ? 'easy' : 'hard')}
+              onPress={() => setActiveTab(tab)}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.activeTabText,
+                ]}
+              >
                 {tab.toUpperCase()}
               </Text>
             </TouchableOpacity>
@@ -136,9 +237,13 @@ const RoutineScreen = () => {
           title="Verify Action"
           style={[
             styles.verifyBtn,
-            { backgroundColor: verifyEnabled ? '#415D43' : '#6A6A6A' },
+            {
+              backgroundColor:
+                selectedTasks.length > 0 ? '#415D43' : '#6A6A6A',
+            },
           ]}
           textStyle={styles.verifyText}
+          onPress={handleVerifyAction}
         />
       </View>
     </View>
@@ -221,7 +326,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#131313',
     padding: 16,
   },
-  backBtn: { marginBottom: 16 },
+  backBtn: { marginTop: 20 },
   backText: { color: '#CCCCCC', fontSize: 14 },
 
   descWrapper: {

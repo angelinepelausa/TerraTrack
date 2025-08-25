@@ -6,32 +6,42 @@ const TaskCard = ({ task, onPress, onAdd }) => {
   const [isClicked, setIsClicked] = useState(false);
 
   const handleAddPress = () => {
-    setIsClicked(!isClicked);
-    onAdd(task);
+    const newClicked = !isClicked;
+    setIsClicked(newClicked);
+    onAdd(task, newClicked);
   };
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => onPress(task)}
-      activeOpacity={0.8}
-    >
-      <Text style={styles.title}>{task.title}</Text>
-      <TouchableOpacity onPress={handleAddPress} style={styles.addBtnContainer}>
+    <View style={styles.card}>
+      <TouchableOpacity
+        onPress={() => onPress(task)}
+        activeOpacity={0.8}
+        style={styles.titleWrapper}
+      >
+        <Text style={styles.title}>{task.title}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={handleAddPress}
+        style={styles.addBtnContainer}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
         <Image
-          source={isClicked 
-            ? require('../assets/images/addButtonClicked.png')
-            : require('../assets/images/addButton.png')}
+          source={
+            isClicked
+              ? require('../assets/images/addButtonClicked.png')
+              : require('../assets/images/addButton.png')
+          }
           style={styles.addBtn}
         />
       </TouchableOpacity>
-    </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    width: '100%', 
+    width: '100%',
     minHeight: vScale(75),
     backgroundColor: '#CCCCCC',
     borderRadius: scale(10),
@@ -41,11 +51,11 @@ const styles = StyleSheet.create({
     marginBottom: vScale(12),
     justifyContent: 'space-between',
   },
+  titleWrapper: { flex: 1 },
   title: {
     fontSize: scale(14),
     fontFamily: 'DMSans-Bold',
     color: '#131313',
-    flex: 1,
   },
   addBtnContainer: {
     padding: scale(6),
