@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
-import { getLeaderboard } from '../repositories/leaderboardRepository';
+import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { getLeaderboard, getUserRank } from '../repositories/leaderboardRepository';
 import { useAuth } from '../context/AuthContext';
 
 import Avatar from '../assets/images/Avatar.png';
@@ -9,13 +9,19 @@ import Crown from '../assets/images/Crown.png';
 const LeaderboardsScreen = () => {
   const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState([]);
+  const [currentUserRank, setCurrentUserRank] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const data = await getLeaderboard();
-        setLeaderboard(data);
+        const [topUsers, userRank] = await Promise.all([
+          getLeaderboard(10),
+          getUserRank(user?.uid),
+        ]);
+
+        setLeaderboard(topUsers);
+        setCurrentUserRank(userRank);
       } catch (error) {
         console.error("Failed to load leaderboard:", error);
       } finally {
@@ -24,7 +30,7 @@ const LeaderboardsScreen = () => {
     };
 
     loadData();
-  }, []);
+  }, [user?.uid]);
 
   if (loading) {
     return <ActivityIndicator size="large" style={{ flex: 1 }} />;
@@ -33,34 +39,60 @@ const LeaderboardsScreen = () => {
   const top3 = leaderboard.slice(0, 3);
   const rest = leaderboard.slice(3);
 
+  const isBeyond10 = currentUserRank && currentUserRank.rank > 10;
+  const listItemPaddingVertical = isBeyond10 ? 4 : 6;
+  const podiumAvatarSize = isBeyond10 ? 70 : 90;
+  const rankCircleSize = isBeyond10 ? 20 : 28;
+  const restContainerPaddingVertical = isBeyond10 ? 5 : 10;
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.container}>
       <Text style={styles.title}>Leaderboards</Text>
 
       {/* Podium */}
       <View style={styles.podium}>
         {top3[1] && (
-          <View style={[styles.podiumItem, { marginTop: 40 }]}>
-            <RankedAvatar user={top3[1]} currentUserId={user?.uid} />
+          <View style={[styles.podiumItem, { marginTop: 30 }]}>
+            <RankedAvatar
+              user={top3[1]}
+              currentUserId={user?.uid}
+              avatarSize={podiumAvatarSize}
+              rankCircleSize={rankCircleSize}
+            />
           </View>
         )}
 
         {top3[0] && (
-          <View style={[styles.podiumItem, { marginBottom: 30 }]}>
+          <View style={[styles.podiumItem, { marginBottom: 20 }]}>
             <Image source={Crown} style={styles.crown} />
-            <RankedAvatar user={top3[0]} currentUserId={user?.uid} />
+            <RankedAvatar
+              user={top3[0]}
+              currentUserId={user?.uid}
+              avatarSize={podiumAvatarSize}
+              rankCircleSize={rankCircleSize}
+            />
           </View>
         )}
 
         {top3[2] && (
-          <View style={[styles.podiumItem, { marginTop: 40 }]}>
-            <RankedAvatar user={top3[2]} currentUserId={user?.uid} />
+          <View style={[styles.podiumItem, { marginTop: 30 }]}>
+            <RankedAvatar
+              user={top3[2]}
+              currentUserId={user?.uid}
+              avatarSize={podiumAvatarSize}
+              rankCircleSize={rankCircleSize}
+            />
           </View>
         )}
       </View>
 
       {rest.length > 0 && (
-        <View style={styles.restContainer}>
+        <View
+          style={[
+            styles.restContainer,
+            { paddingVertical: restContainerPaddingVertical },
+          ]}
+        >
           {rest.map((item) => {
             const isCurrentUser = item.id === user?.uid;
             const highlight = isCurrentUser && item.rank >= 4 && item.rank <= 10;
@@ -70,6 +102,7 @@ const LeaderboardsScreen = () => {
                 key={item.id}
                 style={[
                   styles.listItem,
+                  { paddingVertical: listItemPaddingVertical },
                   highlight && { backgroundColor: "#415D43" },
                 ]}
               >
@@ -101,13 +134,38 @@ const LeaderboardsScreen = () => {
               </View>
             );
           })}
+
+          {isBeyond10 && (
+            <View
+              style={[
+                styles.listItem,
+                { backgroundColor: "#415D43", marginTop: 10, paddingVertical: 4 },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.listRank,
+                  { color: "#D9D9D9", backgroundColor: "transparent" },
+                ]}
+              >
+                {currentUserRank.rank}
+              </Text>
+              <Image source={Avatar} style={styles.listAvatar} />
+              <Text style={[styles.listUsername, { color: "#D9D9D9" }]}>
+                {currentUserRank.username}
+              </Text>
+              <Text style={[styles.listPoints, { color: "#D9D9D9" }]}>
+                {currentUserRank.terraPoints} pts
+              </Text>
+            </View>
+          )}
         </View>
       )}
-    </ScrollView>
+    </View>
   );
 };
 
-const RankedAvatar = ({ user, currentUserId }) => {
+const RankedAvatar = ({ user, currentUserId, avatarSize, rankCircleSize }) => {
   const isCurrentUser = user.id === currentUserId;
 
   return (
@@ -115,11 +173,25 @@ const RankedAvatar = ({ user, currentUserId }) => {
       <Image
         source={Avatar}
         style={[
-          styles.avatar,
-          isCurrentUser && { borderWidth: 3, borderColor: '#415D43', borderRadius: 45 },
+          { width: avatarSize, height: avatarSize },
+          isCurrentUser && { borderWidth: 3, borderColor: '#415D43', borderRadius: avatarSize / 2 },
         ]}
       />
-      <View style={styles.rankCircle}>
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 40,
+          left: '50%',
+          transform: [{ translateX: -rankCircleSize / 2 }],
+          backgroundColor: '#415D43',
+          width: rankCircleSize,
+          height: rankCircleSize,
+          borderRadius: rankCircleSize / 2,
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 3,
+        }}
+      >
         <Text style={styles.rankText}>{user.rank}</Text>
       </View>
       <Text style={styles.username}>{user.username}</Text>
@@ -130,12 +202,10 @@ const RankedAvatar = ({ user, currentUserId }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#000',
-    alignItems: 'center',          
-    justifyContent: 'center',      
     paddingVertical: 20,
-    paddingBottom: 0
+    alignItems: 'center',
+    backgroundColor: '#000',
+    paddingBottom: 30,
   },
   title: {
     fontSize: 18,
@@ -168,24 +238,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
     position: 'relative',
   },
-  avatar: {
-    width: 90,
-    height: 90,
-    resizeMode: 'contain',
-  },
-  rankCircle: {
-    position: 'absolute',
-    bottom: 40,
-    left: '50%',
-    transform: [{ translateX: -14 }],
-    backgroundColor: '#415D43',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 3,
-  },
   rankText: {
     color: '#CCCCCC',
     fontWeight: 'bold',
@@ -204,7 +256,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#111D13',
     borderRadius: 15,
     paddingHorizontal: 20,
-    paddingVertical: 10,
     marginTop: 10,
     width: '100%',
     alignSelf: 'center',
@@ -213,7 +264,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#D9D9D9',
     borderRadius: 10,
-    paddingVertical: 6,
     paddingHorizontal: 10,
     marginVertical: 6,
     alignItems: 'center',
