@@ -19,8 +19,33 @@ import { scale, vScale } from '../utils/scaling';
 import { getUserTerraCoins, addUserRewards } from '../repositories/userRepository';
 import firestore from '@react-native-firebase/firestore';
 import { launchCamera } from 'react-native-image-picker';
+import axios from 'axios';
 
 const { width } = Dimensions.get('window');
+
+const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dgdzmrhc4/image/upload';
+const UPLOAD_PRESET = 'terratrack';
+
+const uploadImageToCloudinary = async (uri) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', {
+      uri,
+      type: 'image/jpeg',
+      name: 'task-photo.jpg',
+    });
+    formData.append('upload_preset', UPLOAD_PRESET);
+
+    const response = await axios.post(CLOUDINARY_URL, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data.secure_url;
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    throw error;
+  }
+};
 
 const RoutineScreen = () => {
   const { user } = useAuth();
@@ -91,7 +116,6 @@ const RoutineScreen = () => {
     else setSelectedTasks((prev) => prev.filter((t) => t.id !== task.id));
   };
 
-  // REQUEST CAMERA PERMISSION FOR ANDROID
   const requestCameraPermission = async () => {
     try {
       const granted = await PermissionsAndroid.request(
@@ -111,73 +135,99 @@ const RoutineScreen = () => {
     }
   };
 
-  const handleVerifyAction = async () => {
-    if (selectedTasks.length === 0) {
-      Alert.alert('No Task Selected', 'Please select at least one task to verify.');
-      return;
-    }
+const handleVerifyAction = async () => {
+  if (selectedTasks.length === 0) {
+    Alert.alert('No Task Selected', 'Please select at least one task to verify.');
+    return;
+  }
 
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
-      return;
-    }
+  const hasPermission = await requestCameraPermission();
+  if (!hasPermission) {
+    Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
+    return;
+  }
 
-    launchCamera({ mediaType: 'photo', saveToPhotos: true }, async (response) => {
-      if (response.didCancel) {
-        console.log('User cancelled camera');
-        return;
-      } else if (response.errorCode) {
-        console.error('Camera error: ', response.errorMessage);
-        Alert.alert('Error', 'Unable to open camera.');
-        return;
-      }
+  try {
+    const photoUris = [];
 
-      try {
-        const photoUri = response.assets?.[0]?.uri || null;
-        const today = new Date().toISOString().split('T')[0];
-        const tasksFinishedRef = firestore()
-          .collection('users')
-          .doc(user.uid)
-          .collection('tasks_finished')
-          .doc(today);
-
-        const batch = firestore().batch();
-
-        selectedTasks.forEach((task) => {
-          batch.set(
-            tasksFinishedRef,
-            {
-              [task.id]: {
-                pointsEarned: 10,
-                coinsEarned: 1,
-                finishedAt: firestore.FieldValue.serverTimestamp(),
-                photoUri,
-              },
-            },
-            { merge: true }
-          );
+    for (let i = 0; i < Math.min(3, selectedTasks.length); i++) {
+      const uri = await new Promise((resolve) => {
+        launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
+          if (response.didCancel || response.errorCode) resolve(null);
+          else resolve(response.assets?.[0]?.uri || null);
         });
+      });
+      photoUris.push(uri);
+    }
 
-        await batch.commit();
-        await addUserRewards(user.uid, selectedTasks.length * 1, selectedTasks.length * 10);
-        setTerraCoins((prev) => prev + selectedTasks.length * 1);
+    const today = new Date().toISOString().split('T')[0];
 
-        setEasyTasks((prev) =>
-          prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
-        );
-        setHardTasks((prev) =>
-          prev.filter((t) => !selectedTasks.some((s) => s.id === t.id))
-        );
+    const tasksFinishedRef = firestore()
+      .collection('users')
+      .doc(user.uid)
+      .collection('tasks_finished')
+      .doc(today);
 
-        setSelectedTasks([]);
-        Alert.alert('Success', 'Tasks verified and rewards added!');
-      } catch (error) {
-        console.error('Error verifying tasks:', error);
-        Alert.alert('Error', 'Something went wrong verifying tasks.');
+    const verificationsRef = firestore()
+      .collection('users')
+      .doc(user.uid)
+      .collection('verifications')
+      .doc(today);
+
+    const batch = firestore().batch();
+
+    for (let i = 0; i < selectedTasks.length; i++) {
+      const task = selectedTasks[i];
+      const isFirst3 = i < 3;
+      let photoUrl = null;
+
+      if (isFirst3 && photoUris[i]) {
+        photoUrl = await uploadImageToCloudinary(photoUris[i]);
+        console.log('Uploaded to Cloudinary:', photoUrl);
       }
-    });
-  };
+
+      batch.set(
+        tasksFinishedRef,
+        {
+          [task.id]: {
+            pointsEarned: 10,
+            coinsEarned: 1,
+            finishedAt: firestore.FieldValue.serverTimestamp(),
+            photoUrl: photoUrl || null,
+          },
+        },
+        { merge: true }
+      );
+
+      batch.set(
+        verificationsRef,
+        {
+          [task.id]: {
+            photoUrl: photoUrl || null,
+            status: 'pending',
+            verifiedBy: '',
+            submittedAt: firestore.FieldValue.serverTimestamp(),
+          },
+        },
+        { merge: true }
+      );
+    }
+
+    await batch.commit();
+
+    await addUserRewards(user.uid, selectedTasks.length, selectedTasks.length * 10);
+    setTerraCoins((prev) => prev + selectedTasks.length);
+
+    setEasyTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
+    setHardTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
+
+    setSelectedTasks([]);
+    Alert.alert('Success', 'Tasks verified and rewards added!');
+  } catch (error) {
+    console.error('Error verifying tasks:', error);
+    Alert.alert('Error', 'Something went wrong verifying tasks.');
+  }
+};
 
   const tasks = activeTab === 'easy' ? easyTasks : hardTasks;
 
@@ -238,7 +288,12 @@ const RoutineScreen = () => {
         {tasks.length === 0 ? (
           <Text style={styles.emptyText}>No {activeTab} tasks available</Text>
         ) : (
-          <FlatList data={tasks} keyExtractor={(item) => item.id} renderItem={renderTask} contentContainerStyle={styles.list} />
+          <FlatList
+            data={tasks}
+            keyExtractor={(item) => item.id}
+            renderItem={renderTask}
+            contentContainerStyle={styles.list}
+          />
         )}
       </View>
 
