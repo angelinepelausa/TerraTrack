@@ -1,9 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Dimensions, ActivityIndicator, Image } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  Dimensions,
+  ActivityIndicator,
+  Image,
+} from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { educationalContentRepository } from '../repositories/educationalContentRepository';
 import { getUserTerraCoins } from '../repositories/userRepository';
 import { hasAttemptedQuiz } from '../repositories/quizAttemptsRepository';
+import EducationalContentCard from '../components/EducationalContentCard';
 
 const { width } = Dimensions.get('window');
 
@@ -53,9 +64,10 @@ const EducationalScreen = ({ navigation }) => {
     }
   };
 
-  const filteredContent = content.filter(item =>
-    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredContent = content.filter(
+    (item) =>
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
@@ -70,7 +82,10 @@ const EducationalScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.topBar}>
         <View style={styles.coinBox}>
-          <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
+          <Image
+            source={require('../assets/images/TerraCoin.png')}
+            style={styles.coinImage}
+          />
           <Text style={styles.coinText}>{terraCoins}</Text>
         </View>
       </View>
@@ -78,9 +93,11 @@ const EducationalScreen = ({ navigation }) => {
       <View style={styles.content}>
         <Text style={styles.header}>Educational Materials</Text>
 
-        {/* Search */}
         <View style={styles.searchContainer}>
-          <Image source={require('../assets/images/Search.png')} style={styles.searchIcon} />
+          <Image
+            source={require('../assets/images/Search.png')}
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchBar}
             placeholder="Search"
@@ -97,13 +114,12 @@ const EducationalScreen = ({ navigation }) => {
             data={filteredContent}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.contentCard}
-                onPress={() => navigation.navigate('EducationalDetailScreen', { content: item })}
-              >
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardDescription}>{item.description}</Text>
-              </TouchableOpacity>
+              <EducationalContentCard
+                item={item}
+                onPress={() =>
+                  navigation.navigate('EducationalDetailScreen', { content: item })
+                }
+              />
             )}
             contentContainerStyle={styles.listContainer}
           />
@@ -114,20 +130,9 @@ const EducationalScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#131313',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#131313' },
+  content: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   topBar: {
     height: 90,
     backgroundColor: '#415D43',
@@ -151,11 +156,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
     resizeMode: 'contain',
   },
-  coinText: {
-    color: '#131313',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
+  coinText: { color: '#131313', fontWeight: 'bold', fontSize: 12 },
   header: {
     color: '#709775',
     fontSize: 20,
@@ -177,36 +178,9 @@ const styles = StyleSheet.create({
     tintColor: '#131313',
     marginRight: 8,
   },
-  searchBar: {
-    flex: 1,
-    paddingVertical: 14,
-    color: '#131313',
-  },
-  listContainer: {
-    paddingBottom: 20,
-  },
-  contentCard: {
-    backgroundColor: '#D9D9D9',
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 12,
-  },
-  cardTitle: {
-    color: '#131313',
-    fontSize: 16,
-    fontFamily: 'DMSans-Bold',
-    marginBottom: 8,
-  },
-  cardDescription: {
-    color: '#415D43',
-    fontSize: 14,
-    fontFamily: 'DMSans-Regular',
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#CCCCCC',
-    marginTop: 20,
-  },
+  searchBar: { flex: 1, paddingVertical: 14, color: '#131313' },
+  listContainer: { paddingBottom: 20 },
+  emptyText: { textAlign: 'center', color: '#CCCCCC', marginTop: 20 },
 });
 
 export default EducationalScreen;

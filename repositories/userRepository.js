@@ -15,28 +15,28 @@ const generateReferralCode = () => {
 export const createUserDocument = async (userData) => {
   try {
     const referralCode = generateReferralCode();
-    
+
     await firestore()
-      .collection('users')
+      .collection("users")
       .doc(userData.userId)
-      .set({
-        email: userData.email,
-        phoneNumber: userData.phoneNumber,
-        username: userData.username,
-        terraCoins: 0,
-        terraPoints: 0,
-        referralCode: referralCode,
-        createdAt: firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      .set(
+        {
+          email: userData.email,
+          phoneNumber: userData.phoneNumber,
+          username: userData.username,
+          terraCoins: 0,
+          terraPoints: 0,
+          referralCode: referralCode,
+          createdAt: firestore.FieldValue.serverTimestamp(),
+          status: "Active", 
+        },
+        { merge: true }
+      );
 
     return { success: true, referralCode };
   } catch (error) {
-    console.error('Firestore error:', error);
-    return { 
-      success: false, 
-      error: error.message,
-      code: error.code
-    };
+    console.error("Firestore error:", error);
+    return { success: false, error: error.message, code: error.code };
   }
 };
 
@@ -111,5 +111,27 @@ export const getUserReferralCode = async (userId) => {
       success: false, 
       error: error.message 
     };
+  }
+};
+
+export const getUsersByFilter = async (filter = {}) => {
+  try {
+    let query = firestore().collection("users");
+
+    if (filter.status) {
+      query = query.where("status", "==", filter.status);
+    }
+
+    if (filter.dateRange?.from && filter.dateRange?.to) {
+      query = query
+        .where("createdAt", ">=", filter.dateRange.from)
+        .where("createdAt", "<=", filter.dateRange.to);
+    }
+
+    const snapshot = await query.get();
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error fetching filtered users:", error);
+    return [];
   }
 };

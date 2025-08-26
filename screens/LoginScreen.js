@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { Text, View, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { checkOnboardingStatus } from '../repositories/onboardingRepository';
+import { checkIfUserIsAdmin } from '../repositories/adminRepository';
 import { scale, vScale } from '../utils/scaling';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     GoogleSignin.configure({
@@ -19,21 +21,36 @@ const LoginScreen = ({ navigation }) => {
   }, []);
 
   const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    setLoading(true);
     try {
       const { user } = await auth().signInWithEmailAndPassword(email.trim(), password);
-      const hasOnboarding = await checkOnboardingStatus(user.uid);
-
-      if (hasOnboarding) {
-        navigation.replace('HomeScreen');
+      
+      const isAdmin = await checkIfUserIsAdmin(user.uid);
+      
+      if (isAdmin) {
+        navigation.replace('AdminDashboard');
       } else {
-        navigation.replace('Onboarding');
+        const hasOnboarding = await checkOnboardingStatus(user.uid);
+        if (hasOnboarding) {
+          navigation.replace('HomeScreen');
+        } else {
+          navigation.replace('Onboarding');
+        }
       }
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
+    setLoading(true);
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
@@ -43,18 +60,34 @@ const LoginScreen = ({ navigation }) => {
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
       const { user } = await auth().signInWithCredential(googleCredential);
 
-      const hasOnboarding = await checkOnboardingStatus(user.uid);
-
-      if (hasOnboarding) {
-        navigation.replace('HomeScreen');
+      const isAdmin = await checkIfUserIsAdmin(user.uid);
+      
+      if (isAdmin) {
+        navigation.replace('AdminDashboard');
       } else {
-        navigation.replace('Onboarding');
+        const hasOnboarding = await checkOnboardingStatus(user.uid);
+        if (hasOnboarding) {
+          navigation.replace('HomeScreen');
+        } else {
+          navigation.replace('Onboarding');
+        }
       }
     } catch (err) {
       console.error('Google Sign-In error:', err);
       Alert.alert('Sign-In Failed', err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#709775" />
+        <Text style={styles.loadingText}>Signing in...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -69,18 +102,21 @@ const LoginScreen = ({ navigation }) => {
         <TextInput
           style={styles.input}
           placeholder="Email Address"
+          placeholderTextColor="#666"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          keyboardType="email-address"
         />
         <TextInput
           style={styles.input}
           placeholder="Password"
+          placeholderTextColor="#666"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
         />
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+        <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
           <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
 
@@ -97,7 +133,7 @@ const LoginScreen = ({ navigation }) => {
 
       <View style={styles.texts}>
         <Text style={styles.signupText}>Or continue with</Text>
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
+        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn} disabled={loading}>
           <Text style={styles.loginButtonText}>Google</Text>
         </TouchableOpacity>
       </View>
@@ -112,9 +148,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     backgroundColor: '#131313' 
   },
-  content: {
-    width: '85%',
-    alignItems: 'center',
+  loadingContainer: {
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: '#709775',
+    fontFamily: 'DMSans-Bold',
+    marginTop: vScale(20),
+    fontSize: scale(14),
   },
   headContainer: { 
     padding: scale(18), 
@@ -147,6 +188,7 @@ const styles = StyleSheet.create({
     fontSize: scale(11),
     paddingLeft: scale(20),
     width: '100%',
+    color: '#000',
   },
   loginButton: {
     backgroundColor: '#415D43',

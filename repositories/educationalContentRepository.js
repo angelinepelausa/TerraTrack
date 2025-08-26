@@ -31,7 +31,31 @@ export const getAllContent = async () => {
   }
 };
 
+export const addContent = async (data) => {
+  try {
+    const docRef = await firestore().collection('educational_content').add(data);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error adding educational content:', error);
+    throw error;
+  }
+};
+
+export const deleteContent = async (contentId) => {
+  try {
+    await firestore()
+      .collection('educational_content')
+      .doc(contentId)
+      .delete();
+  } catch (error) {
+    console.error('Error deleting educational content:', error);
+    throw error;
+  }
+};
+
 export const educationalContentRepository = {
   getContent,
   getAllContent,
+  addContent,
+  deleteContent
 };

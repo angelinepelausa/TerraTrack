@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider } from './context/AuthContext';
+import { FilterProvider } from './context/FilterContext'; 
 import SplashScreen from './screens/Splash';
 import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
@@ -18,6 +19,10 @@ import WeeklyQuizScreen from './screens/WeeklyQuizScreen';
 import InviteScreen from './screens/InviteScreen';
 import CommunityProgressScreen from './screens/CommunityProgressScreen';
 import CameraVerificationScreen from './screens/CameraVerificationScreen';
+import AdminDashboard from './screens/AdminDashboard';
+import AdminUserManagement from './screens/AdminUserManagement';
+import AdminEducationalMaterials from './screens/AdminEducationalMaterials';
+import AddEducationalMaterial from './screens/AddEducationalMaterial';
 
 const Stack = createNativeStackNavigator();
 
@@ -102,6 +107,28 @@ const App = () => {
           <Stack.Screen 
             name="CameraVerificationScreen" 
             component={CameraVerificationScreen}
+          />
+          <Stack.Screen 
+            name="AdminDashboard"
+            component={AdminDashboard}
+          />
+          <Stack.Screen 
+            name="AdminUserManagement"
+            options={{ gestureEnabled: false }}
+          >
+            {props => (
+              <FilterProvider>
+                <AdminUserManagement {...props} />
+              </FilterProvider>
+            )}
+          </Stack.Screen>
+          <Stack.Screen 
+            name="AdminEducationalMaterials"
+            component={AdminEducationalMaterials}
+          />
+          <Stack.Screen 
+            name="AddEducationalMaterial"
+            component={AddEducationalMaterial}
           />
         </Stack.Navigator>
       </NavigationContainer>
