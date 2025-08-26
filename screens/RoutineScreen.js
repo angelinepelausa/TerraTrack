@@ -135,99 +135,104 @@ const RoutineScreen = () => {
     }
   };
 
-const handleVerifyAction = async () => {
-  if (selectedTasks.length === 0) {
-    Alert.alert('No Task Selected', 'Please select at least one task to verify.');
-    return;
-  }
-
-  const hasPermission = await requestCameraPermission();
-  if (!hasPermission) {
-    Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
-    return;
-  }
-
-  try {
-    const photoUris = [];
-
-    for (let i = 0; i < Math.min(3, selectedTasks.length); i++) {
-      const uri = await new Promise((resolve) => {
-        launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
-          if (response.didCancel || response.errorCode) resolve(null);
-          else resolve(response.assets?.[0]?.uri || null);
-        });
-      });
-      photoUris.push(uri);
+  const handleVerifyAction = async () => {
+    if (selectedTasks.length === 0) {
+      Alert.alert('No Task Selected', 'Please select at least one task to verify.');
+      return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) {
+      Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
+      return;
+    }
 
-    const tasksFinishedRef = firestore()
-      .collection('users')
-      .doc(user.uid)
-      .collection('tasks_finished')
-      .doc(today);
+    try {
+      const photoUris = [];
 
-    const verificationsRef = firestore()
-      .collection('users')
-      .doc(user.uid)
-      .collection('verifications')
-      .doc(today);
-
-    const batch = firestore().batch();
-
-    for (let i = 0; i < selectedTasks.length; i++) {
-      const task = selectedTasks[i];
-      const isFirst3 = i < 3;
-      let photoUrl = null;
-
-      if (isFirst3 && photoUris[i]) {
-        photoUrl = await uploadImageToCloudinary(photoUris[i]);
-        console.log('Uploaded to Cloudinary:', photoUrl);
+      // Capture photos for up to 3 tasks
+      for (let i = 0; i < Math.min(3, selectedTasks.length); i++) {
+        const uri = await new Promise((resolve) => {
+          launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
+            if (response.didCancel || response.errorCode) resolve(null);
+            else resolve(response.assets?.[0]?.uri || null);
+          });
+        });
+        photoUris.push(uri);
       }
 
-      batch.set(
-        tasksFinishedRef,
-        {
-          [task.id]: {
-            pointsEarned: 10,
-            coinsEarned: 1,
-            finishedAt: firestore.FieldValue.serverTimestamp(),
-            photoUrl: photoUrl || null,
-          },
-        },
-        { merge: true }
-      );
+      const today = new Date().toISOString().split('T')[0];
 
-      batch.set(
-        verificationsRef,
-        {
-          [task.id]: {
-            photoUrl: photoUrl || null,
-            status: 'pending',
-            verifiedBy: '',
-            submittedAt: firestore.FieldValue.serverTimestamp(),
+      const tasksFinishedRef = firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('tasks_finished')
+        .doc(today);
+
+      const verificationsRef = firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('verifications')
+        .doc(today);
+
+      const batch = firestore().batch();
+
+      for (let i = 0; i < selectedTasks.length; i++) {
+        const task = selectedTasks[i];
+        const isFirst3 = i < 3;
+        let photoUrl = null;
+
+        if (isFirst3 && photoUris[i]) {
+          photoUrl = await uploadImageToCloudinary(photoUris[i]);
+          console.log('Uploaded to Cloudinary:', photoUrl);
+        }
+
+        // Save finished task
+        batch.set(
+          tasksFinishedRef,
+          {
+            [task.id]: {
+              pointsEarned: 10,
+              coinsEarned: 1,
+              finishedAt: firestore.FieldValue.serverTimestamp(),
+              photoUrl: photoUrl || null,
+            },
           },
-        },
-        { merge: true }
-      );
+          { merge: true }
+        );
+
+        // Save verification under {date} doc
+        batch.set(
+          verificationsRef,
+          {
+            [task.id]: {
+              photoUrl: photoUrl || null,
+              status: 'pending',
+              verifiedBy: '',
+              submittedAt: firestore.FieldValue.serverTimestamp(),
+            },
+          },
+          { merge: true }
+        );
+      }
+
+      await batch.commit();
+
+      // Update user rewards
+      await addUserRewards(user.uid, selectedTasks.length, selectedTasks.length * 10);
+      setTerraCoins((prev) => prev + selectedTasks.length);
+
+      // Remove completed tasks from UI
+      setEasyTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
+      setHardTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
+
+      setSelectedTasks([]);
+      Alert.alert('Success', 'Tasks verified and rewards added!');
+    } catch (error) {
+      console.error('Error verifying tasks:', error);
+      Alert.alert('Error', 'Something went wrong verifying tasks.');
     }
-
-    await batch.commit();
-
-    await addUserRewards(user.uid, selectedTasks.length, selectedTasks.length * 10);
-    setTerraCoins((prev) => prev + selectedTasks.length);
-
-    setEasyTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
-    setHardTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
-
-    setSelectedTasks([]);
-    Alert.alert('Success', 'Tasks verified and rewards added!');
-  } catch (error) {
-    console.error('Error verifying tasks:', error);
-    Alert.alert('Error', 'Something went wrong verifying tasks.');
-  }
-};
+  };
 
   const tasks = activeTab === 'easy' ? easyTasks : hardTasks;
 
