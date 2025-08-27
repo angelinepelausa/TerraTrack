@@ -102,13 +102,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#131313",
     padding: 20,
-    paddingTop: 50,
+    paddingTop: 40,
   },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
   },
   headerText: {
     fontSize: 22,
