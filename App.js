@@ -25,6 +25,8 @@ import AdminEducationalMaterials from './screens/AdminEducationalMaterials';
 import AddEducationalMaterial from './screens/AddEducationalMaterial';
 import AdminWeeklyQuiz from './screens/AdminWeeklyQuiz';
 import AddWeeklyQuiz from './screens/AddWeeklyQuiz';
+import AdminTaskLibrary from './screens/AdminTaskLibrary';
+import AddTask from './screens/AddTask';
 
 const Stack = createNativeStackNavigator();
 
@@ -139,6 +141,14 @@ const App = () => {
           <Stack.Screen 
             name="AddWeeklyQuiz"
             component={AddWeeklyQuiz}
+          />
+          <Stack.Screen 
+            name="AdminTaskLibrary"
+            component={AdminTaskLibrary}
+          />
+          <Stack.Screen
+            name="AddTask"
+            component={AddTask}
           />
         </Stack.Navigator>
       </NavigationContainer>

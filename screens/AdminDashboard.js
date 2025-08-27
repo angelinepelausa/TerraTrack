@@ -13,6 +13,7 @@ const gridItems = [
   "Badge Section",
   "Leaderboard",
   "Referral",
+  "Settings",
   "Support",
 ];
 
@@ -45,6 +46,9 @@ const AdminDashboard = () => {
       case "Referral":
         navigation.navigate("AdminReferral");
         break;
+      case "Settings":
+        navigation.navigate("AdminSettings");
+        break;
       case "Support":
         navigation.navigate("AdminSupport");
         break;
@@ -57,28 +61,15 @@ const AdminDashboard = () => {
     <View style={styles.container}>
       <Text style={styles.header}>Admin Dashboard</Text>
       <View style={styles.gridContainer}>
-        {gridItems.map((item, index) => {
-          if (item === "Support") {
-            return (
-              <TouchableOpacity
-                key={index}
-                style={styles.supportItem}
-                onPress={() => handlePress(item)}
-              >
-                <Text style={styles.gridText}>{item}</Text>
-              </TouchableOpacity>
-            );
-          }
-          return (
-            <TouchableOpacity
-              key={index}
-              style={styles.gridItem}
-              onPress={() => handlePress(item)}
-            >
-              <Text style={styles.gridText}>{item}</Text>
-            </TouchableOpacity>
-          );
-        })}
+        {gridItems.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.gridItem}
+            onPress={() => handlePress(item)}
+          >
+            <Text style={styles.gridText}>{item}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
@@ -87,14 +78,14 @@ const AdminDashboard = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#131313",
+    backgroundColor: "#131313", 
     padding: 20,
     paddingTop: 50,
   },
   header: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#709775",
+    color: "#709775", 
     marginBottom: 20,
   },
   gridContainer: {
@@ -103,25 +94,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   gridItem: {
-    width: (width - 60) / 2,
+    width: (width - 60) / 2, 
     height: 120,
-    backgroundColor: "#CCCCCC",
+    backgroundColor: "#1f1f1f", 
     borderRadius: 25,
     alignItems: "center",
-    paddingTop: 10,
-    marginBottom: 20,
-  },
-  supportItem: {
-    width: width - 40,
-    height: 120,
-    backgroundColor: "#CCCCCC",
-    borderRadius: 25,
-    alignItems: "center",
-    paddingTop: 10,
+    justifyContent: "center",
     marginBottom: 20,
   },
   gridText: {
-    color: "#131313",
+    color: "#ffffff", 
     fontSize: 14,
     fontWeight: "600",
     textAlign: "center",

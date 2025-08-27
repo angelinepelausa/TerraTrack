@@ -66,7 +66,7 @@ const FilterModal = ({ visible, onClose }) => {
             >
               <Text style={styles.dateText}>{formatDate(fromDate)}</Text>
             </TouchableOpacity>
-            <Text style={{ marginHorizontal: 10, fontSize: 16 }}>–</Text>
+            <Text style={{ marginHorizontal: 10, fontSize: 16, color: "#fff" }}>–</Text>
             <TouchableOpacity
               style={styles.dateButton}
               onPress={() => setShowToPicker(true)}
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "85%",
-    backgroundColor: "#fff",
+    backgroundColor: "#1E1E1E",
     borderRadius: 12,
     padding: 25,
     shadowColor: "#000",
@@ -137,28 +137,28 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 10,
   },
-  header: { fontSize: 22, fontWeight: "700", color: "#131313", marginBottom: 20 },
-  label: { fontSize: 16, fontWeight: "600", color: "#555", marginBottom: 10 },
+  header: { fontSize: 22, fontWeight: "700", color: "#709775", marginBottom: 20 },
+  label: { fontSize: 16, fontWeight: "600", color: "#fff", marginBottom: 10 },
   statusOptions: { flexDirection: "row", flexWrap: "wrap", marginBottom: 20 },
   statusButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#333",
     borderRadius: 25,
     margin: 4,
   },
   statusButtonSelected: { backgroundColor: "#709775" },
-  statusText: { fontSize: 14, color: "#333", fontWeight: "600" },
+  statusText: { fontSize: 14, color: "#fff", fontWeight: "600" },
   statusTextSelected: { color: "#fff" },
   dateRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
   dateButton: {
     flex: 1,
     paddingVertical: 10,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#333",
     borderRadius: 25,
     alignItems: "center",
   },
-  dateText: { color: "#333", fontWeight: "600", fontSize: 14 },
+  dateText: { color: "#fff", fontWeight: "600", fontSize: 14 },
   actions: { flexDirection: "row", justifyContent: "space-between", marginBottom: 15 },
   applyButton: {
     flex: 1,
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   },
   clearButtonText: { color: "#FF4D4D", fontWeight: "600", fontSize: 16 },
   closeButton: { alignSelf: "center", marginTop: 10 },
-  closeButtonText: { color: "#131313", fontWeight: "600", fontSize: 16 },
+  closeButtonText: { color: "#709775", fontWeight: "600", fontSize: 16 },
 });
 
 export default FilterModal;

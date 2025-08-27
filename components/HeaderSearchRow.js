@@ -29,7 +29,7 @@ const HeaderSearchRow = ({
           <TextInput
             style={styles.searchInput}
             placeholder="Search"
-            placeholderTextColor="#131313"
+            placeholderTextColor="#888"
             value={searchValue}
             onChangeText={onSearchChange}
           />
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  backIcon: { width: 40, height: 40, resizeMode: "contain" },
+  backIcon: { width: 40, height: 40, resizeMode: "contain", tintColor: "#709775" },
   headerText: { fontSize: 22, fontWeight: "bold", color: "#709775" },
 
   searchAddRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
@@ -57,24 +57,24 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#CCCCCC",
+    backgroundColor: "#1E1E1E",
     borderRadius: 25,
     paddingHorizontal: 10,
     height: 42,
   },
-  searchIcon: { width: 18, height: 18, marginRight: 6, tintColor: "#131313" },
-  searchInput: { flex: 1, color: "#131313", fontSize: 14 },
+  searchIcon: { width: 18, height: 18, marginRight: 6, tintColor: "#709775" },
+  searchInput: { flex: 1, color: "#fff", fontSize: 14 },
 
   filterCircle: {
     width: 42,
     height: 42,
     borderRadius: 25,
-    backgroundColor: "#CCCCCC",
+    backgroundColor: "#709775",
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 8,
   },
-  addButtonText: { color: "#131313", fontWeight: "500", fontSize: 12 },
+  addButtonText: { color: "#fff", fontWeight: "500", fontSize: 12 },
 });
 
 export default HeaderSearchRow;

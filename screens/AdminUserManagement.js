@@ -57,7 +57,7 @@ const AdminUserManagement = () => {
           <TextInput
             style={styles.searchInput}
             placeholder="Search"
-            placeholderTextColor="#131313"
+            placeholderTextColor="#888"
             value={search}
             onChangeText={setSearch}
           />
@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     resizeMode: "contain",
+    tintColor: "#709775",
   },
   searchRow: {
     flexDirection: "row",
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#CCCCCC",
+    backgroundColor: "#1E1E1E",
     borderRadius: 25,
     flex: 1,
     paddingHorizontal: 10,
@@ -137,11 +138,11 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     marginRight: 6,
-    tintColor: "#131313",
+    tintColor: "#709775",
   },
   searchInput: {
     flex: 1,
-    color: "#131313",
+    color: "#fff",
     fontSize: 14,
   },
   filterButton: {
@@ -151,20 +152,20 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 25,
-    backgroundColor: "#CCCCCC",
+    backgroundColor: "#709775",
     justifyContent: "center",
     alignItems: "center",
   },
   filterIcon: {
     width: 24,
     height: 24,
-    tintColor: "#131313",
+    tintColor: "#fff",
     resizeMode: "contain",
   },
   userCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#D9D9D9",
+    backgroundColor: "#1E1E1E",
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -182,14 +183,14 @@ const styles = StyleSheet.create({
   username: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#131313",
+    color: "#fff",
   },
   loader: {
     marginTop: 50,
   },
   emptyText: {
     textAlign: "center",
-    color: "#CCC",
+    color: "#888",
     marginTop: 50,
     fontSize: 16,
   },

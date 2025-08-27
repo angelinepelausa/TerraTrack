@@ -37,19 +37,36 @@ const WeeklyQuizCard = ({ item, onDelete, onPress }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#D9D9D9',
-    borderRadius: 10,
+    backgroundColor: '#1f1f1f', 
+    borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     height: CARD_HEIGHT,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   row: { flexDirection: 'row', alignItems: 'center', height: '100%' },
-  image: { width: IMAGE_SIZE, height: IMAGE_SIZE, borderRadius: 8, marginRight: 12, resizeMode: 'cover' },
-  placeholderImage: { width: IMAGE_SIZE, height: IMAGE_SIZE, borderRadius: 8, marginRight: 12, backgroundColor: '#ccc' },
+  image: {
+    width: IMAGE_SIZE,
+    height: IMAGE_SIZE,
+    borderRadius: 12,
+    marginRight: 12,
+    resizeMode: 'cover',
+  },
+  placeholderImage: {
+    width: IMAGE_SIZE,
+    height: IMAGE_SIZE,
+    borderRadius: 12,
+    marginRight: 12,
+    backgroundColor: '#333',
+  },
   textContainer: { flex: 1, justifyContent: 'center' },
-  title: { fontSize: 16, fontWeight: 'bold', color: '#131313', marginBottom: 4 },
-  date: { fontSize: 14, color: '#415D43' },
-  deleteText: { color: 'red', fontSize: 12, marginLeft: 8 },
+  title: { fontSize: 16, fontWeight: '700', color: '#fff', marginBottom: 4 },
+  date: { fontSize: 14, color: '#aaa' },
+  deleteText: { color: '#ff4d4d', fontSize: 12, marginLeft: 8, fontWeight: '700' },
 });
 
 export default WeeklyQuizCard;

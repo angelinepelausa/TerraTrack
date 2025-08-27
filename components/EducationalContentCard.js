@@ -35,11 +35,16 @@ const EducationalContentCard = ({ item, onPress, onDelete }) => {
 
 const styles = StyleSheet.create({
   contentCard: {
-    backgroundColor: '#D9D9D9',
-    borderRadius: 10,
+    backgroundColor: '#1f1f1f', 
+    borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     height: CARD_HEIGHT,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cardRow: {
     flexDirection: 'row',
@@ -49,35 +54,34 @@ const styles = StyleSheet.create({
   cardImage: {
     width: IMAGE_SIZE,
     height: IMAGE_SIZE,
-    borderRadius: 8,
+    borderRadius: 12,
     marginRight: 12,
     resizeMode: 'cover',
   },
   placeholderImage: {
     width: IMAGE_SIZE,
     height: IMAGE_SIZE,
-    borderRadius: 8,
+    borderRadius: 12,
     marginRight: 12,
-    backgroundColor: '#ccc',
+    backgroundColor: '#333',
   },
   textContainer: {
     flex: 1,
     justifyContent: 'center',
   },
   cardTitle: {
-    color: '#131313',
+    color: '#fff',
     fontSize: 16,
-    fontFamily: 'DMSans-Bold',
+    fontWeight: '700',
     marginBottom: 4,
   },
   cardDescription: {
-    color: '#415D43',
+    color: '#aaa',
     fontSize: 14,
-    fontFamily: 'DMSans-Regular',
   },
   deleteText: {
-    color: 'red',
-    fontWeight: '400',
+    color: '#ff4d4d',
+    fontWeight: '700',
     fontSize: 12,
     marginLeft: 8,
   },

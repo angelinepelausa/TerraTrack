@@ -36,4 +36,32 @@ export const tasksRepository = {
       throw error;
     }
   },
+
+  addTask: async (task) => {
+    try {
+      const docRef = await firestore().collection('tasks').add(task);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding task:', error);
+      throw error;
+    }
+  },
+
+  updateTask: async (id, updatedTask) => {
+    try {
+      await firestore().collection('tasks').doc(id).update(updatedTask);
+    } catch (error) {
+      console.error('Error updating task:', error);
+      throw error;
+    }
+  },
+
+  deleteTask: async (id) => {
+    try {
+      await firestore().collection('tasks').doc(id).delete();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      throw error;
+    }
+  },
 };
