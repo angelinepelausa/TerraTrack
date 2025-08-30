@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { getUserTerraCoins, addUserRewards } from '../repositories/userRepositor
 import firestore from '@react-native-firebase/firestore';
 import { launchCamera } from 'react-native-image-picker';
 import axios from 'axios';
+import { useNavigation } from '@react-navigation/native'; // ✅ add this
 
 const { width } = Dimensions.get('window');
 
@@ -49,6 +50,8 @@ const uploadImageToCloudinary = async (uri) => {
 
 const RoutineScreen = () => {
   const { user } = useAuth();
+  const navigation = useNavigation(); // ✅ and this
+
   const [easyTasks, setEasyTasks] = useState([]);
   const [hardTasks, setHardTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +59,8 @@ const RoutineScreen = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedTasks, setSelectedTasks] = useState([]);
   const [terraCoins, setTerraCoins] = useState(0);
+  const [verificationTasks, setVerificationTasks] = useState([]);
+  const dateRef = useRef(new Date().toISOString().split('T')[0]); // track today's date
 
   const fetchAllTasks = async () => {
     if (!user) return;
@@ -85,8 +90,39 @@ const RoutineScreen = () => {
 
       const finishedTasks = Object.keys(finishedData);
 
-      setEasyTasks(easy.filter((task) => !finishedTasks.includes(task.id)));
-      setHardTasks(hard.filter((task) => !finishedTasks.includes(task.id)));
+      const remainingEasy = easy.filter((task) => !finishedTasks.includes(task.id));
+      const remainingHard = hard.filter((task) => !finishedTasks.includes(task.id));
+
+      setEasyTasks(remainingEasy);
+      setHardTasks(remainingHard);
+
+      // 🔑 Persist & reuse the same 3 easy verification tasks per day
+      const verificationsRef = firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('verifications')
+        .doc(today);
+
+      const verificationsSnap = await verificationsRef.get();
+
+      let randomEasy = [];
+      if (verificationsSnap.exists && verificationsSnap.data()?.dailyEasyTasks) {
+        const storedIds = verificationsSnap.data().dailyEasyTasks;
+        randomEasy = remainingEasy.filter((t) => storedIds.includes(t.id));
+      } else {
+        const shuffled = [...remainingEasy].sort(() => 0.5 - Math.random());
+        randomEasy = shuffled.slice(0, 3);
+        await verificationsRef.set(
+          { dailyEasyTasks: randomEasy.map((t) => t.id) },
+          { merge: true }
+        );
+      }
+
+      const verificationIds = [
+        ...randomEasy.map((t) => t.id),
+        ...remainingHard.map((t) => t.id),
+      ];
+      setVerificationTasks(verificationIds);
     } catch (error) {
       console.error('Error loading tasks:', error);
     } finally {
@@ -94,9 +130,22 @@ const RoutineScreen = () => {
     }
   };
 
+  // 🔄 Refetch tasks when user logs in
   useEffect(() => {
     fetchAllTasks();
   }, [user]);
+
+  // 🔄 Reset tasks automatically at midnight
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const today = new Date().toISOString().split('T')[0];
+      if (dateRef.current !== today) {
+        dateRef.current = today;
+        fetchAllTasks();
+      }
+    }, 60 * 1000); // check every minute
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (user) fetchTerraCoins();
@@ -141,24 +190,28 @@ const RoutineScreen = () => {
       return;
     }
 
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
-      return;
+    const requiresPhoto = selectedTasks.some((t) => verificationTasks.includes(t.id));
+    if (requiresPhoto) {
+      const hasPermission = await requestCameraPermission();
+      if (!hasPermission) {
+        Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
+        return;
+      }
     }
 
     try {
-      const photoUris = [];
+      const photoUris = {};
 
-      // Capture photos for up to 3 tasks
-      for (let i = 0; i < Math.min(3, selectedTasks.length); i++) {
-        const uri = await new Promise((resolve) => {
-          launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
-            if (response.didCancel || response.errorCode) resolve(null);
-            else resolve(response.assets?.[0]?.uri || null);
+      for (const task of selectedTasks) {
+        if (verificationTasks.includes(task.id)) {
+          const uri = await new Promise((resolve) => {
+            launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
+              if (response.didCancel || response.errorCode) resolve(null);
+              else resolve(response.assets?.[0]?.uri || null);
+            });
           });
-        });
-        photoUris.push(uri);
+          if (uri) photoUris[task.id] = uri;
+        }
       }
 
       const today = new Date().toISOString().split('T')[0];
@@ -177,17 +230,27 @@ const RoutineScreen = () => {
 
       const batch = firestore().batch();
 
-      for (let i = 0; i < selectedTasks.length; i++) {
-        const task = selectedTasks[i];
-        const isFirst3 = i < 3;
+      for (const task of selectedTasks) {
         let photoUrl = null;
 
-        if (isFirst3 && photoUris[i]) {
-          photoUrl = await uploadImageToCloudinary(photoUris[i]);
+        if (verificationTasks.includes(task.id) && photoUris[task.id]) {
+          photoUrl = await uploadImageToCloudinary(photoUris[task.id]);
           console.log('Uploaded to Cloudinary:', photoUrl);
+
+          batch.set(
+            verificationsRef,
+            {
+              [task.id]: {
+                photoUrl,
+                status: 'pending',
+                verifiedBy: '',
+                submittedAt: firestore.FieldValue.serverTimestamp(),
+              },
+            },
+            { merge: true }
+          );
         }
 
-        // Save finished task
         batch.set(
           tasksFinishedRef,
           {
@@ -200,29 +263,30 @@ const RoutineScreen = () => {
           },
           { merge: true }
         );
-
-        // Save verification under {date} doc
-        batch.set(
-          verificationsRef,
-          {
-            [task.id]: {
-              photoUrl: photoUrl || null,
-              status: 'pending',
-              verifiedBy: '',
-              submittedAt: firestore.FieldValue.serverTimestamp(),
-            },
-          },
-          { merge: true }
-        );
       }
 
       await batch.commit();
 
-      // Update user rewards
       await addUserRewards(user.uid, selectedTasks.length, selectedTasks.length * 10);
       setTerraCoins((prev) => prev + selectedTasks.length);
 
-      // Remove completed tasks from UI
+      const now = new Date();
+      const quarter = `Q${Math.floor(now.getMonth() / 3) + 1}`;
+      const year = now.getFullYear();
+      const docId = `${year}-${quarter}`;
+
+      const communityRef = firestore().collection('community_progress').doc(docId);
+
+      await communityRef.set(
+        {
+          contributors: {
+            [user.uid]: firestore.FieldValue.increment(selectedTasks.length),
+          },
+          current: firestore.FieldValue.increment(selectedTasks.length),
+        },
+        { merge: true }
+      );
+
       setEasyTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
       setHardTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
 
@@ -276,6 +340,14 @@ const RoutineScreen = () => {
       <View style={styles.content}>
         <Text style={styles.header}>Routine</Text>
 
+        {/* Task Verification button using TouchableOpacity */}
+        <TouchableOpacity
+          style={styles.taskVerifyBtn}
+          onPress={() => navigation.navigate('TaskVerifyScreen')} // ✅ make sure this matches your navigator name
+        >
+          <Text style={styles.taskVerifyText}>Task Verification</Text>
+        </TouchableOpacity>
+
         <View style={styles.tabContainer}>
           {['easy', 'hard'].map((tab) => (
             <TouchableOpacity
@@ -305,7 +377,10 @@ const RoutineScreen = () => {
       <View style={styles.verifyWrapper}>
         <Button
           title="Verify Action"
-          style={[styles.verifyBtn, { backgroundColor: selectedTasks.length > 0 ? '#415D43' : '#6A6A6A' }]}
+          style={[
+            styles.verifyBtn,
+            { backgroundColor: selectedTasks.length > 0 ? '#415D43' : '#6A6A6A' },
+          ]}
           textStyle={styles.verifyText}
           onPress={handleVerifyAction}
         />
@@ -341,7 +416,14 @@ const styles = StyleSheet.create({
   coinText: { color: '#131313', fontWeight: 'bold', fontSize: scale(12) },
   header: { color: '#CCCCCC', fontSize: 20, fontFamily: 'DMSans-Bold', marginBottom: 12 },
   tabContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
-  tab: { flex: 1, paddingVertical: 10, marginHorizontal: 5, borderRadius: 20, backgroundColor: '#CCCCCC', alignItems: 'center' },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    marginHorizontal: 4,
+    borderRadius: 20,
+    backgroundColor: '#CCCCCC',
+    alignItems: 'center',
+  },
   activeTab: { backgroundColor: '#415D43' },
   tabText: { color: '#131313', fontWeight: 'bold' },
   activeTabText: { color: '#FFFFFF' },
@@ -354,9 +436,36 @@ const styles = StyleSheet.create({
   backBtn: { marginTop: 20 },
   backText: { color: '#CCCCCC', fontSize: 14 },
   descWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  descBox: { backgroundColor: '#CCCCCC', borderRadius: 10, padding: 20, width: '85%', alignItems: 'center' },
-  detailTitle: { fontSize: 18, fontFamily: 'DMSans-Bold', color: '#415D43', marginBottom: 12, textAlign: 'center' },
-  detailDesc: { fontSize: 14, color: '#131313', fontFamily: 'DMSans-Regular', textAlign: 'center' },
+  descBox: {
+    backgroundColor: '#CCCCCC',
+    borderRadius: 10,
+    padding: 20,
+    width: '85%',
+    alignItems: 'center',
+  },
+  detailTitle: {
+    fontSize: 18,
+    fontFamily: 'DMSans-Bold',
+    color: '#415D43',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  detailDesc: {
+    fontSize: 14,
+    color: '#131313',
+    fontFamily: 'DMSans-Regular',
+    textAlign: 'center',
+  },
+  taskVerifyBtn: {
+    backgroundColor: '#CCCCCC',
+    paddingVertical: 12,
+    borderRadius: 30,
+    marginBottom: 16,
+    alignItems: 'center',
+    width: '98%',
+    alignSelf: 'center',
+  },
+  taskVerifyText: { color: '#131313', fontWeight: 'bold', fontSize: 16 },
 });
 
 export default RoutineScreen;

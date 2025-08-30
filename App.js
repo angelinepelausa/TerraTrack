@@ -19,6 +19,8 @@ import WeeklyQuizScreen from './screens/WeeklyQuizScreen';
 import InviteScreen from './screens/InviteScreen';
 import CommunityProgressScreen from './screens/CommunityProgressScreen';
 import CameraVerificationScreen from './screens/CameraVerificationScreen';
+import TaskVerifyScreen from './screens/TaskVerifyScreen';
+import VerifyTaskScreen from './screens/VerifyTaskScreen';
 import AdminDashboard from './screens/AdminDashboard';
 import AdminUserManagement from './screens/AdminUserManagement';
 import AdminEducationalMaterials from './screens/AdminEducationalMaterials';
@@ -28,6 +30,7 @@ import AddWeeklyQuiz from './screens/AddWeeklyQuiz';
 import AdminTaskLibrary from './screens/AdminTaskLibrary';
 import AddTask from './screens/AddTask';
 import AdminLeaderboard from './screens/AdminLeaderboard';
+
 
 const Stack = createNativeStackNavigator();
 
@@ -154,6 +157,14 @@ const App = () => {
           <Stack.Screen 
             name="AdminLeaderboard"
             component={AdminLeaderboard}
+          />
+          <Stack.Screen 
+            name="TaskVerifyScreen"
+            component={TaskVerifyScreen}
+          />
+          <Stack.Screen 
+            name="VerifyTaskScreen"
+            component={VerifyTaskScreen}
           />
         </Stack.Navigator>
       </NavigationContainer>
