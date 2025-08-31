@@ -20,12 +20,90 @@ import { getUserTerraCoins, addUserRewards } from '../repositories/userRepositor
 import firestore from '@react-native-firebase/firestore';
 import { launchCamera } from 'react-native-image-picker';
 import axios from 'axios';
-import { useNavigation } from '@react-navigation/native'; // ✅ add this
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dgdzmrhc4/image/upload';
 const UPLOAD_PRESET = 'terratrack';
+
+// ✅ local distribution (was in Firebase function before)
+const distributeTasksForVerification = async () => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+
+    // get all submitted tasks for today
+    const tasksSnap = await firestore()
+      .collection("tasks_verification")
+      .doc(today)
+      .get();
+
+    if (!tasksSnap.exists) return;
+    const allTasks = tasksSnap.data() || {};
+    const tasksArray = Object.entries(allTasks).map(([taskId, task]) => ({
+      taskId,
+      ...task,
+    }));
+
+    if (tasksArray.length === 0) return;
+
+    // get all users
+    const usersSnap = await firestore().collection("users").get();
+    const allUsers = usersSnap.docs.map((d) => ({ id: d.id }));
+
+    // filter only users who submitted tasks
+    const submitters = [...new Set(tasksArray.map(t => t.userId))];
+    const eligibleUsers = allUsers.filter(u => submitters.includes(u.id));
+
+    if (eligibleUsers.length === 0) return;
+
+    console.log("Eligible verifiers:", eligibleUsers.map(u => u.id));
+
+    // round-robin assign each task to 3 verifiers
+    let userIndex = 0;
+    for (const task of tasksArray) {
+      let assignedUsers = [];
+
+      for (let i = 0; i < 3; i++) {
+        let verifier = eligibleUsers[userIndex % eligibleUsers.length];
+
+        // skip task owner & duplicates
+        while (
+          verifier.id === task.userId ||
+          assignedUsers.includes(verifier.id)
+        ) {
+          userIndex++;
+          verifier = eligibleUsers[userIndex % eligibleUsers.length];
+        }
+
+        assignedUsers.push(verifier.id);
+
+        await firestore()
+          .collection("users")
+          .doc(verifier.id)
+          .collection("assigned_verifications")
+          .doc(today)
+          .set(
+            {
+              [task.taskId]: {
+                title: task.title || "Untitled Task",
+                photoUrl: task.photoUrl || null,
+                ownerId: task.userId,
+                status: "pending",
+              },
+            },
+            { merge: true }
+          );
+
+        userIndex++;
+      }
+    }
+
+    console.log("✅ Task distribution completed for", today);
+  } catch (err) {
+    console.error("Error distributing verification tasks:", err);
+  }
+};
 
 const uploadImageToCloudinary = async (uri) => {
   try {
@@ -48,9 +126,37 @@ const uploadImageToCloudinary = async (uri) => {
   }
 };
 
+// 📌 Save submitted task into shared daily doc
+const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    const verificationRef = firestore()
+      .collection('tasks_verification')
+      .doc(today);
+
+    await verificationRef.set(
+      {
+        [taskId]: {
+          title: taskTitle,
+          status: 'pending',
+          submittedAt: firestore.FieldValue.serverTimestamp(),
+          photoUrl,
+          verifiedBy: '',
+          userId: userId,
+          date: today,
+        },
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Error storing task for verification:', error);
+  }
+};
+
 const RoutineScreen = () => {
   const { user } = useAuth();
-  const navigation = useNavigation(); // ✅ and this
+  const navigation = useNavigation();
 
   const [easyTasks, setEasyTasks] = useState([]);
   const [hardTasks, setHardTasks] = useState([]);
@@ -60,7 +166,7 @@ const RoutineScreen = () => {
   const [selectedTasks, setSelectedTasks] = useState([]);
   const [terraCoins, setTerraCoins] = useState(0);
   const [verificationTasks, setVerificationTasks] = useState([]);
-  const dateRef = useRef(new Date().toISOString().split('T')[0]); // track today's date
+  const dateRef = useRef(new Date().toISOString().split('T')[0]);
 
   const fetchAllTasks = async () => {
     if (!user) return;
@@ -96,7 +202,7 @@ const RoutineScreen = () => {
       setEasyTasks(remainingEasy);
       setHardTasks(remainingHard);
 
-      // 🔑 Persist & reuse the same 3 easy verification tasks per day
+      // Persist same random 3 easy tasks daily
       const verificationsRef = firestore()
         .collection('users')
         .doc(user.uid)
@@ -130,20 +236,20 @@ const RoutineScreen = () => {
     }
   };
 
-  // 🔄 Refetch tasks when user logs in
   useEffect(() => {
     fetchAllTasks();
   }, [user]);
 
-  // 🔄 Reset tasks automatically at midnight
+  // 🔥 Run daily refresh + local distribution
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       const today = new Date().toISOString().split('T')[0];
       if (dateRef.current !== today) {
         dateRef.current = today;
-        fetchAllTasks();
+        await fetchAllTasks();
+        await distributeTasksForVerification(); // 🔑 added
       }
-    }, 60 * 1000); // check every minute
+    }, 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -245,10 +351,13 @@ const RoutineScreen = () => {
                 status: 'pending',
                 verifiedBy: '',
                 submittedAt: firestore.FieldValue.serverTimestamp(),
+                title: task.title,
               },
             },
             { merge: true }
           );
+
+          await storeTaskForVerification(task.id, task.title, photoUrl, user.uid);
         }
 
         batch.set(
@@ -340,12 +449,19 @@ const RoutineScreen = () => {
       <View style={styles.content}>
         <Text style={styles.header}>Routine</Text>
 
-        {/* Task Verification button using TouchableOpacity */}
         <TouchableOpacity
           style={styles.taskVerifyBtn}
-          onPress={() => navigation.navigate('TaskVerifyScreen')} // ✅ make sure this matches your navigator name
+          onPress={() => navigation.navigate('TaskVerifyScreen')}
         >
           <Text style={styles.taskVerifyText}>Task Verification</Text>
+        </TouchableOpacity>
+
+        {/* 🔧 Manual trigger button for testing */}
+        <TouchableOpacity
+          style={[styles.taskVerifyBtn, { backgroundColor: '#709775' }]}
+          onPress={distributeTasksForVerification}
+        >
+          <Text style={[styles.taskVerifyText, { color: '#fff' }]}>Distribute Now (Test)</Text>
         </TouchableOpacity>
 
         <View style={styles.tabContainer}>
