@@ -10,7 +10,7 @@ const gridItems = [
   "Weekly Quiz",
   "Task Library",
   "Community Progress",
-  "Badge Section",
+  "Badge and Avatar",
   "Leaderboard",
   "Referral",
   "Settings",
@@ -37,8 +37,8 @@ const AdminDashboard = () => {
       case "Community Progress":
         navigation.navigate("AdminCommunityProgress");
         break;
-      case "Badge Section":
-        navigation.navigate("AdminBadgeSection");
+      case "Badge and Avatar":
+        navigation.navigate("AdminBadgeAvatar");
         break;
       case "Leaderboard":
         navigation.navigate("AdminLeaderboard");

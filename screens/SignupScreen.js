@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
-import { signUpWithEmail } from '../services/authService';
 import { validateSignUp, authErrorMessages } from '../services/validationService';
+import { signUpWithEmail } from '../services/authService';
+import { createUserDocument } from '../repositories/userRepository';
 
 const SignUpScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -23,31 +24,41 @@ const SignUpScreen = ({ navigation }) => {
   const handleSignUp = async () => {
     const { isValid, errors } = validateSignUp(formData);
     setErrorMessages(errors);
-
     if (!isValid) return;
 
     setLoading(true);
     const { email, password, ...userData } = formData;
 
-    const { success, error, code } = await signUpWithEmail(email, password, userData);
-    setLoading(false);
-
-    if (success) {
-      setShowSuccess(true);
-    } else {
-      let newErrors = {};
-      if (authErrorMessages[code]) {
-        if (code.includes('username')) {
-          newErrors.username = authErrorMessages[code];
-        } else if (code.includes('email')) {
-          newErrors.email = authErrorMessages[code];
-        } else {
-          newErrors.general = authErrorMessages[code];
-        }
-      } else {
-        newErrors.general = error || 'Something went wrong';
+    try {
+      // 1️⃣ Create account in Firebase Auth
+      const { success: authSuccess, error: authError, code } = await signUpWithEmail(email, password, userData);
+      if (!authSuccess) {
+        let newErrors = {};
+        if (authErrorMessages[code]) {
+          if (code.includes('username')) newErrors.username = authErrorMessages[code];
+          else if (code.includes('email')) newErrors.email = authErrorMessages[code];
+          else newErrors.general = authErrorMessages[code];
+        } else newErrors.general = authError || 'Something went wrong';
+        setErrorMessages(prev => ({ ...prev, ...newErrors }));
+        setLoading(false);
+        return;
       }
-      setErrorMessages(prev => ({ ...prev, ...newErrors }));
+
+      // 2️⃣ Add user document in Firestore with default TerraBuddy avatar
+      const userId = authSuccess.user.uid; // assuming signUpWithEmail returns user object
+      const userDocResult = await createUserDocument({ ...userData, userId });
+      if (!userDocResult.success) {
+        setErrorMessages(prev => ({ ...prev, general: 'Failed to create user profile.' }));
+        setLoading(false);
+        return;
+      }
+
+      setShowSuccess(true);
+    } catch (err) {
+      console.error('Sign up error:', err);
+      setErrorMessages(prev => ({ ...prev, general: 'Something went wrong' }));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -141,11 +152,7 @@ const SignUpScreen = ({ navigation }) => {
       )}
 
       <TouchableOpacity
-        style={[
-          styles.button,
-          { width: inputWidth, height: inputHeight, marginTop: vScale(20) },
-          loading && styles.disabledButton
-        ]}
+        style={[styles.button, { width: inputWidth, height: inputHeight, marginTop: vScale(20) }, loading && styles.disabledButton]}
         onPress={handleSignUp}
         disabled={loading}
       >

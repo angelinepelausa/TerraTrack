@@ -30,7 +30,8 @@ import AddWeeklyQuiz from './screens/AddWeeklyQuiz';
 import AdminTaskLibrary from './screens/AdminTaskLibrary';
 import AddTask from './screens/AddTask';
 import AdminLeaderboard from './screens/AdminLeaderboard';
-
+import AdminBadgeAvatar from './screens/AdminBadgeAvatar';
+import AddAvatar from './screens/AddAvatar';
 
 const Stack = createNativeStackNavigator();
 
@@ -157,6 +158,14 @@ const App = () => {
           <Stack.Screen 
             name="AdminLeaderboard"
             component={AdminLeaderboard}
+          />
+          <Stack.Screen 
+            name="AdminBadgeAvatar"
+            component={AdminBadgeAvatar}
+          />
+          <Stack.Screen 
+            name="AddAvatar"
+            component={AddAvatar}
           />
           <Stack.Screen 
             name="TaskVerifyScreen"

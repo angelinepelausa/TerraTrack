@@ -1,5 +1,7 @@
 import firestore from '@react-native-firebase/firestore';
+import { avatarsRepository } from './avatarsRepository';
 
+// Generate a 6-character referral code
 const generateReferralCode = () => {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let referralCode = '';
@@ -12,9 +14,11 @@ const generateReferralCode = () => {
   return referralCode;
 };
 
+// Create a new user document
 export const createUserDocument = async (userData) => {
   try {
     const referralCode = generateReferralCode();
+    const defaultAvatarId = "ZPbPGHol6O29uGaqxaum"; 
 
     await firestore()
       .collection("users")
@@ -28,7 +32,8 @@ export const createUserDocument = async (userData) => {
           terraPoints: 0,
           referralCode: referralCode,
           createdAt: firestore.FieldValue.serverTimestamp(),
-          status: "Active", 
+          status: "Active",
+          currentAvatarId: defaultAvatarId, 
         },
         { merge: true }
       );
@@ -40,6 +45,7 @@ export const createUserDocument = async (userData) => {
   }
 };
 
+// Add TerraCoins and TerraPoints to a user
 export const addUserRewards = async (userId, coinsEarned, pointsEarned) => {
   try {
     await firestore()
@@ -57,6 +63,31 @@ export const addUserRewards = async (userId, coinsEarned, pointsEarned) => {
   }
 };
 
+// Deduct TerraCoins from a user (for purchases)
+export const deductTerraCoins = async (userId, amount) => {
+  try {
+    const userRef = firestore().collection("users").doc(userId);
+
+    await firestore().runTransaction(async transaction => {
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists) throw new Error("User not found");
+
+      const currentTC = userDoc.data()?.terraCoins || 0;
+      if (currentTC < amount) throw new Error("Not enough TerraCoins");
+
+      transaction.update(userRef, {
+        terraCoins: currentTC - amount
+      });
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deducting TerraCoins:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Get user's TerraCoins and TerraPoints
 export const getUserTerraCoins = async (userId) => {
   try {
     const userDoc = await firestore()
@@ -86,6 +117,7 @@ export const getUserTerraCoins = async (userId) => {
   }
 };
 
+// Get user's referral code
 export const getUserReferralCode = async (userId) => {
   try {
     const userDoc = await firestore()
@@ -114,6 +146,7 @@ export const getUserReferralCode = async (userId) => {
   }
 };
 
+// Get users by filter (status, date range)
 export const getUsersByFilter = async (filter = {}) => {
   try {
     let query = firestore().collection("users");
