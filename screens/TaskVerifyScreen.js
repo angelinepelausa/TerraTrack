@@ -32,56 +32,58 @@ const TaskVerifyScreen = ({ navigation }) => {
   };
 
   const fetchTasks = async () => {
-    try {
-      // --- My submitted tasks ---
-      const myVerifSnap = await firestore()
-        .collection("users")
-        .doc(user.uid)
-        .collection("verifications")
-        .doc(today)
-        .get();
+  try {
+    // --- My submitted tasks (from user log) ---
+    const mySnap = await firestore()
+      .collection("users")
+      .doc(user.uid)
+      .collection("verifications")
+      .doc(today)
+      .get();
 
-      let myTasks = [];
-      if (myVerifSnap.exists) {
-        const myData = myVerifSnap.data() || {};
-        for (const [taskId, val] of Object.entries(myData)) {
-          if (!val || typeof val !== "object" || Array.isArray(val)) continue;
-          myTasks.push({
-            id: taskId,
-            title: val.title || "Unknown Task",
-            status: val.status || "pending",
-            photoUrl: val.photoUrl || null,
-          });
-        }
-      }
-      setMySubmittedTasks(myTasks);
+    let myTasks = [];
+    if (mySnap.exists) {
+      const myData = mySnap.data() || {};
+      myTasks = Object.entries(myData)
+        .filter(([key]) => key !== "dailyEasyTasks")
+        .map(([taskId, task]) => ({
+          id: taskId,
+          title: task?.title || "Unknown Task",
+          status: task?.status || "pending",
+          photoUrl: task?.photoUrl || null,
+        }));
+    }
+    setMySubmittedTasks(myTasks);
 
-      // --- Tasks assigned to me ---
-      const assignedSnap = await firestore()
-        .collection("users")
-        .doc(user.uid)
-        .collection("assigned_verifications")
-        .doc(today)
-        .get();
+    // --- Assigned tasks (loop over all runs today) ---
+    const assignedSnap = await firestore()
+      .collection("users")
+      .doc(user.uid)
+      .collection("assigned_verifications")
+      .get();
 
-      let assigned = [];
-      if (assignedSnap.exists) {
-        const assignedData = assignedSnap.data() || {};
-        assigned = Object.entries(assignedData).map(([taskId, task]) => ({
+    let assigned = [];
+    assignedSnap.forEach((doc) => {
+      if (doc.id.startsWith(today)) {  // 👈 only today’s runs
+        const data = doc.data();
+        const tasks = Object.entries(data).map(([taskId, task]) => ({
           id: taskId,
           title: task?.title || "Untitled Task",
           photoUrl: task?.photoUrl || null,
           status: task?.status || "pending",
           userId: task?.ownerId || "unknown",
         }));
+        assigned.push(...tasks);
       }
-      setAssignedTasks(assigned);
-    } catch (error) {
-      console.error("Error fetching verification tasks:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
+
+    setAssignedTasks(assigned);
+  } catch (error) {
+    console.error("Error fetching verification tasks:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer} style={styles.container}>

@@ -28,80 +28,110 @@ const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dgdzmrhc4/image/upload';
 const UPLOAD_PRESET = 'terratrack';
 
 // ✅ local distribution (was in Firebase function before)
-const distributeTasksForVerification = async () => {
+// ✅ New distribution logic for subcollection structure
+// utils/distribution.js (or inside RoutineScreen if you prefer)
+
+export const distributeTasksForVerification = async () => {
   try {
     const today = new Date().toISOString().split("T")[0];
+    const runId = Date.now().toString(); // unique run each time
 
-    // get all submitted tasks for today
+    // --- Get all submitted tasks ---
     const tasksSnap = await firestore()
       .collection("tasks_verification")
       .doc(today)
+      .collection("submitted")
       .get();
 
-    if (!tasksSnap.exists) return;
-    const allTasks = tasksSnap.data() || {};
-    const tasksArray = Object.entries(allTasks).map(([taskId, task]) => ({
-      taskId,
-      ...task,
-    }));
+    if (tasksSnap.empty) {
+      console.log("⚡ No submitted tasks today");
+      return;
+    }
 
-    if (tasksArray.length === 0) return;
+    const tasksArray = tasksSnap.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        docId: doc.id,
+        taskId: data.taskId || doc.id,
+        ...data,
+      };
+    });
 
-    // get all users
+    // --- Get all users ---
     const usersSnap = await firestore().collection("users").get();
-    const allUsers = usersSnap.docs.map((d) => ({ id: d.id }));
+    const eligibleUsers = usersSnap.docs.map((d) => ({ id: d.id }));
 
-    // filter only users who submitted tasks
-    const submitters = [...new Set(tasksArray.map(t => t.userId))];
-    const eligibleUsers = allUsers.filter(u => submitters.includes(u.id));
+    if (eligibleUsers.length === 0) {
+      console.log("⚡ No users available for verification");
+      return;
+    }
 
-    if (eligibleUsers.length === 0) return;
+    console.log("Eligible verifiers:", eligibleUsers.map((u) => u.id));
 
-    console.log("Eligible verifiers:", eligibleUsers.map(u => u.id));
+    const loadMap = Object.fromEntries(eligibleUsers.map((u) => [u.id, 0]));
+    let batch = firestore().batch();
+    let opCount = 0;
 
-    // round-robin assign each task to 3 verifiers
-    let userIndex = 0;
+    // --- Assign 3 verifiers per task ---
     for (const task of tasksArray) {
       let assignedUsers = [];
 
       for (let i = 0; i < 3; i++) {
-        let verifier = eligibleUsers[userIndex % eligibleUsers.length];
+        let candidates = eligibleUsers
+          .filter((u) => u.id !== task.userId && !assignedUsers.includes(u.id))
+          .sort((a, b) => loadMap[a.id] - loadMap[b.id]);
 
-        // skip task owner & duplicates
-        while (
-          verifier.id === task.userId ||
-          assignedUsers.includes(verifier.id)
-        ) {
-          userIndex++;
-          verifier = eligibleUsers[userIndex % eligibleUsers.length];
-        }
+        if (candidates.length === 0) break;
+
+        const minLoad = loadMap[candidates[0].id];
+        const lowest = candidates.filter((c) => loadMap[c.id] === minLoad);
+        const verifier = lowest[Math.floor(Math.random() * lowest.length)];
 
         assignedUsers.push(verifier.id);
+        loadMap[verifier.id]++;
 
-        await firestore()
+        const ref = firestore()
           .collection("users")
           .doc(verifier.id)
           .collection("assigned_verifications")
-          .doc(today)
-          .set(
-            {
-              [task.taskId]: {
-                title: task.title || "Untitled Task",
-                photoUrl: task.photoUrl || null,
-                ownerId: task.userId,
-                status: "pending",
-              },
-            },
-            { merge: true }
-          );
+          .doc(`${today}_${runId}`); // 👈 unique per run
 
-        userIndex++;
+        batch.set(
+          ref,
+          {
+            [task.docId]: {
+              taskId: task.taskId,
+              title: task.title || "Untitled Task",
+              photoUrl: task.photoUrl || null,
+              ownerId: task.userId,
+              status: "pending",
+            },
+          },
+          { merge: true }
+        );
+
+        opCount++;
+        if (opCount >= 450) {
+          await batch.commit();
+          batch = firestore().batch();
+          opCount = 0;
+        }
       }
     }
 
-    console.log("✅ Task distribution completed for", today);
+    if (opCount > 0) await batch.commit();
+
+    // --- Log distribution run instead of blocking ---
+    await firestore().collection("distribution").add({
+      date: today,
+      runId,
+      status: "done",
+      completedAt: firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log("✅ Distribution finished for", today, "run:", runId);
   } catch (err) {
-    console.error("Error distributing verification tasks:", err);
+    console.error("❌ Distribution error:", err);
   }
 };
 
@@ -126,33 +156,55 @@ const uploadImageToCloudinary = async (uri) => {
   }
 };
 
-// 📌 Save submitted task into shared daily doc
+// ✅ Save submitted task into subcollection to avoid overwrites
+// ✅ Save submitted task into subcollection to avoid overwrites
 const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
-    const verificationRef = firestore()
-      .collection('tasks_verification')
+    // ✅ 1. Save into global pool (composite docId for uniqueness)
+    const globalRef = firestore()
+      .collection("tasks_verification")
+      .doc(today)
+      .collection("submitted")
+      .doc(`${userId}_${taskId}`);
+
+    await globalRef.set({
+      taskId, // 🔑 store real taskId for later distribution
+      title: taskTitle,
+      status: "pending",
+      submittedAt: firestore.FieldValue.serverTimestamp(),
+      photoUrl,
+      verifiedBy: "",
+      userId,
+      date: today,
+    });
+
+    // ✅ 2. Save into user's personal verification log
+    const userRef = firestore()
+      .collection("users")
+      .doc(userId)
+      .collection("verifications")
       .doc(today);
 
-    await verificationRef.set(
+    await userRef.set(
       {
         [taskId]: {
           title: taskTitle,
-          status: 'pending',
-          submittedAt: firestore.FieldValue.serverTimestamp(),
+          status: "pending",
           photoUrl,
-          verifiedBy: '',
-          userId: userId,
-          date: today,
+          submittedAt: firestore.FieldValue.serverTimestamp(),
         },
       },
-      { merge: true }
+      { merge: true } // ensures multiple tasks don’t overwrite each other
     );
+
+    console.log("✅ Task stored in both global + user verifications:", taskId);
   } catch (error) {
-    console.error('Error storing task for verification:', error);
+    console.error("❌ Error storing task for verification:", error);
   }
 };
+
 
 const RoutineScreen = () => {
   const { user } = useAuth();
@@ -457,12 +509,22 @@ const RoutineScreen = () => {
         </TouchableOpacity>
 
         {/* 🔧 Manual trigger button for testing */}
-        <TouchableOpacity
-          style={[styles.taskVerifyBtn, { backgroundColor: '#709775' }]}
-          onPress={distributeTasksForVerification}
-        >
-          <Text style={[styles.taskVerifyText, { color: '#fff' }]}>Distribute Now (Test)</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.taskVerifyBtn, { backgroundColor: '#709775' }]}
+              onPress={async () => {
+                console.log("🚀 Distribute button pressed");
+                try {
+                  await distributeTasksForVerification();
+                  Alert.alert("Success", "Distribution completed!");
+                } catch (err) {
+                  console.error("❌ Distribution failed:", err);
+                  Alert.alert("Error", "Distribution failed, check console logs.");
+                }
+              }}
+            >
+              <Text style={[styles.taskVerifyText, { color: '#fff' }]}>Distribute Now (Test)</Text>
+            </TouchableOpacity>
+
 
         <View style={styles.tabContainer}>
           {['easy', 'hard'].map((tab) => (
