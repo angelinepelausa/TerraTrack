@@ -1,7 +1,7 @@
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 
-export const hasAttemptedQuiz = async (contentId) => {
+export const hasAttemptedQuiz = async (contentId, type = 'weekly') => {
   const user = auth().currentUser;
   if (!user) throw new Error('User not logged in');
   const userId = user.uid;
@@ -11,7 +11,11 @@ export const hasAttemptedQuiz = async (contentId) => {
     .doc(userId)
     .collection('quiz_attempts');
 
-  const snapshot = await attemptsRef.where('contentId', '==', contentId).get();
+  const snapshot = await attemptsRef
+    .where('contentId', '==', contentId)
+    .where('type', '==', type)
+    .get();
+
   return !snapshot.empty; 
 };
 
@@ -22,7 +26,7 @@ export const saveQuizAttempt = async ({
   coinsEarned,
   pointsEarned,
   timeTaken,
-  type = 'educational', // 👈 default type is educational
+  type = 'educational', 
 }) => {
   const user = auth().currentUser;
   if (!user) throw new Error('User not logged in');

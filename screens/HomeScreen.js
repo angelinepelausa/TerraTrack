@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { getCommunityProgress } from '../repositories/communityProgressRepository';
 import { getUserTerraCoins } from '../repositories/userRepository';
+import { hasAttemptedQuiz } from '../repositories/quizAttemptsRepository';
 import ProgressBar from '../components/ProgressBar';
 import { scale, vScale } from '../utils/scaling';
 import { useAuth } from '../context/AuthContext';
@@ -11,11 +12,21 @@ const PADDING = scale(20);
 const GAP = scale(20);
 const CARD_WIDTH = (width - PADDING * 2 - GAP) / 2;
 
+// Function to get current week's Monday date (quiz starts on Monday)
+const getCurrentQuizWeek = () => {
+  const now = new Date();
+  const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+  const monday = new Date(now.setDate(diff));
+  return monday.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+};
+
 const HomeScreen = ({ navigation }) => {
   const [terraCoins, setTerraCoins] = useState(0);
   const [communityProgress, setCommunityProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [weeklyQuizAttempted, setWeeklyQuizAttempted] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -30,6 +41,13 @@ const HomeScreen = ({ navigation }) => {
         } else {
           setError('No community progress data found.');
         }
+
+        // Check if weekly quiz is already attempted (using Monday as start)
+        if (user) {
+          const weekId = `weekly_${getCurrentQuizWeek()}`;
+          const attempted = await hasAttemptedQuiz(weekId, 'weekly');
+          setWeeklyQuizAttempted(attempted);
+        }
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load data.');
@@ -39,28 +57,55 @@ const HomeScreen = ({ navigation }) => {
     };
 
     fetchData();
-  }, []);
+  }, [user]);
+
+  const handleCardPress = (item) => {
+    if (item.attempted) {
+      Alert.alert(
+        'Quiz Completed',
+        'You have already taken this week\'s quiz. Please check back next week for a new quiz!',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    if (item.title === 'Read') {
+      navigation.navigate('EducationalScreen');
+    }
+    else if (item.title === 'Weekly Quiz') {
+      navigation.navigate('WeeklyQuizScreen');
+    }
+    else if (item.title === 'Invite') {
+      navigation.navigate('InviteScreen');
+    }
+  };
 
   const features = [
     {
       title: 'Weekly Quiz',
-      subtitle: 'Answer the weekly quiz to earn Terra Points and Coins!',
+      subtitle: weeklyQuizAttempted 
+        ? 'Quiz completed for this week!' 
+        : 'Answer the weekly quiz to earn Terra Points and Coins!',
       image: require('../assets/images/WeeklyQuiz.png'),
+      attempted: weeklyQuizAttempted,
     },
     {
       title: 'Achievements',
       subtitle: 'Accomplish achievements to earn Terra Points and Coins!',
       image: require('../assets/images/Achievements.png'),
+      attempted: false,
     },
     {
       title: 'Read',
       subtitle: 'Read and answer the quiz to earn Terra Points and Coins!',
       image: require('../assets/images/Read.png'),
+      attempted: false,
     },
     {
       title: 'Invite',
       subtitle: 'Invite friends to TerraTrack to earn Terra Coins and Points!',
       image: require('../assets/images/Invite.png'),
+      attempted: false,
     },
   ];
 
@@ -109,18 +154,11 @@ const HomeScreen = ({ navigation }) => {
           {features.map((item, index) => (
             <TouchableOpacity
               key={index}
-              style={styles.card}
-              onPress={() => {
-                if (item.title === 'Read') {
-                  navigation.navigate('EducationalScreen');
-                }
-                else if (item.title === 'Weekly Quiz') {
-                  navigation.navigate('WeeklyQuizScreen');
-                }
-                else if (item.title === 'Invite') {
-                  navigation.navigate('InviteScreen');
-                }
-              }}
+              style={[
+                styles.card,
+                item.attempted && {backgroundColor: '#a7a7a7'}
+              ]}
+              onPress={() => handleCardPress(item)}
             >
               <View style={styles.cardTextArea}>
                 <Text style={styles.cardTitle}>{item.title}</Text>

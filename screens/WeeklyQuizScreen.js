@@ -62,7 +62,6 @@ const WeeklyQuizScreen = ({ navigation }) => {
     const earnedCoins = isCorrect ? 5 : 0;
     const earnedPoints = isCorrect ? 50 : 0;
 
-    // ✅ Save rewards state
     setRewards({
       coins: earnedCoins,
       points: earnedPoints,
@@ -98,20 +97,6 @@ const WeeklyQuizScreen = ({ navigation }) => {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#709775" />
-      </View>
-    );
-  }
-
-  if (alreadyAttempted) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.infoText}>You already completed this week's quiz.</Text>
-        <TouchableOpacity
-          style={[styles.optionButton, styles.continueButton, styles.fixedButton]}
-          onPress={() => navigation.navigate("HomeScreen")}
-        >
-          <Text style={styles.submitText}>Go Home</Text>
-        </TouchableOpacity>
       </View>
     );
   }

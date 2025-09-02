@@ -1,125 +1,66 @@
+// repositories/leaderboardRepository.js
 import firestore from '@react-native-firebase/firestore';
+import { computeWeeklyCycle } from '../utils/leaderboardUtils';
+import { addUserRewards } from './userRepository';
 
-const toTimestamp = (value) => {
-  if (!value) return null;
-  return value.toDate ? value : firestore.Timestamp.fromDate(value);
-};
+const CONFIG_DOC = firestore().collection('leaderboard').doc('config');
+const RESULTS_COLLECTION = firestore().collection('leaderboard').doc('results');
 
-export const calculateNextCycleEnd = (frequency) => {
-  const now = new Date();
+// ----------------- CONFIG -----------------
 
-  switch (frequency) {
-    case 'daily': {
-      const end = new Date(now);
-      end.setHours(23, 59, 59, 999);
-      return firestore.Timestamp.fromDate(end);
-    }
-    case 'weekly': {
-      const end = new Date(now);
-      const day = end.getDay(); 
-      const daysUntilSaturday = 6 - day;
-      end.setDate(end.getDate() + daysUntilSaturday);
-      end.setHours(23, 59, 59, 999);
-      return firestore.Timestamp.fromDate(end);
-    }
-    case 'monthly': {
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      end.setHours(23, 59, 59, 999);
-      return firestore.Timestamp.fromDate(end);
-    }
-    default: {
-      const end = new Date(now);
-      const day = end.getDay();
-      const daysUntilSaturday = 6 - day;
-      end.setDate(end.getDate() + daysUntilSaturday);
-      end.setHours(23, 59, 59, 999);
-      return firestore.Timestamp.fromDate(end);
-    }
-  }
-};
-
-export const applyPendingConfigIfNeeded = async () => {
-  const docRef = firestore().collection('leaderboardConfig').doc('config');
-  const doc = await docRef.get();
-  if (!doc.exists) return;
-
-  const data = doc.data();
-  if (!data.currentCycleEnd) return; 
-  const now = new Date();
-  const cycleEnd = toTimestamp(data.currentCycleEnd).toDate();
-
-  if (data.pendingConfig && cycleEnd <= now) {
-    const updated = {
-      ...data.pendingConfig,
-      lastApplied: firestore.Timestamp.fromDate(now),
-    };
-
-    await docRef.set({
-      ...updated,
-      pendingConfig: firestore.FieldValue.delete(),
-      currentCycleEnd: calculateNextCycleEnd(updated.resetFrequency),
-    }, { merge: true });
-  }
-};
-
+/**
+ * Get current leaderboard config from Firestore.
+ * If none exists, create a default one.
+ */
 export const getLeaderboardConfig = async () => {
-  const docRef = firestore().collection('leaderboardConfig').doc('config');
-  const doc = await docRef.get();
+  const snapshot = await CONFIG_DOC.get();
 
-  if (!doc.exists) {
+  if (!snapshot.exists) {
     const defaultConfig = {
-      status: 'active',
-      resetFrequency: 'weekly',
       rewards: {
-        top1: { terraCoins: 0, terraPoints: 0 },
-        top2: { terraCoins: 0, terraPoints: 0 },
-        top3: { terraCoins: 0, terraPoints: 0 },
-        top4to10: { terraCoins: 0, terraPoints: 0 },
-        top11plus: { terraCoins: 0, terraPoints: 0 },
+        top1: { terraCoins: 300, terraPoints: 30 },
+        top2: { terraCoins: 200, terraPoints: 20 },
+        top3: { terraCoins: 100, terraPoints: 10 },
+        top4to10: { terraCoins: 50, terraPoints: 5 },
+        top11plus: { terraCoins: 30, terraPoints: 3 },
       },
-      currentCycleEnd: null, 
       pendingConfig: null,
+      lastAppliedCycleStart: null,
     };
-    await docRef.set(defaultConfig);
+    await CONFIG_DOC.set(defaultConfig);
     return defaultConfig;
   }
 
-  const data = doc.data();
-  return data;
+  return snapshot.data();
 };
 
-export const savePendingLeaderboardConfig = async (config) => {
-  const docRef = firestore().collection('leaderboardConfig').doc('config');
+/**
+ * Save or update pending leaderboard config.
+ * - If no pending exists → create new pending.
+ * - If pending exists → update it with new rewards.
+ */
+export const saveOrUpdatePendingConfig = async (rewards) => {
+  const currentConfig = await getLeaderboardConfig();
 
-  await applyPendingConfigIfNeeded();
+  const pendingConfig = currentConfig.pendingConfig
+    ? { ...currentConfig.pendingConfig, rewards, savedAt: firestore.Timestamp.now() }
+    : { rewards, savedAt: firestore.Timestamp.now() };
 
-  const doc = await docRef.get();
-  const now = new Date();
-
-  if (!doc.exists) {
-    await docRef.set({
-      ...config,
-      currentCycleEnd: calculateNextCycleEnd(config.resetFrequency),
-      pendingConfig: null,
-    });
-  } else {
-    const data = doc.data();
-    const cycleEnd = toTimestamp(data.currentCycleEnd)?.toDate();
-
-    if (!data.currentCycleEnd || cycleEnd <= now) {
-      await docRef.set({
-        ...config,
-        currentCycleEnd: calculateNextCycleEnd(config.resetFrequency),
-        pendingConfig: firestore.FieldValue.delete(),
-      }, { merge: true });
-    } else {
-      await docRef.set({
-        pendingConfig: config,
-      }, { merge: true });
-    }
-  }
+  await CONFIG_DOC.set({ pendingConfig }, { merge: true });
 };
 
+/**
+ * Delete pending configuration entirely.
+ */
+export const deletePendingConfig = async () => {
+  await CONFIG_DOC.set({ pendingConfig: null }, { merge: true });
+};
+
+// ----------------- LEADERBOARD DISPLAY -----------------
+
+/**
+ * Get top N users for leaderboard display
+ */
 export const getLeaderboard = async (limit = 10) => {
   const snapshot = await firestore()
     .collection('users')
@@ -135,6 +76,9 @@ export const getLeaderboard = async (limit = 10) => {
   }));
 };
 
+/**
+ * Get user's current rank
+ */
 export const getUserRank = async (userId) => {
   const snapshot = await firestore()
     .collection('users')
@@ -149,4 +93,214 @@ export const getUserRank = async (userId) => {
   }));
 
   return allUsers.find(user => user.id === userId) || null;
+};
+
+// ----------------- LEADERBOARD REWARDS -----------------
+
+/**
+ * Get ALL users for reward distribution
+ */
+export const getAllUsers = async () => {
+  const snapshot = await firestore()
+    .collection('users')
+    .orderBy('terraPoints', 'desc')
+    .get();
+
+  let rank = 1;
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    rank: rank++,
+    username: doc.data().username,
+    terraPoints: doc.data().terraPoints || 0,
+  }));
+};
+
+/**
+ * Distribute rewards to ALL users and save results
+ */
+export const distributeLeaderboardRewards = async () => {
+  try {
+    const config = await getLeaderboardConfig();
+    const allUsers = await getAllUsers(); // Get ALL users
+    const { start, end } = computeWeeklyCycle();
+    
+    const results = {
+      cycleStart: firestore.Timestamp.fromDate(start),
+      cycleEnd: firestore.Timestamp.fromDate(end),
+      distributedAt: firestore.Timestamp.now(),
+      rewards: [],
+      totalUsers: allUsers.length,
+      totalTerraCoinsDistributed: 0,
+      totalTerraPointsDistributed: 0
+    };
+
+    // Distribute rewards to ALL users based on rank
+    for (const user of allUsers) {
+      let rewardConfig;
+
+      if (user.rank === 1) rewardConfig = config.rewards.top1;
+      else if (user.rank === 2) rewardConfig = config.rewards.top2;
+      else if (user.rank === 3) rewardConfig = config.rewards.top3;
+      else if (user.rank >= 4 && user.rank <= 10) rewardConfig = config.rewards.top4to10;
+      else rewardConfig = config.rewards.top11plus;
+
+      // Add rewards to EVERY user
+      await addUserRewards(user.id, rewardConfig.terraCoins, rewardConfig.terraPoints);
+      
+      results.rewards.push({
+        userId: user.id,
+        username: user.username,
+        rank: user.rank,
+        terraCoins: rewardConfig.terraCoins,
+        terraPoints: rewardConfig.terraPoints,
+        previousTerraPoints: user.terraPoints
+      });
+
+      results.totalTerraCoinsDistributed += rewardConfig.terraCoins;
+      results.totalTerraPointsDistributed += rewardConfig.terraPoints;
+    }
+
+    // Save results to history
+    await RESULTS_COLLECTION.collection('history').add(results);
+
+    return { success: true, results };
+
+  } catch (error) {
+    console.error('Error distributing rewards:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Apply pending config and distribute rewards if new cycle
+ */
+export const applyPendingConfigIfNeeded = async () => {
+  const { start } = computeWeeklyCycle(); // current Sunday start
+  const config = await getLeaderboardConfig();
+
+  // If already applied this cycle, do nothing
+  if (
+    config.lastAppliedCycleStart &&
+    config.lastAppliedCycleStart.toMillis &&
+    new Date(config.lastAppliedCycleStart.toMillis()).getTime() === start.getTime()
+  ) {
+    return { applied: false, reason: 'Already applied this cycle' };
+  }
+
+  let appliedConfig = config.rewards;
+
+  // Apply pending if exists
+  if (config.pendingConfig) {
+    appliedConfig = config.pendingConfig.rewards;
+    await CONFIG_DOC.set(
+      {
+        rewards: appliedConfig,
+        lastAppliedCycleStart: firestore.Timestamp.fromDate(start),
+        pendingConfig: null,
+      },
+      { merge: true }
+    );
+  } else {
+    // No pending → just mark cycle as updated
+    await CONFIG_DOC.set(
+      {
+        lastAppliedCycleStart: firestore.Timestamp.fromDate(start),
+      },
+      { merge: true }
+    );
+  }
+
+  // Distribute rewards to ALL users for the completed cycle
+  const distributionResult = await distributeLeaderboardRewards();
+
+  return { 
+    applied: true, 
+    config: appliedConfig,
+    distribution: distributionResult
+  };
+};
+
+/**
+ * Get reward history
+ */
+export const getRewardHistory = async (limit = 10) => {
+  try {
+    const snapshot = await RESULTS_COLLECTION
+      .collection('history')
+      .orderBy('distributedAt', 'desc')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('Error fetching reward history:', error);
+    return [];
+  }
+};
+
+/**
+ * MANUAL REWARD DISTRIBUTION - Call this from your admin panel
+ * This will reward ALL users regardless of cycle timing
+ */
+export const manuallyDistributeRewards = async () => {
+  try {
+    const config = await getLeaderboardConfig();
+    const allUsers = await getAllUsers();
+    const now = firestore.Timestamp.now();
+    
+    const results = {
+      distributedAt: now,
+      rewards: [],
+      totalUsers: allUsers.length,
+      totalTerraCoinsDistributed: 0,
+      totalTerraPointsDistributed: 0,
+      manualDistribution: true
+    };
+
+    // Distribute rewards to ALL users
+    for (const user of allUsers) {
+      let rewardConfig;
+
+      if (user.rank === 1) rewardConfig = config.rewards.top1;
+      else if (user.rank === 2) rewardConfig = config.rewards.top2;
+      else if (user.rank === 3) rewardConfig = config.rewards.top3;
+      else if (user.rank >= 4 && user.rank <= 10) rewardConfig = config.rewards.top4to10;
+      else rewardConfig = config.rewards.top11plus;
+
+      await addUserRewards(user.id, rewardConfig.terraCoins, rewardConfig.terraPoints);
+      
+      results.rewards.push({
+        userId: user.id,
+        username: user.username,
+        rank: user.rank,
+        terraCoins: rewardConfig.terraCoins,
+        terraPoints: rewardConfig.terraPoints
+      });
+
+      results.totalTerraCoinsDistributed += rewardConfig.terraCoins;
+      results.totalTerraPointsDistributed += rewardConfig.terraPoints;
+    }
+
+    // Save manual distribution results
+    await RESULTS_COLLECTION.collection('manual_distributions').add(results);
+
+    return { success: true, results };
+
+  } catch (error) {
+    console.error('Error in manual reward distribution:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export default {
+  getLeaderboardConfig,
+  saveOrUpdatePendingConfig,
+  deletePendingConfig,
+  getLeaderboard,
+  getUserRank,
+  getAllUsers,
+  distributeLeaderboardRewards,
+  applyPendingConfigIfNeeded,
+  getRewardHistory,
+  manuallyDistributeRewards
 };
