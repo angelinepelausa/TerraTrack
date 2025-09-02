@@ -59,7 +59,6 @@ export const saveQuizAttempt = async ({
       throw new Error("You have already completed this week's quiz.");
     }
 
-    // ✅ Allow retries for educational quizzes
     const docId = querySnapshot.docs[0].id;
     await attemptsRef.doc(docId).update(attemptData);
     return docId;

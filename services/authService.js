@@ -3,10 +3,10 @@ import { createUserDocument } from '../repositories/userRepository';
 
 export const signUpWithEmail = async (email, password, userData) => {
   try {
-    // 1. Create auth user
+    // Create auth user
     const userCredential = await auth().createUserWithEmailAndPassword(email, password);
     
-    // 2. Create user document (wait for auth to fully initialize)
+    // Create user document (wait for auth to fully initialize)
     await new Promise(resolve => setTimeout(resolve, 500));
     
     const result = await createUserDocument({
@@ -21,7 +21,12 @@ export const signUpWithEmail = async (email, password, userData) => {
       throw new Error(result.error);
     }
 
-    return { success: true };
+    // Return both user object and uid for clarity
+    return { 
+      success: true, 
+      user: userCredential.user,
+      uid: userCredential.user.uid
+    };
   } catch (error) {
     console.error('Auth error:', error);
     let errorMessage = 'Signup failed. Please try again.';

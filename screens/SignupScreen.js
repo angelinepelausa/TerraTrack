@@ -30,25 +30,22 @@ const SignUpScreen = ({ navigation }) => {
     const { email, password, ...userData } = formData;
 
     try {
-      // 1️⃣ Create account in Firebase Auth
-      const { success: authSuccess, error: authError, code } = await signUpWithEmail(email, password, userData);
-      if (!authSuccess) {
+      const { success, user, uid, error, code } = await signUpWithEmail(email, password, userData);
+      
+      if (!success) {
         let newErrors = {};
         if (authErrorMessages[code]) {
           if (code.includes('username')) newErrors.username = authErrorMessages[code];
           else if (code.includes('email')) newErrors.email = authErrorMessages[code];
           else newErrors.general = authErrorMessages[code];
-        } else newErrors.general = authError || 'Something went wrong';
+        } else newErrors.general = error || 'Something went wrong';
         setErrorMessages(prev => ({ ...prev, ...newErrors }));
         setLoading(false);
         return;
       }
 
-      // 2️⃣ Add user document in Firestore with default TerraBuddy avatar
-      const userId = authSuccess.user.uid; // assuming signUpWithEmail returns user object
-      const userDocResult = await createUserDocument({ ...userData, userId });
-      if (!userDocResult.success) {
-        setErrorMessages(prev => ({ ...prev, general: 'Failed to create user profile.' }));
+      if (!user || !uid) {
+        setErrorMessages(prev => ({ ...prev, general: 'Failed to get user ID from Auth.' }));
         setLoading(false);
         return;
       }
