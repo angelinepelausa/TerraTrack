@@ -30,28 +30,6 @@ export const purchasesRepository = {
     }
   },
 
-  removeAvatarPurchase: async (userId, avatarId) => {
-    try {
-      const ref = firestore()
-        .collection("users")
-        .doc(userId)
-        .collection("purchases")
-        .doc("avatars");
-
-      await firestore().runTransaction(async (transaction) => {
-        const doc = await transaction.get(ref);
-        if (!doc.exists) return;
-        const list = doc.data()?.list || [];
-        transaction.set(ref, { list: list.filter(id => id !== avatarId) }, { merge: true });
-      });
-
-      return { success: true };
-    } catch (error) {
-      console.error(error);
-      return { success: false, error: error.message };
-    }
-  },
-
   getUserPurchases: async (userId) => {
     try {
       const snap = await firestore()

@@ -118,15 +118,11 @@ const TaskVerifyScreen = ({ navigation }) => {
                   <Text style={styles.vertaskTitle}>{task.title}</Text>
                 </View>
                 <TouchableOpacity
-                  style={styles.taskVerifyBtn}
-                  onPress={() =>
-                    navigation.navigate("VerifyTaskScreen", {
-                      task,
-                      onVerificationComplete: loadTasks, // refresh after verification
-                    })
-                  }
+                  style={[styles.taskVerifyBtn, task.status !== 'pending' && { backgroundColor: '#6A6A6A' }]}
+                  disabled={task.status !== 'pending'}
+                  onPress={() => navigation.navigate('VerifyTaskScreen', { task, onVerificationComplete: loadTasks })}
                 >
-                  <Text style={styles.taskVerifyText}>Verify</Text>
+                  <Text style={styles.taskVerifyText}>{task.status !== 'pending' ? 'Reviewed' : 'Verify'}</Text>
                 </TouchableOpacity>
               </View>
             ))

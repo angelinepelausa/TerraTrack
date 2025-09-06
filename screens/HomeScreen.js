@@ -173,7 +173,8 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.shopBox}>
+        <TouchableOpacity style={styles.shopBox}
+        onPress={() => navigation.navigate('ShopScreen')}>
           <Text style={styles.shopText}>
             Buy exclusive avatars and rewards from{'\n'}our partners from the Terra Shop!
           </Text>

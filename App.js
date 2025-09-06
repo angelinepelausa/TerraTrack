@@ -32,6 +32,10 @@ import AddTask from './screens/AddTask';
 import AdminLeaderboard from './screens/AdminLeaderboard';
 import AdminBadgeAvatar from './screens/AdminBadgeAvatar';
 import AddAvatar from './screens/AddAvatar';
+import ShopScreen from './screens/ShopScreen';
+import SettingsScreen from './screens/SettingsScreen';
+import AdminCommunityProgress from './screens/AdminCommunityProgress';
+import AddCommunityProgress from './screens/AddCommunityProgress';
 
 const Stack = createNativeStackNavigator();
 
@@ -174,6 +178,22 @@ const App = () => {
           <Stack.Screen 
             name="VerifyTaskScreen"
             component={VerifyTaskScreen}
+          />
+          <Stack.Screen 
+            name="ShopScreen"
+            component={ShopScreen}
+          />
+          <Stack.Screen
+            name="SettingsScreen"
+            component={SettingsScreen}
+          />
+          <Stack.Screen
+            name="AdminCommunityProgress"
+            component={AdminCommunityProgress}
+          />
+          <Stack.Screen
+            name="AddCommunityProgress"
+            component={AddCommunityProgress}
           />
         </Stack.Navigator>
       </NavigationContainer>

@@ -12,6 +12,7 @@ import {
   Platform,
   UIManager,
   Alert,
+  ActivityIndicator
 } from "react-native";
 import {
   getLeaderboardConfig,
@@ -19,9 +20,11 @@ import {
   deletePendingConfig,
   applyPendingConfigIfNeeded,
 } from "../repositories/leaderboardRepository";
+import { getCommunityLeaderboard } from "../repositories/communityProgressRepository";
 import Toast from "../components/Toast";
 import { useNavigation } from "@react-navigation/native";
 import { computeWeeklyCycle } from "../utils/leaderboardUtils";
+import Leaderboard from "../components/Leaderboard";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -43,15 +46,29 @@ const AdminLeaderboard = () => {
   const [toastMessage, setToastMessage] = useState("");
   const [cycle, setCycle] = useState({ start: null, end: null, timeLeft: "" });
   const [pendingExpanded, setPendingExpanded] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
 
   useEffect(() => {
     const init = async () => {
-      await applyPendingConfigIfNeeded();
-      const cfg = await getLeaderboardConfig();
-      setConfig((prev) => ({ ...prev, ...cfg }));
+      try {
+        await applyPendingConfigIfNeeded();
+        const cfg = await getLeaderboardConfig();
+        setConfig((prev) => ({ ...prev, ...cfg }));
 
-      const { start, end, timeLeft } = computeWeeklyCycle();
-      setCycle({ start, end, timeLeft });
+        const { start, end, timeLeft } = computeWeeklyCycle();
+        setCycle({ start, end, timeLeft });
+
+        // Fetch leaderboard data
+        const data = await getCommunityLeaderboard();
+        setLeaderboardData(data || []);
+      } catch (error) {
+        console.error("Error initializing admin leaderboard:", error);
+        setToastMessage("Error loading data");
+        setToastVisible(true);
+      } finally {
+        setLoadingLeaderboard(false);
+      }
     };
     init();
   }, []);
@@ -336,6 +353,18 @@ const AdminLeaderboard = () => {
         </>
       )}
 
+      {loadingLeaderboard ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#709775" />
+          <Text style={styles.loadingText}>Loading leaderboard...</Text>
+        </View>
+      ) : (
+        <Leaderboard 
+          leaderboard={leaderboardData}
+          loading={loadingLeaderboard}
+        />
+      )}
+
       <Toast
         message={toastMessage}
         visible={toastVisible}
@@ -384,6 +413,16 @@ const styles = StyleSheet.create({
   pendingArrow: { color: "#709775", fontWeight: "600", fontSize: 16 },
   pendingDetails: { marginTop: 10, marginBottom: 50, padding: 12, backgroundColor: "#222", borderRadius: 12 },
   header: { fontSize: 18, fontWeight: "bold", color: "#CCCCCC", marginTop: 20, marginBottom: 10 },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    color: '#CCCCCC',
+    marginTop: 10,
+    fontSize: 16,
+  },
 });
 
 export default AdminLeaderboard;

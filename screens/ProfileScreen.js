@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, 
   ActivityIndicator, Dimensions 
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import auth from "@react-native-firebase/auth";
 import firestore from "@react-native-firebase/firestore";
 import { BarChart } from "react-native-chart-kit";
@@ -17,6 +18,7 @@ const AVATAR_SIZE = width * 0.25;
 const categories = ["Total", "Diet", "Transport", "Energy"];
 
 const ProfileScreen = () => {
+  const navigation = useNavigation();
   const [userData, setUserData] = useState(null);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(null);
   const [chartData, setChartData] = useState({ labels: [], datasets: [{ data: [] }] });
@@ -124,7 +126,6 @@ const ProfileScreen = () => {
   };
 
   const handleAvatarSelect = async (avatar) => {
-    // Simply update the avatar - the AvatarPicker component handles purchases
     try {
       await firestore().collection("users").doc(userId).update({ avatar: avatar.id });
       setAvatarModalVisible(false);
@@ -135,6 +136,14 @@ const ProfileScreen = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/* Edit button */}
+      <TouchableOpacity 
+        style={styles.editButton}
+        onPress={() => navigation.navigate("SettingsScreen")}
+      >
+        <Image source={require("../assets/icons/edit.png")} style={styles.editIcon} />
+      </TouchableOpacity>
+
       {/* Avatar */}
       <TouchableOpacity onPress={() => setAvatarModalVisible(true)}>
         {currentAvatarUrl ? (
@@ -253,6 +262,17 @@ const styles = StyleSheet.create({
     alignItems: "center", 
     paddingVertical: 30, 
     backgroundColor: "#131313"
+  },
+  editButton: {
+    position: "absolute",
+    top: 40,
+    right: 20,
+    zIndex: 100,
+  },
+  editIcon: {
+    width: 24,
+    height: 24,
+    tintColor: "#fff",
   },
   avatar: {
     width: AVATAR_SIZE,

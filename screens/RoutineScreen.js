@@ -34,7 +34,7 @@ const UPLOAD_PRESET = 'terratrack';
 export const distributeTasksForVerification = async () => {
   try {
     const today = new Date().toISOString().split("T")[0];
-    const runId = Date.now().toString(); // unique run each time
+    const runId = Date.now().toString();
 
     // --- Get all submitted tasks ---
     const tasksSnap = await firestore()
@@ -53,56 +53,64 @@ export const distributeTasksForVerification = async () => {
       return {
         docId: doc.id,
         taskId: data.taskId || doc.id,
-        ...data,
+        userId: data.userId,
+        title: data.title || "Untitled Task",
+        photoUrl: data.photoUrl || null,
       };
     });
 
-    // --- Get all users ---
-    const usersSnap = await firestore().collection("users").get();
-    const eligibleUsers = usersSnap.docs.map((d) => ({ id: d.id }));
-
-    if (eligibleUsers.length === 0) {
-      console.log("⚡ No users available for verification");
+    // --- Determine eligible users (only those who submitted today) ---
+    const submitterIds = [...new Set(tasksArray.map((t) => t.userId))];
+    if (submitterIds.length === 0) {
+      console.log("⚡ No eligible submitters today");
       return;
     }
 
+    const eligibleUsers = submitterIds.map((id) => ({ id }));
+
     console.log("Eligible verifiers:", eligibleUsers.map((u) => u.id));
 
+    // --- Load balancing tracker ---
     const loadMap = Object.fromEntries(eligibleUsers.map((u) => [u.id, 0]));
     let batch = firestore().batch();
     let opCount = 0;
 
     // --- Assign 3 verifiers per task ---
     for (const task of tasksArray) {
-      let assignedUsers = [];
+      const assignedUsers = [];
 
       for (let i = 0; i < 3; i++) {
-        let candidates = eligibleUsers
+        // candidates = all eligible except owner + already assigned
+        const candidates = eligibleUsers
           .filter((u) => u.id !== task.userId && !assignedUsers.includes(u.id))
-          .sort((a, b) => loadMap[a.id] - loadMap[b.id]);
+          .sort((a, b) => loadMap[a.id] - loadMap[b.id]); // pick from lowest load first
 
         if (candidates.length === 0) break;
 
+        // get users with same lowest load
         const minLoad = loadMap[candidates[0].id];
         const lowest = candidates.filter((c) => loadMap[c.id] === minLoad);
+
+        // pick one randomly among lowest
         const verifier = lowest[Math.floor(Math.random() * lowest.length)];
 
         assignedUsers.push(verifier.id);
         loadMap[verifier.id]++;
 
+        // store under verifier
         const ref = firestore()
           .collection("users")
           .doc(verifier.id)
           .collection("assigned_verifications")
-          .doc(`${today}_${runId}`); // 👈 unique per run
+          .doc(`${today}_${runId}`);
 
         batch.set(
           ref,
           {
-            [task.docId]: {
+            [`${task.userId}_${task.taskId}`]: {
               taskId: task.taskId,
-              title: task.title || "Untitled Task",
-              photoUrl: task.photoUrl || null,
+              title: task.title,
+              photoUrl: task.photoUrl,
               ownerId: task.userId,
               status: "pending",
             },
@@ -121,7 +129,7 @@ export const distributeTasksForVerification = async () => {
 
     if (opCount > 0) await batch.commit();
 
-    // --- Log distribution run instead of blocking ---
+    // --- Log run ---
     await firestore().collection("distribution").add({
       date: today,
       runId,
@@ -130,6 +138,7 @@ export const distributeTasksForVerification = async () => {
     });
 
     console.log("✅ Distribution finished for", today, "run:", runId);
+    console.log("Final load per user:", loadMap);
   } catch (err) {
     console.error("❌ Distribution error:", err);
   }

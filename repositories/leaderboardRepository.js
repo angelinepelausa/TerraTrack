@@ -1,4 +1,3 @@
-// repositories/leaderboardRepository.js
 import firestore from '@react-native-firebase/firestore';
 import { computeWeeklyCycle } from '../utils/leaderboardUtils';
 import { addUserRewards } from './userRepository';
@@ -6,12 +5,6 @@ import { addUserRewards } from './userRepository';
 const CONFIG_DOC = firestore().collection('leaderboard').doc('config');
 const RESULTS_COLLECTION = firestore().collection('leaderboard').doc('results');
 
-// ----------------- CONFIG -----------------
-
-/**
- * Get current leaderboard config from Firestore.
- * If none exists, create a default one.
- */
 export const getLeaderboardConfig = async () => {
   const snapshot = await CONFIG_DOC.get();
 
@@ -34,11 +27,6 @@ export const getLeaderboardConfig = async () => {
   return snapshot.data();
 };
 
-/**
- * Save or update pending leaderboard config.
- * - If no pending exists → create new pending.
- * - If pending exists → update it with new rewards.
- */
 export const saveOrUpdatePendingConfig = async (rewards) => {
   const currentConfig = await getLeaderboardConfig();
 
@@ -49,18 +37,10 @@ export const saveOrUpdatePendingConfig = async (rewards) => {
   await CONFIG_DOC.set({ pendingConfig }, { merge: true });
 };
 
-/**
- * Delete pending configuration entirely.
- */
 export const deletePendingConfig = async () => {
   await CONFIG_DOC.set({ pendingConfig: null }, { merge: true });
 };
 
-// ----------------- LEADERBOARD DISPLAY -----------------
-
-/**
- * Get top N users for leaderboard display
- */
 export const getLeaderboard = async (limit = 10) => {
   const snapshot = await firestore()
     .collection('users')
@@ -76,9 +56,6 @@ export const getLeaderboard = async (limit = 10) => {
   }));
 };
 
-/**
- * Get user's current rank
- */
 export const getUserRank = async (userId) => {
   const snapshot = await firestore()
     .collection('users')
@@ -95,11 +72,6 @@ export const getUserRank = async (userId) => {
   return allUsers.find(user => user.id === userId) || null;
 };
 
-// ----------------- LEADERBOARD REWARDS -----------------
-
-/**
- * Get ALL users for reward distribution
- */
 export const getAllUsers = async () => {
   const snapshot = await firestore()
     .collection('users')
@@ -115,15 +87,11 @@ export const getAllUsers = async () => {
   }));
 };
 
-/**
- * Distribute rewards to ALL users and save results
- */
-export const distributeLeaderboardRewards = async () => {
+export const distributeLeaderboardRewards = async (config) => {
   try {
-    const config = await getLeaderboardConfig();
-    const allUsers = await getAllUsers(); // Get ALL users
+    const allUsers = await getAllUsers();
     const { start, end } = computeWeeklyCycle();
-    
+
     const results = {
       cycleStart: firestore.Timestamp.fromDate(start),
       cycleEnd: firestore.Timestamp.fromDate(end),
@@ -134,51 +102,62 @@ export const distributeLeaderboardRewards = async () => {
       totalTerraPointsDistributed: 0
     };
 
-    // Distribute rewards to ALL users based on rank
+    const historyRef = await RESULTS_COLLECTION.collection('history').doc();
+    const batch = firestore().batch();
+
     for (const user of allUsers) {
       let rewardConfig;
 
-      if (user.rank === 1) rewardConfig = config.rewards.top1;
-      else if (user.rank === 2) rewardConfig = config.rewards.top2;
-      else if (user.rank === 3) rewardConfig = config.rewards.top3;
-      else if (user.rank >= 4 && user.rank <= 10) rewardConfig = config.rewards.top4to10;
-      else rewardConfig = config.rewards.top11plus;
+      if (user.rank === 1) rewardConfig = config.top1;
+      else if (user.rank === 2) rewardConfig = config.top2;
+      else if (user.rank === 3) rewardConfig = config.top3;
+      else if (user.rank >= 4 && user.rank <= 10) rewardConfig = config.top4to10;
+      else rewardConfig = config.top11plus;
 
-      // Add rewards to EVERY user
       await addUserRewards(user.id, rewardConfig.terraCoins, rewardConfig.terraPoints);
-      
+
+      const userResultRef = historyRef.collection("users").doc(user.id);
+      batch.set(userResultRef, {
+        username: user.username,
+        rank: user.rank,
+        score: user.terraPoints, 
+        terraCoins: rewardConfig.terraCoins,
+        terraPoints: rewardConfig.terraPoints
+      });
+
+      const userRef = firestore().collection("users").doc(user.id);
+      batch.update(userRef, { terraPoints: 0 });
+
       results.rewards.push({
         userId: user.id,
         username: user.username,
         rank: user.rank,
+        score: user.terraPoints,
         terraCoins: rewardConfig.terraCoins,
-        terraPoints: rewardConfig.terraPoints,
-        previousTerraPoints: user.terraPoints
+        terraPoints: rewardConfig.terraPoints
       });
 
       results.totalTerraCoinsDistributed += rewardConfig.terraCoins;
       results.totalTerraPointsDistributed += rewardConfig.terraPoints;
     }
 
-    // Save results to history
-    await RESULTS_COLLECTION.collection('history').add(results);
+    batch.set(historyRef, results);
+
+    await batch.commit();
 
     return { success: true, results };
 
   } catch (error) {
-    console.error('Error distributing rewards:', error);
+    console.error("Error distributing rewards:", error);
     return { success: false, error: error.message };
   }
 };
 
-/**
- * Apply pending config and distribute rewards if new cycle
- */
+
 export const applyPendingConfigIfNeeded = async () => {
   const { start } = computeWeeklyCycle(); // current Sunday start
   const config = await getLeaderboardConfig();
 
-  // If already applied this cycle, do nothing
   if (
     config.lastAppliedCycleStart &&
     config.lastAppliedCycleStart.toMillis &&
@@ -189,7 +168,6 @@ export const applyPendingConfigIfNeeded = async () => {
 
   let appliedConfig = config.rewards;
 
-  // Apply pending if exists
   if (config.pendingConfig) {
     appliedConfig = config.pendingConfig.rewards;
     await CONFIG_DOC.set(
@@ -201,7 +179,6 @@ export const applyPendingConfigIfNeeded = async () => {
       { merge: true }
     );
   } else {
-    // No pending → just mark cycle as updated
     await CONFIG_DOC.set(
       {
         lastAppliedCycleStart: firestore.Timestamp.fromDate(start),
@@ -210,19 +187,15 @@ export const applyPendingConfigIfNeeded = async () => {
     );
   }
 
-  // Distribute rewards to ALL users for the completed cycle
-  const distributionResult = await distributeLeaderboardRewards();
+  const distributionResult = await distributeLeaderboardRewards(appliedConfig);
 
-  return { 
-    applied: true, 
+  return {
+    applied: true,
     config: appliedConfig,
     distribution: distributionResult
   };
 };
 
-/**
- * Get reward history
- */
 export const getRewardHistory = async (limit = 10) => {
   try {
     const snapshot = await RESULTS_COLLECTION
@@ -238,60 +211,6 @@ export const getRewardHistory = async (limit = 10) => {
   }
 };
 
-/**
- * MANUAL REWARD DISTRIBUTION - Call this from your admin panel
- * This will reward ALL users regardless of cycle timing
- */
-export const manuallyDistributeRewards = async () => {
-  try {
-    const config = await getLeaderboardConfig();
-    const allUsers = await getAllUsers();
-    const now = firestore.Timestamp.now();
-    
-    const results = {
-      distributedAt: now,
-      rewards: [],
-      totalUsers: allUsers.length,
-      totalTerraCoinsDistributed: 0,
-      totalTerraPointsDistributed: 0,
-      manualDistribution: true
-    };
-
-    // Distribute rewards to ALL users
-    for (const user of allUsers) {
-      let rewardConfig;
-
-      if (user.rank === 1) rewardConfig = config.rewards.top1;
-      else if (user.rank === 2) rewardConfig = config.rewards.top2;
-      else if (user.rank === 3) rewardConfig = config.rewards.top3;
-      else if (user.rank >= 4 && user.rank <= 10) rewardConfig = config.rewards.top4to10;
-      else rewardConfig = config.rewards.top11plus;
-
-      await addUserRewards(user.id, rewardConfig.terraCoins, rewardConfig.terraPoints);
-      
-      results.rewards.push({
-        userId: user.id,
-        username: user.username,
-        rank: user.rank,
-        terraCoins: rewardConfig.terraCoins,
-        terraPoints: rewardConfig.terraPoints
-      });
-
-      results.totalTerraCoinsDistributed += rewardConfig.terraCoins;
-      results.totalTerraPointsDistributed += rewardConfig.terraPoints;
-    }
-
-    // Save manual distribution results
-    await RESULTS_COLLECTION.collection('manual_distributions').add(results);
-
-    return { success: true, results };
-
-  } catch (error) {
-    console.error('Error in manual reward distribution:', error);
-    return { success: false, error: error.message };
-  }
-};
-
 export default {
   getLeaderboardConfig,
   saveOrUpdatePendingConfig,
@@ -301,6 +220,5 @@ export default {
   getAllUsers,
   distributeLeaderboardRewards,
   applyPendingConfigIfNeeded,
-  getRewardHistory,
-  manuallyDistributeRewards
+  getRewardHistory
 };

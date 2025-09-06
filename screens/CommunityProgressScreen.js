@@ -21,9 +21,9 @@ const CommunityProgressScreen = () => {
     const loadData = async () => {
       try {
         const [progress, topUsers, userRank] = await Promise.all([
-          getCommunityProgress(),
-          getCommunityLeaderboard(),
-          getUserCommunityRank(user?.uid),
+          getCommunityProgress(),           // fetch current quarter
+          getCommunityLeaderboard(),       // fetch leaderboard
+          getUserCommunityRank(user?.uid), // fetch current user's rank
         ]);
 
         if (progress) setProgressData(progress);
@@ -47,14 +47,23 @@ const CommunityProgressScreen = () => {
     </View>
   );
 
-  const { description, current, goal, rewards } = progressData;
+  const { description, current, goal, rewards, image } = progressData;
   const top3 = leaderboard.slice(0, 3);
-  const rest = leaderboard.slice(3, 10); 
+  const rest = leaderboard.slice(3, 10);
   const isBeyond3 = currentUserRank && currentUserRank.rank > 3;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Community Impact</Text>
+
+      {image && (
+        <Image 
+          source={{ uri: image }} 
+          style={styles.communityImage} 
+          resizeMode="cover"
+        />
+      )}
+
       <Text style={styles.description}>{description}</Text>
 
       <View style={styles.progressBox}>
@@ -111,14 +120,12 @@ const CommunityProgressScreen = () => {
             <RankedAvatar user={top3[1]} currentUserId={user?.uid} />
           </View>
         )}
-
         {top3[0] && (
           <View style={[styles.podiumItem, { marginBottom: 20 }]}>
             <Image source={Crown} style={styles.crown} />
             <RankedAvatar user={top3[0]} currentUserId={user?.uid} />
           </View>
         )}
-
         {top3[2] && (
           <View style={[styles.podiumItem, { marginTop: 30 }]}>
             <RankedAvatar user={top3[2]} currentUserId={user?.uid} />
@@ -130,7 +137,6 @@ const CommunityProgressScreen = () => {
         <View style={styles.restContainer}>
           {rest.map((item) => {
             const highlight = isBeyond3 && item.id === currentUserRank.id;
-
             return (
               <View
                 key={item.id}
@@ -160,15 +166,11 @@ const CommunityProgressScreen = () => {
 
 const RankedAvatar = ({ user, currentUserId }) => {
   const isCurrentUser = user.id === currentUserId;
-
   return (
     <View style={styles.avatarWrapper}>
       <Image
         source={Avatar}
-        style={[
-          { width: 90, height: 90 },
-          isCurrentUser && { borderWidth: 3, borderColor: '#415D43', borderRadius: 45 },
-        ]}
+        style={[{ width: 90, height: 90 }, isCurrentUser && { borderWidth: 3, borderColor: '#415D43', borderRadius: 45 }]}
       />
       <View style={{
         position: 'absolute',
@@ -196,20 +198,14 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
   error: { color: 'red', fontSize: 16 },
   title: { fontSize: 18, color: '#CCCCCC', textAlign: 'center', marginTop: 40, marginBottom: 20, fontWeight: 'bold' },
+  communityImage: { width: '90%', height: 180, borderRadius: 15, marginVertical: 15, alignSelf: 'center' },
   description: { color: '#CCCCCC', fontSize: 14, textAlign: 'center', margin: 20, marginTop: 0 },
 
   progressBox: { width: '90%', backgroundColor: '#CCCCCC', borderRadius: 15, padding: 15, alignItems: 'center' },
   progressHeader: { fontWeight: 'bold', fontSize: 18, marginBottom: 8, color: '#131313' },
   progressTitle: { fontWeight: 'bold', fontSize: 15, marginBottom: 4, color: '#415D43' },
 
-  rewardsCard: {
-    width: '90%',
-    marginTop: 30,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderRadius: 18,
-    backgroundColor: '#1B2B20',
-  },
+  rewardsCard: { width: '90%', marginTop: 30, paddingVertical: 15, paddingHorizontal: 20, borderRadius: 18, backgroundColor: '#1B2B20' },
   rewardsTitle: { color: '#CCCCCC', fontWeight: 'bold', fontSize: 16, marginBottom: 12, textAlign: 'center' },
   rewardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 },
   rewardLabel: { color: '#CCCCCC', fontSize: 14, fontWeight: 'bold', width: 80 },
