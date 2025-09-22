@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, Text, ActivityIndicator, Alert } from 'react-native';
+import { View, FlatList, Text, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import HeaderSearchRow from '../components/HeaderSearchRow';
+import HeaderRow from '../components/HeaderRow';
+import SearchRow from '../components/SearchRow';
 import WeeklyQuizCard from '../components/WeeklyQuizCard';
 import { weeklyQuizRepository } from '../repositories/weeklyQuizRepository';
 
@@ -56,24 +57,28 @@ const AdminWeeklyQuiz = () => {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#131313' }}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#709775" />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, padding: 16, paddingTop: 40, backgroundColor: '#131313' }}>
-      <HeaderSearchRow
+    <View style={styles.container}>
+      <HeaderRow
         title="Weekly Quizzes"
         onBackPress={() => navigation.goBack()}
+      />
+      
+      <SearchRow
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         onAddPress={() => navigation.navigate('AddWeeklyQuiz')}
+        placeholder="Search quizzes..."
       />
 
       {filteredQuizzes.length === 0 ? (
-        <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>
+        <Text style={styles.emptyText}>
           No weekly quizzes available
         </Text>
       ) : (
@@ -87,11 +92,34 @@ const AdminWeeklyQuiz = () => {
               onPress={() => navigation.navigate('AddWeeklyQuiz', { quiz: item })}
             />
           )}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={styles.listContainer}
         />
       )}
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { 
+    flex: 1, 
+    padding: 16, 
+    paddingTop: 40, 
+    backgroundColor: '#131313' 
+  },
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: '#131313' 
+  },
+  emptyText: { 
+    textAlign: 'center', 
+    marginTop: 20, 
+    color: '#888' 
+  },
+  listContainer: { 
+    paddingBottom: 20 
+  },
+});
 
 export default AdminWeeklyQuiz;

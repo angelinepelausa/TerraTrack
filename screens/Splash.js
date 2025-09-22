@@ -1,8 +1,36 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import auth from '@react-native-firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scale, vScale } from '../utils/scaling';
+import { checkIfUserIsAdmin } from '../repositories/adminRepository';
 
 const SplashScreen = ({ navigation }) => {
+
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const rememberedUid = await AsyncStorage.getItem('rememberedUser');
+        const currentUser = auth().currentUser;
+
+        if (rememberedUid && currentUser && currentUser.uid === rememberedUid) {
+          const isAdmin = await checkIfUserIsAdmin(currentUser.uid);
+
+          if (isAdmin) {
+            navigation.replace('AdminDashboard');
+          } else {
+            navigation.replace('HomeScreen');
+          }
+        }
+        // else stay on splash/login screen
+      } catch (err) {
+        console.error('Error checking remembered user', err);
+      }
+    };
+
+    checkUser();
+  }, [navigation]);
+
   return (
     <View style={styles.container}>
       <View style={styles.contentContainer}>

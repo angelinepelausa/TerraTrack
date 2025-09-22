@@ -34,15 +34,20 @@ const ProfileScreen = () => {
   const [userPurchases, setUserPurchases] = useState([]);
   const [userId, setUserId] = useState(null);
 
-  // Wait for auth
+  // --- Leaderboard stats ---
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyTotalResults, setHistoryTotalResults] = useState(0);
+  const [bestRank, setBestRank] = useState(null);
+  const [bestRankDate, setBestRankDate] = useState(null);
+
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(user => {
       if (user) setUserId(user.uid);
+      else setUserId(null);
     });
     return unsubscribe;
   }, []);
 
-  // Fetch profile data and listen for avatar changes
   useEffect(() => {
     if (!userId) return;
     fetchUserData();
@@ -53,16 +58,118 @@ const ProfileScreen = () => {
       .onSnapshot(doc => {
         const data = doc.data();
         setUserData(data);
+
         if (data?.avatar) fetchAvatarUrl(data.avatar);
+        else setCurrentAvatarUrl(null);
       });
 
     return () => unsubscribeAvatar();
   }, [userId]);
 
-  // Fetch chart when year/category change
   useEffect(() => {
     if (selectedYear && selectedCategory && userData) fetchChart(selectedYear, selectedCategory);
   }, [selectedYear, selectedCategory, userData]);
+
+  const fetchLeaderboardHistoryStats = async (uid) => {
+    setHistoryLoading(true);
+    try {
+      if (!uid) {
+        setHistoryTotalResults(0);
+        setBestRank(null);
+        setBestRankDate(null);
+        setHistoryLoading(false);
+        return;
+      }
+
+      let total = 0;
+      let best = Number.POSITIVE_INFINITY;
+      let bestDateId = null;
+
+      try {
+        const leaderboardDocs = await firestore()
+          .collection("leaderboard")
+          .get();
+
+        if (leaderboardDocs.empty) {
+          setHistoryTotalResults(0);
+          setBestRank(null);
+          setBestRankDate(null);
+          setHistoryLoading(false);
+          return;
+        }
+
+        for (const doc of leaderboardDocs.docs) {
+          try {
+            const userRankDoc = await firestore()
+              .collection("leaderboard")
+              .doc(doc.id)
+              .collection("users")
+              .doc(uid)
+              .get();
+
+            if (userRankDoc.exists) {
+              const d = userRankDoc.data() || {};
+              let rank = typeof d.rank === 'number' ? d.rank : parseInt(d.rank, 10);
+
+              if (rank == null || Number.isNaN(rank)) continue;
+
+              total += 1;
+
+              if (rank < best) {
+                best = rank;
+                bestDateId = doc.id;
+              } else if (rank === best) {
+                const currentDate = parseResultIdToDate(doc.id);
+                const previousDate = parseResultIdToDate(bestDateId);
+                if (currentDate && previousDate && currentDate.getTime() > previousDate.getTime()) {
+                  bestDateId = doc.id;
+                }
+              }
+            }
+          } catch (err) {
+            continue;
+          }
+        }
+      } catch (queryError) {
+        setHistoryTotalResults(0);
+        setBestRank(null);
+        setBestRankDate(null);
+        setHistoryLoading(false);
+        return;
+      }
+
+      setHistoryTotalResults(total);
+      if (best === Number.POSITIVE_INFINITY) {
+        setBestRank(null);
+        setBestRankDate(null);
+      } else {
+        setBestRank(best);
+        setBestRankDate(bestDateId ? formatResultIdToReadable(bestDateId) : null);
+      }
+    } catch (err) {
+      setHistoryTotalResults(0);
+      setBestRank(null);
+      setBestRankDate(null);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const parseResultIdToDate = (resultId) => {
+    if (!resultId || typeof resultId !== "string") return null;
+    const prefix = "result_";
+    if (!resultId.startsWith(prefix)) return null;
+    const datePart = resultId.slice(prefix.length);
+    const d = new Date(datePart);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  };
+
+  const formatResultIdToReadable = (resultId) => {
+    const dt = parseResultIdToDate(resultId);
+    if (!dt) return null;
+    return dt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  };
 
   const fetchUserData = async () => {
     try {
@@ -72,54 +179,72 @@ const ProfileScreen = () => {
       const profileData = profileDoc.data();
       setUserData(profileData);
 
-      // Fetch avatar
-      if (profileData.avatar) fetchAvatarUrl(profileData.avatar);
+      if (profileData?.avatar) fetchAvatarUrl(profileData.avatar);
+      else setCurrentAvatarUrl(null);
 
-      // Fetch user purchases
-      const purchasesSnap = await firestore()
-        .collection("users")
-        .doc(userId)
-        .collection("purchases")
-        .doc("avatars")
-        .get();
-      const purchasedAvatars = purchasesSnap.exists ? purchasesSnap.data()?.list || [] : [];
-      setUserPurchases(purchasedAvatars);
+      if (profileData?.avatar) {
+        const purchasesSnap = await firestore()
+          .collection("users")
+          .doc(userId)
+          .collection("purchases")
+          .doc("avatars")
+          .get();
+        const purchasedAvatars = purchasesSnap.exists ? purchasesSnap.data()?.list || [] : [];
+        setUserPurchases(purchasedAvatars);
+      } else {
+        setUserPurchases([]);
+      }
 
-      // Fetch available years from footprints
       const footprintsSnap = await firestore()
         .collection("users")
         .doc(userId)
         .collection("footprints")
         .get();
-      const availableYears = [
-        ...new Set(footprintsSnap.docs.map(doc => doc.id.split("-")[0]))
-      ].sort().reverse();
-      if (availableYears.length > 0) {
+
+      if (!footprintsSnap.empty) {
+        const availableYears = [
+          ...new Set(footprintsSnap.docs.map(doc => doc.id.split("-")[0]))
+        ].sort().reverse();
         setYears(availableYears);
+
         if (!availableYears.includes(selectedYear)) setSelectedYear(availableYears[0]);
+      } else {
+        setYears([currentYear]);
+        setSelectedYear(currentYear);
       }
+
+      fetchLeaderboardHistoryStats(userId);
+
     } catch (err) {
       console.error("Error fetching profile:", err);
     }
   };
 
   const fetchAvatarUrl = async (avatarId) => {
+    if (!avatarId) return;
     try {
       const avatarDoc = await avatarsRepository.getAvatarById(avatarId);
       if (avatarDoc?.imageurl) setCurrentAvatarUrl(avatarDoc.imageurl);
+      else setCurrentAvatarUrl(null);
     } catch (err) {
       console.error("Error fetching avatar image:", err);
+      setCurrentAvatarUrl(null);
     }
   };
 
   const fetchChart = async (year, category) => {
     setChartLoading(true);
     try {
-      const footprints = await statsRepository.getUserStats(userId);
-      const chartReady = statsService.toMonthlyChartData(footprints, category);
-      setChartData(chartReady);
+      if (!userData?.avatar) {
+        setChartData({ labels: [], datasets: [{ data: [] }] });
+      } else {
+        const footprints = await statsRepository.getUserStats(userId);
+        const chartReady = statsService.toMonthlyChartData(footprints, category);
+        setChartData(chartReady);
+      }
     } catch (err) {
       console.error("Error fetching chart:", err);
+      setChartData({ labels: [], datasets: [{ data: [] }] });
     } finally {
       setChartLoading(false);
     }
@@ -136,7 +261,6 @@ const ProfileScreen = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Edit button */}
       <TouchableOpacity 
         style={styles.editButton}
         onPress={() => navigation.navigate("SettingsScreen")}
@@ -144,7 +268,6 @@ const ProfileScreen = () => {
         <Image source={require("../assets/icons/edit.png")} style={styles.editIcon} />
       </TouchableOpacity>
 
-      {/* Avatar */}
       <TouchableOpacity onPress={() => setAvatarModalVisible(true)}>
         {currentAvatarUrl ? (
           <Image source={{ uri: currentAvatarUrl }} style={styles.avatar} />
@@ -157,19 +280,18 @@ const ProfileScreen = () => {
 
       <Text style={styles.username}>{userData?.username || "User"}</Text>
 
-      {/* Avatar Picker */}
-      <AvatarPicker
-        visible={avatarModalVisible}
-        onClose={() => setAvatarModalVisible(false)}
-        onSelect={handleAvatarSelect}
-      />
+      {userData?.avatar && (
+        <AvatarPicker
+          visible={avatarModalVisible}
+          onClose={() => setAvatarModalVisible(false)}
+          onSelect={handleAvatarSelect}
+        />
+      )}
 
-      {/* Chart Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Carbon Footprint Tracker</Text>
           <View style={styles.dropdownRow}>
-            {/* Year Dropdown */}
             <View style={styles.dropdownWrapperLeft}>
               <TouchableOpacity
                 style={styles.dropdownButtonSmall}
@@ -192,7 +314,6 @@ const ProfileScreen = () => {
               )}
             </View>
 
-            {/* Category Dropdown */}
             <View style={styles.dropdownWrapperRight}>
               <TouchableOpacity
                 style={styles.dropdownButtonSmall}
@@ -247,20 +368,39 @@ const ProfileScreen = () => {
         )}
       </View>
 
-      {/* Badges Section */}
       <View style={[styles.section, { backgroundColor: "#CCCCCC" }]}>
         <Text style={styles.sectionTitle}>Badges</Text>
         <Text style={{ color: "#888", fontStyle: "italic" }}>No badges yet</Text>
+      </View>
+
+      {/* Stats Row: Best Rank only */}
+      <View style={styles.statsRow}>
+        <View style={styles.statsCard}>
+          <Text style={styles.statsTitle}>Best Leaderboard Rank</Text>
+          {historyLoading ? (
+            <ActivityIndicator size="small" color="#709775" style={{ marginVertical: 8 }} />
+          ) : historyTotalResults === 0 ? (
+            <>
+              <Text style={styles.statsValue}>—</Text>
+              <Text style={styles.statsSub}>No results yet</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.statsValue}>{bestRank != null ? `#${bestRank}` : "—"}</Text>
+              <Text style={styles.statsSub}>{bestRankDate ? bestRankDate : "Date not available"}</Text>
+            </>
+          )}
+        </View>
       </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flexGrow: 1, 
-    alignItems: "center", 
-    paddingVertical: 30, 
+  container: {
+    flexGrow: 1,
+    alignItems: "center",
+    paddingVertical: 30,
     backgroundColor: "#131313"
   },
   editButton: {
@@ -311,20 +451,28 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 16,
   },
-  dropdownRow: { flexDirection: "row", justifyContent: "flex-end", flex: 1 },
-  dropdownWrapperLeft: { marginRight: 8 },
-  dropdownWrapperRight: { marginLeft: 8 },
-  dropdownButtonSmall: { 
-    backgroundColor: "#2A2A2A", 
-    paddingVertical: 6, 
-    paddingHorizontal: 10, 
+  dropdownRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    flex: 1
+  },
+  dropdownWrapperLeft: {
+    marginRight: 8
+  },
+  dropdownWrapperRight: {
+    marginLeft: 8
+  },
+  dropdownButtonSmall: {
+    backgroundColor: "#2A2A2A",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
   },
-  dropdownButtonTextSmall: { 
-    color: "#fff", 
-    fontSize: 12, 
+  dropdownButtonTextSmall: {
+    color: "white",
+    fontSize: 12,
     fontWeight: "500",
   },
   dropdownOverlayFull: {
@@ -341,11 +489,47 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-  optionFull: { 
-    paddingVertical: 10, 
+  optionFull: {
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomColor: "#333",
     borderBottomWidth: 1,
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "90%",
+    marginBottom: 20,
+  },
+  statsCard: {
+    flex: 1,
+    backgroundColor: "#1F1F1F",
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 5,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  statsTitle: {
+    color: "#709775",
+    fontWeight: "700",
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  statsValue: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  statsSub: {
+    color: "#ccc",
+    fontSize: 12,
+    marginBottom: 4,
   },
 });
 

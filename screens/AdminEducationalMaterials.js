@@ -10,7 +10,8 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { educationalContentRepository } from "../repositories/educationalContentRepository";
 import EducationalContentCard from "../components/EducationalContentCard";
-import HeaderSearchRow from "../components/HeaderSearchRow";
+import HeaderRow from "../components/HeaderRow";
+import SearchRow from "../components/SearchRow";
 
 const AdminEducationalMaterials = () => {
   const navigation = useNavigation();
@@ -75,12 +76,16 @@ const AdminEducationalMaterials = () => {
 
   return (
     <View style={styles.container}>
-      <HeaderSearchRow
+      <HeaderRow
         title="Educational Materials"
         onBackPress={() => navigation.goBack()}
+      />
+      
+      <SearchRow
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         onAddPress={() => navigation.navigate("AddEducationalMaterial")}
+        placeholder="Search educational content..."
       />
 
       {filteredContent.length === 0 ? (
@@ -92,6 +97,7 @@ const AdminEducationalMaterials = () => {
           renderItem={({ item }) => (
             <EducationalContentCard
               item={item}
+              variant="admin" 
               onPress={() =>
                 navigation.navigate("AddEducationalMaterial", { content: item })
               }

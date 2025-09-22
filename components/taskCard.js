@@ -13,6 +13,11 @@ const TaskCard = ({ task, onPress, onAdd }) => {
 
   return (
     <View style={styles.card}>
+      {/* ✅ Task image */}
+      {task.imageUrl ? (
+        <Image source={{ uri: task.imageUrl }} style={styles.taskImage} />
+      ) : null}
+
       <TouchableOpacity
         onPress={() => onPress(task)}
         activeOpacity={0.8}
@@ -50,6 +55,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(16),
     marginBottom: vScale(12),
     justifyContent: 'space-between',
+  },
+  taskImage: {
+    width: scale(50),
+    height: scale(50),
+    borderRadius: scale(8),
+    marginRight: scale(12),
+    resizeMode: 'cover',
   },
   titleWrapper: { flex: 1 },
   title: {

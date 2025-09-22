@@ -9,13 +9,15 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  ScrollView,
 } from "react-native";
 import auth from "@react-native-firebase/auth";
 import firestore from "@react-native-firebase/firestore";
 import AvatarPicker from "../components/AvatarPicker";
-import { avatarsRepository } from "../repositories/avatarsRepository"; // 👈 import same repo as ProfileScreen
+import { avatarsRepository } from "../repositories/avatarsRepository";
+import HeaderRow from "../components/HeaderRow"; // Import HeaderRow component
 
-const SettingsScreen = () => {
+const SettingsScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -79,13 +81,11 @@ const SettingsScreen = () => {
       const user = auth().currentUser;
       if (!user) return;
 
-      // Update Firestore (username + avatarId)
       await firestore().collection("users").doc(user.uid).update({
         username,
-        ...(avatarId ? { avatar: avatarId } : {}), // 👈 keep only ID
+        ...(avatarId ? { avatar: avatarId } : {}),
       });
 
-      // Update password if provided
       if (password) {
         await user.updatePassword(password);
       }
@@ -104,12 +104,22 @@ const SettingsScreen = () => {
   const handleAvatarSelect = async (avatar) => {
     try {
       if (!userId) return;
-      setAvatarId(avatar.id); // 👈 store ID
-      fetchAvatarUrl(avatar.id); // 👈 resolve preview
+      setAvatarId(avatar.id);
+      fetchAvatarUrl(avatar.id);
       setAvatarModalVisible(false);
     } catch (err) {
       console.error("Error selecting avatar:", err);
       Alert.alert("Error", "Could not update avatar.");
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await auth().signOut();
+      navigation.replace("LoginScreen");
+    } catch (err) {
+      console.error("Error logging out:", err);
+      Alert.alert("Error", "Failed to log out.");
     }
   };
 
@@ -122,9 +132,12 @@ const SettingsScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Title */}
-      <Text style={styles.title}>Edit Profile</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      {/* Header Row with Back Button */}
+      <HeaderRow 
+        title="Edit Profile" 
+        onBackPress={() => navigation.goBack()} 
+      />
 
       {/* Avatar */}
       <TouchableOpacity onPress={() => setAvatarModalVisible(true)} style={styles.avatarWrapper}>
@@ -137,14 +150,13 @@ const SettingsScreen = () => {
         )}
       </TouchableOpacity>
 
-      {/* Avatar Picker */}
       <AvatarPicker
         visible={avatarModalVisible}
         onClose={() => setAvatarModalVisible(false)}
         onSelect={handleAvatarSelect}
       />
 
-      {/* Email (read only) */}
+      {/* Email */}
       <Text style={styles.label}>Email</Text>
       <TextInput
         style={[styles.input, { backgroundColor: "#2A2A2A", color: "#aaa" }]}
@@ -152,7 +164,7 @@ const SettingsScreen = () => {
         editable={false}
       />
 
-      {/* Username (editable) */}
+      {/* Username */}
       <Text style={styles.label}>Username</Text>
       <TextInput
         style={styles.input}
@@ -173,7 +185,6 @@ const SettingsScreen = () => {
         secureTextEntry
       />
 
-      {/* Confirm Password */}
       {password ? (
         <>
           <Text style={styles.label}>Confirm Password</Text>
@@ -188,21 +199,21 @@ const SettingsScreen = () => {
         </>
       ) : null}
 
-      {/* Save Button */}
       <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-        {saving ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.saveButtonText}>Save Changes</Text>
-        )}
+        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
       </TouchableOpacity>
-    </View>
+
+      {/* Logout Button */}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutButtonText}>Log Out</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: "#131313",
     padding: 20,
   },
@@ -212,16 +223,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#131313",
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#709775",
-    textAlign: "center",
-    marginBottom: 20,
-  },
   avatarWrapper: {
     alignItems: "center",
     marginBottom: 20,
+    marginTop: 10, // Added some top margin after the header
   },
   avatar: {
     width: 100,
@@ -241,6 +246,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 6,
     marginTop: 10,
+    alignSelf: "flex-start",
   },
   input: {
     backgroundColor: "#1F1F1F",
@@ -248,6 +254,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     color: "#fff",
     marginBottom: 10,
+    width: "100%",
   },
   saveButton: {
     backgroundColor: "#709775",
@@ -255,8 +262,22 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     marginTop: 20,
+    width: "100%",
   },
   saveButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  logoutButton: {
+    backgroundColor: "#b94a48",
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 20,
+    width: "100%",
+  },
+  logoutButtonText: {
     color: "#fff",
     fontWeight: "600",
     fontSize: 16,

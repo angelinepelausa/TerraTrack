@@ -15,6 +15,7 @@ import { educationalContentRepository } from '../repositories/educationalContent
 import { getUserTerraCoins } from '../repositories/userRepository';
 import { hasAttemptedQuiz } from '../repositories/quizAttemptsRepository';
 import EducationalContentCard from '../components/EducationalContentCard';
+import HeaderRow from '../components/HeaderRow'; 
 
 const { width } = Dimensions.get('window');
 
@@ -90,9 +91,15 @@ const EducationalScreen = ({ navigation }) => {
         </View>
       </View>
 
-      <View style={styles.content}>
-        <Text style={styles.header}>Educational Materials</Text>
+      <View style={{ paddingHorizontal: 16, marginTop: 10 }}>
+        <HeaderRow
+          title="Educational Materials"
+          showBack={true}
+          onBackPress={() => navigation.goBack()}
+        />
+      </View>
 
+      <View style={styles.content}>
         <View style={styles.searchContainer}>
           <Image
             source={require('../assets/images/Search.png')}
@@ -116,6 +123,7 @@ const EducationalScreen = ({ navigation }) => {
             renderItem={({ item }) => (
               <EducationalContentCard
                 item={item}
+                variant="user" 
                 onPress={() =>
                   navigation.navigate('EducationalDetailScreen', { content: item })
                 }
@@ -149,6 +157,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     paddingHorizontal: 12,
     paddingVertical: 4,
+    alignSelf: 'flex-end',
   },
   coinImage: {
     width: 20,
@@ -157,13 +166,6 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   coinText: { color: '#131313', fontWeight: 'bold', fontSize: 12 },
-  header: {
-    color: '#709775',
-    fontSize: 20,
-    fontFamily: 'DMSans-Bold',
-    marginBottom: 12,
-    textAlign: 'left',
-  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',

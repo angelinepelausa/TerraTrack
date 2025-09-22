@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Alert, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import HeaderSearchRow from '../components/HeaderSearchRow';
+import HeaderRow from '../components/HeaderRow';
+import SearchRow from '../components/SearchRow';
 import TaskDisplay from '../components/TaskDisplay'; 
 import { tasksRepository } from '../repositories/tasksRepository';
 
@@ -62,16 +63,20 @@ const AdminTaskLibrary = () => {
 
   return (
     <View style={styles.container}>
-      <HeaderSearchRow
+      <HeaderRow
         title="Task Library"
         onBackPress={() => navigation.goBack()}
+      />
+      
+      <SearchRow
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         onAddPress={() => navigation.navigate('AddTask', { onSaved: fetchTasks })}
+        placeholder="Search tasks..."
       />
 
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#709775" />
         </View>
       ) : (
@@ -87,7 +92,17 @@ const AdminTaskLibrary = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#131313', padding: 16, paddingTop: 40 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#131313', 
+    padding: 16, 
+    paddingTop: 40 
+  },
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
 });
 
 export default AdminTaskLibrary;

@@ -1,4 +1,3 @@
-// screens/AdminLeaderboard.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -19,8 +18,8 @@ import {
   saveOrUpdatePendingConfig,
   deletePendingConfig,
   applyPendingConfigIfNeeded,
+  getLeaderboard // Added this import
 } from "../repositories/leaderboardRepository";
-import { getCommunityLeaderboard } from "../repositories/communityProgressRepository";
 import Toast from "../components/Toast";
 import { useNavigation } from "@react-navigation/native";
 import { computeWeeklyCycle } from "../utils/leaderboardUtils";
@@ -59,8 +58,8 @@ const AdminLeaderboard = () => {
         const { start, end, timeLeft } = computeWeeklyCycle();
         setCycle({ start, end, timeLeft });
 
-        // Fetch leaderboard data
-        const data = await getCommunityLeaderboard();
+        // Use the same data source as LeaderboardsScreen
+        const data = await getLeaderboard(10); // Using top 10 like the user screen
         setLeaderboardData(data || []);
       } catch (error) {
         console.error("Error initializing admin leaderboard:", error);
@@ -75,6 +74,7 @@ const AdminLeaderboard = () => {
 
   const handleRewardChange = (rankKey, type, value, isPending = false) => {
     if (isPending) {
+      if (!config.pendingConfig) return; // no pending config exists
       const newPending = {
         ...config.pendingConfig,
         rewards: {
@@ -104,6 +104,7 @@ const AdminLeaderboard = () => {
   };
 
   const handleSavePending = () => {
+    if (!config.pendingConfig) return;
     if (isSameConfig(config.pendingConfig.rewards, config.rewards)) {
       setToastMessage("Configurations are the same. Nothing to save.");
       setToastVisible(true);
@@ -137,6 +138,8 @@ const AdminLeaderboard = () => {
   };
 
   const handleDeletePending = () => {
+    if (!config.pendingConfig) return;
+
     Alert.alert(
       "Confirm Delete",
       "Are you sure you want to delete the pending configuration?",
@@ -164,7 +167,7 @@ const AdminLeaderboard = () => {
   };
 
   const handleSaveCurrent = async () => {
-    if (isSameConfig(config.rewards, config.pendingConfig?.rewards)) {
+    if (config.pendingConfig && isSameConfig(config.rewards, config.pendingConfig.rewards)) {
       setToastMessage("Configurations are the same. Nothing to save.");
       setToastVisible(true);
       return;
@@ -197,7 +200,6 @@ const AdminLeaderboard = () => {
   };
 
   const rankOptions = ["top1", "top2", "top3", "top4to10", "top11plus"];
-
   const formatDate = (date) =>
     date
       ? date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })
@@ -210,7 +212,6 @@ const AdminLeaderboard = () => {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Header */}
       <View style={styles.headerRow}>
         <Text style={styles.headerText}>Leaderboard Settings</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -221,7 +222,6 @@ const AdminLeaderboard = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Cycle Info */}
       <Text style={styles.label}>Current Weekly Cycle:</Text>
       <Text style={styles.cycleEndText}>
         {formatDate(cycle.start)} → {formatDate(cycle.end)}
@@ -230,44 +230,28 @@ const AdminLeaderboard = () => {
         Time left before reset: {cycle.timeLeft}
       </Text>
 
-      {/* Current Config Form */}
       <Text style={styles.header}>Rewards Configuration</Text>
       <View style={styles.rewardHeaderRow}>
         <Text style={[styles.rewardLabel, { flex: 1 }]}></Text>
-        <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>
-          TerraCoins
-        </Text>
-        <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>
-          TerraPoints
-        </Text>
+        <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>TerraCoins</Text>
+        <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>TerraPoints</Text>
       </View>
       {rankOptions.map((rankKey) => {
-        let displayLabel = "";
-        switch (rankKey) {
-          case "top1": displayLabel = "Top 1"; break;
-          case "top2": displayLabel = "Top 2"; break;
-          case "top3": displayLabel = "Top 3"; break;
-          case "top4to10": displayLabel = "Top 4-10"; break;
-          case "top11plus": displayLabel = "Top 11+"; break;
-        }
+        const labels = { top1: "Top 1", top2: "Top 2", top3: "Top 3", top4to10: "Top 4-10", top11plus: "Top 11+" };
         return (
           <View key={rankKey} style={styles.rewardRow}>
-            <Text style={styles.rewardLabel}>{displayLabel}</Text>
+            <Text style={styles.rewardLabel}>{labels[rankKey]}</Text>
             <TextInput
               style={[styles.rewardInput, { textAlign: "center" }]}
               keyboardType="numeric"
               value={String(config.rewards?.[rankKey]?.terraCoins || 0)}
-              onChangeText={(text) =>
-                handleRewardChange(rankKey, "terraCoins", text)
-              }
+              onChangeText={(text) => handleRewardChange(rankKey, "terraCoins", text)}
             />
             <TextInput
               style={[styles.rewardInput, { textAlign: "center" }]}
               keyboardType="numeric"
               value={String(config.rewards?.[rankKey]?.terraPoints || 0)}
-              onChangeText={(text) =>
-                handleRewardChange(rankKey, "terraPoints", text)
-              }
+              onChangeText={(text) => handleRewardChange(rankKey, "terraPoints", text)}
             />
           </View>
         );
@@ -280,7 +264,6 @@ const AdminLeaderboard = () => {
         <Text style={styles.actionText}>Save</Text>
       </TouchableOpacity>
 
-      {/* Pending Config Section */}
       {config.pendingConfig && (
         <>
           <Text style={[styles.header, { marginTop: 20 }]}>Pending Configuration</Text>
@@ -295,40 +278,25 @@ const AdminLeaderboard = () => {
             <View style={styles.pendingDetails}>
               <View style={styles.rewardHeaderRow}>
                 <Text style={[styles.rewardLabel, { flex: 1 }]}></Text>
-                <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>
-                  TerraCoins
-                </Text>
-                <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>
-                  TerraPoints
-                </Text>
+                <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>TerraCoins</Text>
+                <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>TerraPoints</Text>
               </View>
               {rankOptions.map((rankKey) => {
-                let displayLabel = "";
-                switch (rankKey) {
-                  case "top1": displayLabel = "Top 1"; break;
-                  case "top2": displayLabel = "Top 2"; break;
-                  case "top3": displayLabel = "Top 3"; break;
-                  case "top4to10": displayLabel = "Top 4-10"; break;
-                  case "top11plus": displayLabel = "Top 11+"; break;
-                }
+                const labels = { top1: "Top 1", top2: "Top 2", top3: "Top 3", top4to10: "Top 4-10", top11plus: "Top 11+" };
                 return (
                   <View key={rankKey} style={styles.rewardRow}>
-                    <Text style={[styles.rewardLabel, { color: "#709775" }]}>{displayLabel}</Text>
+                    <Text style={[styles.rewardLabel, { color: "#709775" }]}>{labels[rankKey]}</Text>
                     <TextInput
                       style={[styles.rewardInput, { flex: 1, textAlign: "center", color: "#fff" }]}
                       keyboardType="numeric"
                       value={String(config.pendingConfig.rewards?.[rankKey]?.terraCoins ?? 0)}
-                      onChangeText={(text) =>
-                        handleRewardChange(rankKey, "terraCoins", text, true)
-                      }
+                      onChangeText={(text) => handleRewardChange(rankKey, "terraCoins", text, true)}
                     />
                     <TextInput
                       style={[styles.rewardInput, { flex: 1, textAlign: "center", color: "#fff" }]}
                       keyboardType="numeric"
                       value={String(config.pendingConfig.rewards?.[rankKey]?.terraPoints ?? 0)}
-                      onChangeText={(text) =>
-                        handleRewardChange(rankKey, "terraPoints", text, true)
-                      }
+                      onChangeText={(text) => handleRewardChange(rankKey, "terraPoints", text, true)}
                     />
                   </View>
                 );
@@ -359,17 +327,10 @@ const AdminLeaderboard = () => {
           <Text style={styles.loadingText}>Loading leaderboard...</Text>
         </View>
       ) : (
-        <Leaderboard 
-          leaderboard={leaderboardData}
-          loading={loadingLeaderboard}
-        />
+        <Leaderboard leaderboard={leaderboardData} loading={loadingLeaderboard} />
       )}
 
-      <Toast
-        message={toastMessage}
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
+      <Toast message={toastMessage} visible={toastVisible} onHide={() => setToastVisible(false)} />
     </ScrollView>
   );
 };
@@ -413,16 +374,8 @@ const styles = StyleSheet.create({
   pendingArrow: { color: "#709775", fontWeight: "600", fontSize: 16 },
   pendingDetails: { marginTop: 10, marginBottom: 50, padding: 12, backgroundColor: "#222", borderRadius: 12 },
   header: { fontSize: 18, fontWeight: "bold", color: "#CCCCCC", marginTop: 20, marginBottom: 10 },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-  },
-  loadingText: {
-    color: '#CCCCCC',
-    marginTop: 10,
-    fontSize: 16,
-  },
+  loadingContainer: { alignItems: 'center', justifyContent: 'center', padding: 40 },
+  loadingText: { color: '#CCCCCC', marginTop: 10, fontSize: 16 },
 });
 
 export default AdminLeaderboard;

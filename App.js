@@ -36,6 +36,8 @@ import ShopScreen from './screens/ShopScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import AdminCommunityProgress from './screens/AdminCommunityProgress';
 import AddCommunityProgress from './screens/AddCommunityProgress';
+import AdminSettings from './screens/AdminSettings';
+import AdminReferral from './screens/AdminReferral';
 
 const Stack = createNativeStackNavigator();
 
@@ -194,6 +196,14 @@ const App = () => {
           <Stack.Screen
             name="AddCommunityProgress"
             component={AddCommunityProgress}
+          />
+          <Stack.Screen
+            name="AdminSettings"
+            component={AdminSettings}
+          />
+          <Stack.Screen
+            name="AdminReferral"
+            component={AdminReferral}
           />
         </Stack.Navigator>
       </NavigationContainer>

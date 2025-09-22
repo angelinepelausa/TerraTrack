@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { tasksRepository } from '../repositories/tasksRepository';
 import Button from '../components/Button';
 import TaskCard from '../components/taskCard';
+import HeaderRow from '../components/HeaderRow';
 import { scale, vScale } from '../utils/scaling';
 import { getUserTerraCoins, addUserRewards } from '../repositories/userRepository';
 import firestore from '@react-native-firebase/firestore';
@@ -473,10 +474,19 @@ const RoutineScreen = () => {
   if (selectedTask) {
     return (
       <View style={styles.detailContainer}>
-        <TouchableOpacity onPress={() => setSelectedTask(null)} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
+        <HeaderRow 
+          title="Task Details" 
+          onBackPress={() => setSelectedTask(null)} 
+        />
+        
         <View style={styles.descWrapper}>
+          {selectedTask.imageUrl && (
+            <Image 
+              source={{ uri: selectedTask.imageUrl }} 
+              style={styles.detailImage}
+            />
+          )}
+          
           <View style={styles.descBox}>
             <Text style={styles.detailTitle}>{selectedTask.title}</Text>
             <Text style={styles.detailDesc}>{selectedTask.description}</Text>
@@ -630,6 +640,13 @@ const styles = StyleSheet.create({
     width: '85%',
     alignItems: 'center',
   },
+    detailImage: {
+    width: '85%',
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 16,
+    resizeMode: 'cover',
+  },
   detailTitle: {
     fontSize: 18,
     fontFamily: 'DMSans-Bold',
@@ -653,6 +670,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   taskVerifyText: { color: '#131313', fontWeight: 'bold', fontSize: 16 },
+
 });
 
 export default RoutineScreen;

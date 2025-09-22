@@ -38,12 +38,10 @@ const AddCommunityProgress = ({ navigation, route }) => {
       setIsEditing(true);
       setOriginalYearQuarter(quarterData.id);
       
-      // Extract year and quarter from the ID
       const [yearPart, quarterPart] = quarterData.id.split('-');
       setYear(yearPart);
       setQuarter(quarterPart);
       
-      // Fill in the form with existing data
       setTitle(quarterData.title || '');
       setDescription(quarterData.description || '');
       setGoal(quarterData.goal?.toString() || '');
@@ -99,7 +97,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
       };
 
       if (isEditing) {
-        // Update existing quarter
         await updateCommunityProgress(originalYearQuarter, payload);
         Alert.alert('Success', 'Community progress updated successfully!', [
           { text: 'OK', onPress: () => {
@@ -108,7 +105,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
           }},
         ]);
       } else {
-        // Add new quarter
         await addCommunityProgress(payload);
         Alert.alert('Success', 'Community progress added successfully!', [
           { text: 'OK', onPress: () => {
@@ -137,120 +133,146 @@ const AddCommunityProgress = ({ navigation, route }) => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.header}>
-        {isEditing ? 'Edit Community Progress' : 'Add Community Progress'}
-      </Text>
+    <View style={styles.container}>
+      {/* Fixed Header */}
+      <View style={styles.headerRow}>
+        <Text style={styles.headerText}>
+          {isEditing ? 'Edit Community Progress' : 'Add Community Progress'}
+        </Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Image source={require('../assets/icons/back.png')} style={styles.backIcon} />
+        </TouchableOpacity>
+      </View>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-        <View style={{ flex: 0.58, marginRight: 10 }}>
-          <Text style={styles.label}>Year</Text>
-          <TextInput
-            style={styles.input}
-            value={year}
-            onChangeText={setYear}
-            keyboardType="numeric"
-            placeholder="Enter year"
-            placeholderTextColor="#888"
-            editable={!isEditing} // Disable editing year when in edit mode
-          />
-        </View>
+      {/* Scrollable Content */}
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40, paddingTop: 90 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+          <View style={{ flex: 0.58, marginRight: 10 }}>
+            <Text style={styles.label}>Year</Text>
+            <TextInput
+              style={styles.input}
+              value={year}
+              onChangeText={setYear}
+              keyboardType="numeric"
+              placeholder="Enter year"
+              placeholderTextColor="#888"
+              editable={!isEditing}
+            />
+          </View>
 
-        <View style={{ flex: 1 }}>
-          <Text style={styles.label}>Quarter</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {quarters.map(q => (
-              <TouchableOpacity
-                key={q}
-                style={[styles.quarterButton, quarter === q && styles.quarterSelected, { marginRight: 6, marginBottom: 6 }]}
-                onPress={() => setQuarter(q)}
-                disabled={isEditing} // Disable quarter selection when in edit mode
-              >
-                <Text style={quarter === q ? styles.quarterTextSelected : styles.quarterText}>{q}</Text>
-              </TouchableOpacity>
-            ))}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>Quarter</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {quarters.map(q => (
+                <TouchableOpacity
+                  key={q}
+                  style={[styles.quarterButton, quarter === q && styles.quarterSelected, { marginRight: 6, marginBottom: 6 }]}
+                  onPress={() => setQuarter(q)}
+                  disabled={isEditing}
+                >
+                  <Text style={quarter === q ? styles.quarterTextSelected : styles.quarterText}>{q}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
-      </View>
 
-      <Text style={styles.label}>Title</Text>
-      <TextInput 
-        style={styles.input} 
-        value={title} 
-        onChangeText={setTitle} 
-        placeholder="Progress title" 
-        placeholderTextColor="#888" 
-      />
+        <Text style={styles.label}>Title</Text>
+        <TextInput 
+          style={styles.input} 
+          value={title} 
+          onChangeText={setTitle} 
+          placeholder="Progress title" 
+          placeholderTextColor="#888" 
+        />
 
-      <Text style={styles.label}>Description</Text>
-      <TextInput 
-        style={[styles.input, { height: 100 }]} 
-        value={description} 
-        onChangeText={setDescription} 
-        multiline
-        placeholder="Describe the progress"
-        placeholderTextColor="#888"
-      />
+        <Text style={styles.label}>Description</Text>
+        <TextInput 
+          style={[styles.input, { height: 100 }]} 
+          value={description} 
+          onChangeText={setDescription} 
+          multiline
+          placeholder="Describe the progress"
+          placeholderTextColor="#888"
+        />
 
-      <Text style={styles.label}>Goal</Text>
-      <TextInput 
-        style={styles.input} 
-        value={goal} 
-        onChangeText={setGoal} 
-        keyboardType="numeric" 
-        placeholder="Enter goal" 
-        placeholderTextColor="#888" 
-      />
+        <Text style={styles.label}>Goal</Text>
+        <TextInput 
+          style={styles.input} 
+          value={goal} 
+          onChangeText={setGoal} 
+          keyboardType="numeric" 
+          placeholder="Enter goal" 
+          placeholderTextColor="#888" 
+        />
 
-      <Text style={styles.label}>Image</Text>
-      {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
-      <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-        <Text style={styles.uploadButtonText}>
-          {imageUri ? 'Change Image' : 'Upload Image'}
-        </Text>
-      </TouchableOpacity>
+        <Text style={styles.label}>Image</Text>
+        {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
+        <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+          <Text style={styles.uploadButtonText}>
+            {imageUri ? 'Change Image' : 'Upload Image'}
+          </Text>
+        </TouchableOpacity>
 
-      <Text style={styles.header}>Rewards</Text>
-      <View style={styles.rewardHeaderRow}>
-        <Text style={[styles.rewardLabel, { flex: 1 }]}></Text>
-        <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>TerraCoins</Text>
-        <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>TerraPoints</Text>
-      </View>
-
-      {rankOptions.map(rankKey => (
-        <View key={rankKey} style={styles.rewardRow}>
-          <Text style={styles.rewardLabel}>{getRankLabel(rankKey)}</Text>
-          <TextInput
-            style={[styles.rewardInput, { flex: 1, textAlign: "center" }]}
-            keyboardType="numeric"
-            value={String(rewards[rankKey]?.terraCoins || '')}
-            onChangeText={(text) => handleRewardChange(rankKey, 'terraCoins', text)}
-          />
-          <TextInput
-            style={[styles.rewardInput, { flex: 1, textAlign: "center" }]}
-            keyboardType="numeric"
-            value={String(rewards[rankKey]?.terraPoints || '')}
-            onChangeText={(text) => handleRewardChange(rankKey, 'terraPoints', text)}
-          />
+        <Text style={styles.sectionHeader}>Rewards</Text>
+        <View style={styles.rewardHeaderRow}>
+          <Text style={[styles.rewardLabel, { flex: 1 }]}></Text>
+          <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>TerraCoins</Text>
+          <Text style={[styles.rewardLabel, { flex: 1, textAlign: "center" }]}>TerraPoints</Text>
         </View>
-      ))}
 
-      <TouchableOpacity 
-        style={[styles.submitButton, loading && { opacity: 0.6 }]} 
-        onPress={handleSubmit}
-        disabled={loading}
-      >
-        <Text style={styles.submitButtonText}>
-          {loading ? 'Saving...' : (isEditing ? 'Update' : 'Save')}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {rankOptions.map(rankKey => (
+          <View key={rankKey} style={styles.rewardRow}>
+            <Text style={styles.rewardLabel}>{getRankLabel(rankKey)}</Text>
+            <TextInput
+              style={[styles.rewardInput, { flex: 1, textAlign: "center" }]}
+              keyboardType="numeric"
+              value={String(rewards[rankKey]?.terraCoins || '')}
+              onChangeText={(text) => handleRewardChange(rankKey, 'terraCoins', text)}
+            />
+            <TextInput
+              style={[styles.rewardInput, { flex: 1, textAlign: "center" }]}
+              keyboardType="numeric"
+              value={String(rewards[rankKey]?.terraPoints || '')}
+              onChangeText={(text) => handleRewardChange(rankKey, 'terraPoints', text)}
+            />
+          </View>
+        ))}
+
+        <TouchableOpacity 
+          style={[styles.submitButton, loading && { opacity: 0.6 }]} 
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          <Text style={styles.submitButtonText}>
+            {loading ? 'Saving...' : (isEditing ? 'Update' : 'Save')}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', padding: 20 },
-  header: { fontSize: 20, fontWeight: 'bold', color: '#CCCCCC', marginBottom: 20, marginTop: 10 },
+  container: { flex: 1, backgroundColor: '#000' },
+
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 30,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#000',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  headerText: { fontSize: 20, fontWeight: '700', color: '#709775' },
+  backIcon: { width: 40, height: 40, resizeMode: 'contain' },
+
   label: { color: '#CCCCCC', marginTop: 12, marginBottom: 6, fontWeight: '600' },
   input: { backgroundColor: '#1E1E1E', color: '#fff', borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 10 },
 
@@ -259,12 +281,14 @@ const styles = StyleSheet.create({
   quarterText: { color: '#CCCCCC', fontWeight: '600' },
   quarterTextSelected: { color: '#fff', fontWeight: '700' },
 
+  sectionHeader: { fontSize: 18, fontWeight: 'bold', color: '#CCCCCC', marginBottom: 12, marginTop: 20 },
+
   rewardHeaderRow: { flexDirection: 'row', marginBottom: 5 },
   rewardRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   rewardLabel: { flex: 1, color: '#CCCCCC', fontWeight: '600' },
   rewardInput: { flex: 1, backgroundColor: '#222', color: '#fff', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, marginLeft: 8 },
 
-  submitButton: { backgroundColor: '#709775', paddingVertical: 14, borderRadius: 25, alignItems: 'center', marginTop: 20 },
+  submitButton: { backgroundColor: '#709775', paddingVertical: 14, borderRadius: 25, alignItems: 'center', marginTop: 20, marginBottom: 40 },
   submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   uploadButton: { backgroundColor: '#709775', paddingVertical: 12, borderRadius: 25, alignItems: 'center', marginBottom: 16 },

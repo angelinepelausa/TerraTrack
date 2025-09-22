@@ -4,7 +4,11 @@ export const tasksRepository = {
   getAllTasks: async () => {
     try {
       const snapshot = await firestore().collection('tasks').get();
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        imageUrl: doc.data().imageurl || null,
+      }));
     } catch (error) {
       console.error('Error fetching tasks:', error);
       throw error;
@@ -17,7 +21,11 @@ export const tasksRepository = {
         .collection('tasks')
         .where('difficulty', '==', 'easy')
         .get();
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        imageUrl: doc.data().imageurl || null,
+      }));
     } catch (error) {
       console.error('Error fetching easy tasks:', error);
       throw error;
@@ -30,7 +38,11 @@ export const tasksRepository = {
         .collection('tasks')
         .where('difficulty', '==', 'hard')
         .get();
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        imageUrl: doc.data().imageurl || null, 
+      }));
     } catch (error) {
       console.error('Error fetching hard tasks:', error);
       throw error;

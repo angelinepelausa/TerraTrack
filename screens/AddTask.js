@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// screens/AddTask.js
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -55,7 +56,6 @@ const AddTask = () => {
       case 'budget': current = budget; setter = setBudget; break;
       default: return;
     }
-
     if (current.includes(option)) setter(current.filter(o => o !== option));
     else setter([...current, option]);
   };
@@ -69,14 +69,12 @@ const AddTask = () => {
       Alert.alert('Budget Required', 'Please select at least one budget option.');
       return;
     }
-
     setSaving(true);
     try {
       let finalImageUrl = imageUri;
       if (imageUri && !imageUri.startsWith('http')) {
         finalImageUrl = await uploadImageToCloudinary(imageUri);
       }
-
       const currentUser = auth().currentUser;
       const finalRequirements = { transport, energy, diet, budget };
       const payload = {
@@ -87,7 +85,6 @@ const AddTask = () => {
         createdby: currentUser?.email || 'unknown',
         requirements: finalRequirements,
       };
-
       if (existingTask?.id) {
         await tasksRepository.updateTask(existingTask.id, payload);
         Alert.alert('Updated', 'Task updated successfully');
@@ -95,7 +92,6 @@ const AddTask = () => {
         await tasksRepository.addTask(payload);
         Alert.alert('Saved', 'Task added successfully');
       }
-
       if (onSaved) onSaved();
       navigation.goBack();
     } catch (err) {
@@ -116,98 +112,129 @@ const AddTask = () => {
   const openDropdown = (key) => setDropdownOpen({ [key]: true });
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.label}>Title</Text>
-      <TextInput
-        style={styles.input}
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Task title"
-        placeholderTextColor="#888"
-      />
-
-      <Text style={styles.label}>Description</Text>
-      <TextInput
-        style={[styles.input, { height: 100 }]}
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Task description"
-        placeholderTextColor="#888"
-        multiline
-      />
-
-      <Text style={styles.label}>Task Image</Text>
-      {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
-      <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-        <Text style={styles.uploadButtonText}>Upload Image</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.label}>Difficulty</Text>
-      <TouchableOpacity style={styles.dropdownButton} onPress={() => openDropdown('difficulty')}>
-        <Text style={styles.dropdownButtonText}>
-          {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+    <View style={styles.container}>
+      {/* Fixed Header */}
+      <View style={styles.headerRow}>
+        <Text style={styles.headerText}>
+          {existingTask ? 'Edit Task' : 'Add Task'}
         </Text>
-      </TouchableOpacity>
-      {dropdownOpen.difficulty &&
-        ['easy', 'hard'].map((opt) => (
-          <TouchableOpacity
-            key={opt}
-            style={styles.option}
-            onPress={() => { setDifficulty(opt); setDropdownOpen({}); }}
-          >
-            <Text style={{ color: difficulty === opt ? '#fff' : '#ccc' }}>
-              {difficulty === opt ? '✓ ' : ''}{opt.charAt(0).toUpperCase() + opt.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Image source={require('../assets/icons/back.png')} style={styles.backIcon} />
+        </TouchableOpacity>
+      </View>
 
-      {questionMapping.map((group) => {
-        const selected =
-              group.field === 'transport' ? (Array.isArray(transport) ? transport : [])
-            : group.field === 'energy' ? (Array.isArray(energy) ? energy : [])
-            : group.field === 'diet' ? (Array.isArray(diet) ? diet : [])
-            : Array.isArray(budget) ? budget : [];
+      {/* Scrollable Content */}
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40, paddingTop: 80 }}>
+        <Text style={styles.label}>Title</Text>
+        <TextInput
+          style={styles.input}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Task title"
+          placeholderTextColor="#888"
+        />
 
-        const allOptions = group.questions.flatMap(q => q.options);
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          style={[styles.input, { height: 100 }]}
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Task description"
+          placeholderTextColor="#888"
+          multiline
+        />
 
-        return (
-          <View key={group.field} style={{ marginBottom: 16 }}>
-            <Text style={styles.label}>{group.field.charAt(0).toUpperCase() + group.field.slice(1)}</Text>
-            <View style={styles.tagsContainer}>
-              {selected.map(opt => (
-                <View key={opt} style={styles.tag}>
-                  <Text style={styles.tagText}>{opt}</Text>
-                  <TouchableOpacity onPress={() => toggleOption(group.field, opt)}>
-                    <Text style={styles.removeTag}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
+        <Text style={styles.label}>Task Image</Text>
+        {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
+        <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+          <Text style={styles.uploadButtonText}>Upload Image</Text>
+        </TouchableOpacity>
 
-            <TouchableOpacity style={styles.dropdownButton} onPress={() => openDropdown(group.field)}>
-              <Text style={styles.dropdownButtonText}>Select Options</Text>
+        <Text style={styles.label}>Difficulty</Text>
+        <TouchableOpacity style={styles.dropdownButton} onPress={() => openDropdown('difficulty')}>
+          <Text style={styles.dropdownButtonText}>
+            {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+          </Text>
+        </TouchableOpacity>
+        {dropdownOpen.difficulty &&
+          ['easy', 'hard'].map((opt) => (
+            <TouchableOpacity
+              key={opt}
+              style={styles.option}
+              onPress={() => { setDifficulty(opt); setDropdownOpen({}); }}
+            >
+              <Text style={{ color: difficulty === opt ? '#fff' : '#ccc' }}>
+                {difficulty === opt ? '✓ ' : ''}{opt.charAt(0).toUpperCase() + opt.slice(1)}
+              </Text>
             </TouchableOpacity>
-            {dropdownOpen[group.field] &&
-              allOptions.map(opt => (
-                <TouchableOpacity key={opt} style={styles.option} onPress={() => toggleOption(group.field, opt)}>
-                  <Text style={{ color: selected.includes(opt) ? '#fff' : '#ccc' }}>
-                    {selected.includes(opt) ? '✓ ' : ''}{opt}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-          </View>
-        );
-      })}
+          ))}
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleSave} disabled={saving}>
-        <Text style={styles.submitButtonText}>{saving ? 'Saving...' : existingTask ? 'Update Task' : 'Save Task'}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {questionMapping.map((group) => {
+          const selected =
+                group.field === 'transport' ? (Array.isArray(transport) ? transport : [])
+              : group.field === 'energy' ? (Array.isArray(energy) ? energy : [])
+              : group.field === 'diet' ? (Array.isArray(diet) ? diet : [])
+              : Array.isArray(budget) ? budget : [];
+
+          const allOptions = group.questions.flatMap(q => q.options);
+
+          return (
+            <View key={group.field} style={{ marginBottom: 16 }}>
+              <Text style={styles.label}>{group.field.charAt(0).toUpperCase() + group.field.slice(1)}</Text>
+              <View style={styles.tagsContainer}>
+                {selected.map(opt => (
+                  <View key={opt} style={styles.tag}>
+                    <Text style={styles.tagText}>{opt}</Text>
+                    <TouchableOpacity onPress={() => toggleOption(group.field, opt)}>
+                      <Text style={styles.removeTag}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+
+              <TouchableOpacity style={styles.dropdownButton} onPress={() => openDropdown(group.field)}>
+                <Text style={styles.dropdownButtonText}>Select Options</Text>
+              </TouchableOpacity>
+              {dropdownOpen[group.field] &&
+                allOptions.map(opt => (
+                  <TouchableOpacity key={opt} style={styles.option} onPress={() => toggleOption(group.field, opt)}>
+                    <Text style={{ color: selected.includes(opt) ? '#fff' : '#ccc' }}>
+                      {selected.includes(opt) ? '✓ ' : ''}{opt}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+            </View>
+          );
+        })}
+
+        <TouchableOpacity style={styles.submitButton} onPress={handleSave} disabled={saving}>
+          <Text style={styles.submitButtonText}>{saving ? 'Saving...' : existingTask ? 'Update Task' : 'Save Task'}</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#131313', padding: 16, paddingTop: 40 },
+  container: { flex: 1, backgroundColor: '#131313' },
+
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 30,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#131313',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  headerText: { fontSize: 20, fontWeight: '700', color: '#709775' },
+  backIcon: { width: 40, height: 40, resizeMode: 'contain' },
+
   label: { color: '#fff', marginTop: 12, marginBottom: 6, fontWeight: '600' },
   input: { backgroundColor: '#1E1E1E', color: '#fff', borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 10 },
   dropdownButton: { backgroundColor: '#1E1E1E', padding: 12, borderRadius: 12, marginBottom: 6 },

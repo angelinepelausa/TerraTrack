@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIn
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { getUserReferralCode, addUserRewards } from '../repositories/userRepository';
+import { referralRepository } from '../repositories/referralRepository';
 import { scale, vScale } from '../utils/scaling';
 import Toast from '../components/Toast';
+import HeaderRow from '../components/HeaderRow';
 
 const InviteScreen = ({ navigation }) => {
   const [referralCode, setReferralCode] = useState('');
@@ -12,6 +14,12 @@ const InviteScreen = ({ navigation }) => {
   const [invites, setInvites] = useState([]);
   const [error, setError] = useState(null);
   const [toastVisible, setToastVisible] = useState(false);
+  const [settings, setSettings] = useState({
+    referrer: { terraCoins: 0, terraPoints: 0 },
+    goalTasks: 0,
+    goalEducational: 0,
+    goalWeeklyQuiz: 0
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -27,6 +35,9 @@ const InviteScreen = ({ navigation }) => {
         const result = await getUserReferralCode(user.uid);
         if (result.success) setReferralCode(result.referralCode);
         else setError(result.error || 'Failed to fetch referral code');
+
+        const referralSettings = await referralRepository.getSettings();
+        setSettings(referralSettings);
 
         const invitesSnap = await firestore()
           .collection('users')
@@ -70,7 +81,7 @@ const InviteScreen = ({ navigation }) => {
       const user = auth().currentUser;
       if (!user) return;
 
-      const rewardResult = await addUserRewards(user.uid, 15, 50);
+      const rewardResult = await addUserRewards(user.uid, settings.referrer.terraCoins, settings.referrer.terraPoints);
       if (!rewardResult.success) {
         Alert.alert('Error', 'Failed to claim prize');
         return;
@@ -91,6 +102,15 @@ const InviteScreen = ({ navigation }) => {
     }
   };
 
+  // Check if all goals are met for a specific invite
+  const areAllGoalsMet = (invite) => {
+    return (
+      invite.taskFinished >= settings.goalTasks &&
+      invite.educationalQuizFinished >= settings.goalEducational &&
+      invite.weeklyQuizFinished >= settings.goalWeeklyQuiz
+    );
+  };
+
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -101,13 +121,14 @@ const InviteScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Text style={styles.backIcon}>{'<'}</Text>
-      </TouchableOpacity>
-
+      <View style={{ paddingHorizontal: 20 }}>
+        <HeaderRow 
+          title="Invite a friend" 
+          showBack={true} 
+          onBackPress={() => navigation.goBack()} 
+        />
+      </View>
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.title}>Invite a friend</Text>
-
         <View style={styles.referralContainer}>
           <Image source={require('../assets/images/BearInvite.png')} style={styles.bearImage} />
           <View style={styles.referralCard}>
@@ -125,11 +146,11 @@ const InviteScreen = ({ navigation }) => {
           <Text style={styles.rewardsTitle}>Earn rewards by inviting a{'\n'}friend to join TerraTrack</Text>
           <View style={styles.rewardItem}>
             <Image source={require('../assets/images/TerraCoin.png')} style={{ width: 20, height: 20, marginRight: 5 }} />
-            <Text style={styles.rewardText}>15 Terra Coins</Text>
+            <Text style={styles.rewardText}>{settings.referrer.terraCoins} Terra Coins</Text>
           </View>
           <View style={styles.rewardItem}>
             <Image source={require('../assets/images/TerraPoint.png')} style={{ width: 20, height: 20, marginRight: 5 }} />
-            <Text style={styles.rewardText}>50 Terra Points</Text>
+            <Text style={styles.rewardText}>{settings.referrer.terraPoints} Terra Points</Text>
           </View>
         </View>
 
@@ -137,48 +158,54 @@ const InviteScreen = ({ navigation }) => {
         {invites.length === 0 ? (
           <Text style={{ color: '#CCCCCC', marginTop: vScale(10) }}>No invites yet</Text>
         ) : (
-          invites.map(inv => (
-            <View key={inv.id} style={styles.inviteCard}>
-              <Text style={styles.inviteUsername}>{inv.username}</Text>
+          invites.map(inv => {
+            const goalsMet = areAllGoalsMet(inv);
+            const canClaim = goalsMet && !inv.rewardsClaimed;
+            
+            return (
+              <View key={inv.id} style={styles.inviteCard}>
+                <Text style={styles.inviteUsername}>{inv.username}</Text>
 
-              <View style={styles.progressContainer}>
-                <Text style={styles.progressLabel}>Tasks</Text>
-                <View style={styles.progressBarBackground}>
-                  <View style={[styles.progressBarFill, { width: `${Math.min(inv.taskFinished / 20 * 100, 100)}%` }]} />
+                <View style={styles.progressContainer}>
+                  <Text style={styles.progressLabel}>Tasks</Text>
+                  <View style={styles.progressBarBackground}>
+                    <View style={[styles.progressBarFill, { width: `${Math.min(inv.taskFinished / settings.goalTasks * 100, 100)}%` }]} />
+                  </View>
+                  <Text style={styles.progressText}>{inv.taskFinished} / {settings.goalTasks}</Text>
                 </View>
-                <Text style={styles.progressText}>{inv.taskFinished} / 20</Text>
-              </View>
 
-              <View style={styles.progressContainer}>
-                <Text style={styles.progressLabel}>Educational Quiz</Text>
-                <View style={styles.progressBarBackground}>
-                  <View style={[styles.progressBarFill, { width: `${Math.min(inv.educationalQuizFinished / 5 * 100, 100)}%` }]} />
+                <View style={styles.progressContainer}>
+                  <Text style={styles.progressLabel}>Educational Quiz</Text>
+                  <View style={styles.progressBarBackground}>
+                    <View style={[styles.progressBarFill, { width: `${Math.min(inv.educationalQuizFinished / settings.goalEducational * 100, 100)}%` }]} />
+                  </View>
+                  <Text style={styles.progressText}>{inv.educationalQuizFinished} / {settings.goalEducational}</Text>
                 </View>
-                <Text style={styles.progressText}>{inv.educationalQuizFinished} / 5</Text>
-              </View>
 
-              <View style={styles.progressContainer}>
-                <Text style={styles.progressLabel}>Weekly Quiz</Text>
-                <View style={styles.progressBarBackground}>
-                  <View style={[styles.progressBarFill, { width: `${Math.min(inv.weeklyQuizFinished / 1 * 100, 100)}%` }]} />
+                <View style={styles.progressContainer}>
+                  <Text style={styles.progressLabel}>Weekly Quiz</Text>
+                  <View style={styles.progressBarBackground}>
+                    <View style={[styles.progressBarFill, { width: `${Math.min(inv.weeklyQuizFinished / settings.goalWeeklyQuiz * 100, 100)}%` }]} />
+                  </View>
+                  <Text style={styles.progressText}>{inv.weeklyQuizFinished} / {settings.goalWeeklyQuiz}</Text>
                 </View>
-                <Text style={styles.progressText}>{inv.weeklyQuizFinished} / 1</Text>
-              </View>
 
-              <TouchableOpacity
-                style={[
-                  styles.claimButton,
-                  inv.rewardsClaimed && { backgroundColor: '#666666' }
-                ]}
-                onPress={() => !inv.rewardsClaimed && handleClaimPrize(inv.id)}
-                disabled={inv.rewardsClaimed}
-              >
-                <Text style={styles.claimButtonText}>
-                  {inv.rewardsClaimed ? 'Claimed' : 'Claim Rewards'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))
+                <TouchableOpacity
+                  style={[
+                    styles.claimButton, 
+                    !canClaim && styles.claimButtonDisabled,
+                    inv.rewardsClaimed && styles.claimButtonClaimed
+                  ]}
+                  onPress={() => canClaim && handleClaimPrize(inv.id)}
+                  disabled={!canClaim}
+                >
+                  <Text style={styles.claimButtonText}>
+                    {inv.rewardsClaimed ? 'Claimed' : 'Claim Rewards' }
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })
         )}
 
         {error && <Text style={styles.errorText}>{error}</Text>}
@@ -197,8 +224,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313', paddingTop: vScale(40) },
   contentContainer: { padding: scale(25), alignItems: 'center' },
   loadingContainer: { justifyContent: 'center', alignItems: 'center' },
-  backButton: { position: 'absolute', top: scale(20), left: scale(20), zIndex: 10, padding: scale(10) },
-  backIcon: { color: '#CCCCCC', fontSize: scale(24), fontWeight: 'bold' },
   title: { color: '#CCCCCC', fontSize: scale(18), fontWeight: 'bold', textAlign: 'center', marginBottom: vScale(20) },
   referralContainer: { alignItems: 'center', marginBottom: vScale(20) },
   bearImage: { width: scale(300), height: scale(300), resizeMode: 'contain', marginBottom: vScale(-40), zIndex: 3 },
@@ -219,8 +244,24 @@ const styles = StyleSheet.create({
   progressBarBackground: { width: '100%', height: vScale(8), backgroundColor: '#333', borderRadius: scale(5) },
   progressBarFill: { height: vScale(8), backgroundColor: '#709775', borderRadius: scale(5) },
   progressText: { color: '#CCCCCC', fontSize: scale(12), textAlign: 'right', marginTop: vScale(2) },
-  claimButton: { backgroundColor: '#709775', padding: vScale(10), borderRadius: scale(12), marginTop: vScale(10), alignItems: 'center' },
-  claimButtonText: { color: '#fff', fontWeight: 'bold', textAlign: 'center' },
+  claimButton: { 
+    backgroundColor: '#709775', 
+    padding: vScale(10), 
+    borderRadius: scale(12), 
+    marginTop: vScale(10), 
+    alignItems: 'center' 
+  },
+  claimButtonDisabled: {
+    backgroundColor: '#666666',
+  },
+  claimButtonClaimed: {
+    backgroundColor: '#666666',
+  },
+  claimButtonText: { 
+    color: '#fff', 
+    fontWeight: 'bold', 
+    textAlign: 'center' 
+  },
   errorText: { color: 'red', textAlign: 'center', marginTop: vScale(10) },
 });
 

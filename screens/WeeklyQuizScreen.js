@@ -5,6 +5,7 @@ import auth from '@react-native-firebase/auth';
 import { addUserRewards } from '../repositories/userRepository';
 import { hasAttemptedQuiz, saveQuizAttempt } from '../repositories/quizAttemptsRepository';
 import QuizResult from '../components/QuizResult';
+import HeaderRow from '../components/HeaderRow'; // <-- Imported HeaderRow
 
 // ✅ Get Monday of current week (YYYY-MM-DD)
 const getMondayDate = () => {
@@ -115,20 +116,22 @@ const WeeklyQuizScreen = ({ navigation }) => {
     );
   }
 
-// ✅ Show QuizResult after submission
-if (submitted && rewards) {
-  return <QuizResult rewards={rewards} navigation={navigation} redirectTo="HomeScreen" />;
-}
-
+  if (submitted && rewards) {
+    return <QuizResult rewards={rewards} navigation={navigation} redirectTo="HomeScreen" />;
+  }
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-        <Text style={styles.backText}>{'<'}</Text>
-      </TouchableOpacity>
+      {/* HeaderRow at top */}
+      <HeaderRow
+        title="Weekly Quiz"
+        showBack={true}
+        onBackPress={() => navigation.goBack()}
+      />
 
       <View style={styles.quizContainer}>
-        <Text style={styles.quizTitle}>Weekly Quiz</Text>
+        {/* Quiz Title fetched from Firestore */}
+        <Text style={styles.quizTitle}>{quiz.title || 'Weekly Quiz'}</Text>
 
         <View style={styles.questionContainer}>
           <Text style={styles.questionText}>{quiz.question}</Text>
@@ -196,19 +199,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
   },
-  backBtn: {
-    marginBottom: 16
-  },
-  backText: {
-    color: '#CCCCCC',
-    fontSize: 20,
-    fontWeight: 'bold'
-  },
   quizContainer: {
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: 120,
+    paddingTop: 20,
   },
   quizTitle: {
     color: '#709775',

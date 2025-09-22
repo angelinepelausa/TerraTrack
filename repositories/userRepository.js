@@ -33,7 +33,7 @@ export const createUserDocument = async (userData) => {
           referralCode: referralCode,
           createdAt: firestore.FieldValue.serverTimestamp(),
           status: "Active",
-          currentAvatarId: defaultAvatarId, 
+          avatar: defaultAvatarId, 
         },
         { merge: true }
       );

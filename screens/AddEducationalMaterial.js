@@ -115,7 +115,8 @@ const AddEducationalMaterial = () => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <View style={styles.container}>
+      {/* Fixed Header */}
       <View style={styles.headerRow}>
         <Text style={styles.headerText}>
           {existingContent ? 'Edit Educational Material' : 'Add Educational Material'}
@@ -125,113 +126,127 @@ const AddEducationalMaterial = () => {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.label}>Title</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter title"
-        placeholderTextColor="#888"
-        value={title}
-        onChangeText={setTitle}
-      />
+      {/* Scrollable Content */}
+      <ScrollView contentContainerStyle={{ paddingBottom: 40, paddingTop: 80, paddingHorizontal: 16 }}>
+        <Text style={styles.label}>Title</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter title"
+          placeholderTextColor="#888"
+          value={title}
+          onChangeText={setTitle}
+        />
 
-      <Text style={styles.label}>Content</Text>
-      <TextInput
-        style={[styles.input, { height: 140 }]}
-        placeholder="Enter content"
-        placeholderTextColor="#888"
-        value={bodyContent}
-        onChangeText={setBodyContent}
-        multiline
-      />
+        <Text style={styles.label}>Content</Text>
+        <TextInput
+          style={[styles.input, { height: 140 }]}
+          placeholder="Enter content"
+          placeholderTextColor="#888"
+          value={bodyContent}
+          onChangeText={setBodyContent}
+          multiline
+        />
 
-      <Text style={styles.label}>Description</Text>
-      <TextInput
-        style={[styles.input, { height: 80 }]}
-        placeholder="Enter description"
-        placeholderTextColor="#888"
-        value={description}
-        onChangeText={setDescription}
-        multiline
-      />
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          style={[styles.input, { height: 80 }]}
+          placeholder="Enter description"
+          placeholderTextColor="#888"
+          value={description}
+          onChangeText={setDescription}
+          multiline
+        />
 
-      <Text style={styles.label}>Image</Text>
-      {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.previewImage} />
-      ) : imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.previewImage} />
-      ) : null}
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-          <Text style={styles.uploadButtonText}>Upload</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.label}>Quiz Questions</Text>
-      {quiz.map((q, idx) => (
-        <View key={idx} style={styles.quizCard}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={styles.quizLabel}>Question {idx + 1}</Text>
-            {idx !== 0 && (
-              <TouchableOpacity onPress={() => handleDeleteQuestion(idx)}>
-                <Text style={{ color: 'red', fontWeight: '600' }}>Delete</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Question text"
-            placeholderTextColor="#888"
-            value={q.text}
-            onChangeText={(t) => handleQuestionChange(idx, 'text', t)}
-          />
-          {q.options.map((opt, oi) => (
-            <TextInput
-              key={oi}
-              style={styles.input}
-              placeholder={`Option ${oi + 1}`}
-              placeholderTextColor="#888"
-              value={opt}
-              onChangeText={(t) => handleQuestionChange(idx, `option-${oi}`, t)}
-            />
-          ))}
-          <TextInput
-            style={styles.input}
-            placeholder="Correct option index"
-            placeholderTextColor="#888"
-            keyboardType="numeric"
-            value={q.correctIndex !== null ? String(q.correctIndex) : ''}
-            onChangeText={(v) => handleQuestionChange(idx, 'correctIndex', v)}
-          />
+        <Text style={styles.label}>Image</Text>
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.previewImage} />
+        ) : imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.previewImage} />
+        ) : null}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+            <Text style={styles.uploadButtonText}>Upload</Text>
+          </TouchableOpacity>
         </View>
-      ))}
 
-      <TouchableOpacity style={styles.addQuestionButton} onPress={handleAddQuestion}>
-        <Text style={styles.addQuestionButtonText}>+ Add Another Question</Text>
-      </TouchableOpacity>
+        <Text style={styles.label}>Quiz Questions</Text>
+        {quiz.map((q, idx) => (
+          <View key={idx} style={styles.quizCard}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={styles.quizLabel}>Question {idx + 1}</Text>
+              {idx !== 0 && (
+                <TouchableOpacity onPress={() => handleDeleteQuestion(idx)}>
+                  <Text style={{ color: 'red', fontWeight: '600' }}>Delete</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Question text"
+              placeholderTextColor="#888"
+              value={q.text}
+              onChangeText={(t) => handleQuestionChange(idx, 'text', t)}
+            />
+            {q.options.map((opt, oi) => (
+              <TextInput
+                key={oi}
+                style={styles.input}
+                placeholder={`Option ${oi + 1}`}
+                placeholderTextColor="#888"
+                value={opt}
+                onChangeText={(t) => handleQuestionChange(idx, `option-${oi}`, t)}
+              />
+            ))}
+            <TextInput
+              style={styles.input}
+              placeholder="Correct option index"
+              placeholderTextColor="#888"
+              keyboardType="numeric"
+              value={q.correctIndex !== null ? String(q.correctIndex) : ''}
+              onChangeText={(v) => handleQuestionChange(idx, 'correctIndex', v)}
+            />
+          </View>
+        ))}
 
-      <TouchableOpacity
-        style={styles.submitButton}
-        onPress={handleSubmit}
-        disabled={saving}
-      >
-        <Text style={styles.submitButtonText}>
-          {saving ? 'Saving...' : 'Save Educational Content'}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={styles.addQuestionButton} onPress={handleAddQuestion}>
+          <Text style={styles.addQuestionButtonText}>+ Add Another Question</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.submitButton}
+          onPress={handleSubmit}
+          disabled={saving}
+        >
+          <Text style={styles.submitButtonText}>
+            {saving ? 'Saving...' : 'Save Educational Content'}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#131313', padding: 16, paddingTop: 40},
+  container: { flex: 1, backgroundColor: '#131313' },
+
+  /* Fixed Header */
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingTop: 30,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#131313',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
   headerText: { fontSize: 20, fontWeight: '700', color: '#709775' },
   backIcon: { width: 40, height: 40, resizeMode: 'contain' },
+
   label: { color: '#fff', marginTop: 12, marginBottom: 6, fontWeight: '600' },
   input: {
     backgroundColor: '#1E1E1E',

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, Dimensions, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import HeaderSearchRow from "../components/HeaderSearchRow";
 import { avatarsRepository } from "../repositories/avatarsRepository";
+import HeaderRow from "../components/HeaderRow";
+import SearchRow from "../components/SearchRow";
 
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = (width - 48) / 2; // 16 padding * 2 + 16 margin between items
@@ -79,12 +80,16 @@ const AdminBadgeAvatarScreen = () => {
 
   return (
     <View style={styles.container}>
-      <HeaderSearchRow
+      <HeaderRow
         title="Badges & Avatars"
         onBackPress={() => navigation.goBack()}
+      />
+      
+      <SearchRow
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         onAddPress={handleAddPress}
+        placeholder="Search avatars..."
       />
 
       {/* Tabs */}

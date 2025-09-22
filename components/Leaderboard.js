@@ -9,6 +9,35 @@ const Leaderboard = ({
   currentUserId = null,
   loading = false,
 }) => {
+  // Process leaderboard data to handle ties
+  const processedLeaderboard = React.useMemo(() => {
+    if (!leaderboard.length) return [];
+    
+    // Sort by terraPoints descending, then by username ascending for consistent ordering
+    const sorted = [...leaderboard].sort((a, b) => {
+      if (b.terraPoints !== a.terraPoints) {
+        return b.terraPoints - a.terraPoints;
+      }
+      return a.username.localeCompare(b.username);
+    });
+    
+    // Assign ranks with ties
+    let currentRank = 1;
+    let previousPoints = null;
+    
+    return sorted.map((item, index) => {
+      // If same points as previous item, use same rank
+      if (previousPoints !== null && item.terraPoints === previousPoints) {
+        return { ...item, rank: currentRank };
+      }
+      
+      // Different points, increment rank
+      currentRank = index + 1;
+      previousPoints = item.terraPoints;
+      return { ...item, rank: currentRank };
+    });
+  }, [leaderboard]);
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -17,8 +46,8 @@ const Leaderboard = ({
     );
   }
 
-  const top3 = leaderboard.slice(0, 3);
-  const rest = leaderboard.slice(3, 10);
+  const top3 = processedLeaderboard.slice(0, 3);
+  const rest = processedLeaderboard.slice(3, 10);
 
   const isBeyond10 = currentUserRank && currentUserRank.rank > 10;
   const listItemPaddingVertical = isBeyond10 ? 4 : 6;
@@ -142,7 +171,7 @@ const Leaderboard = ({
         </View>
       )}
 
-      {leaderboard.length === 0 && !loading && (
+      {processedLeaderboard.length === 0 && !loading && (
         <Text style={styles.noDataText}>No leaderboard data available</Text>
       )}
     </View>

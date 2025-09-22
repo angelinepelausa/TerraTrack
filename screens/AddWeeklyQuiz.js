@@ -1,3 +1,4 @@
+// screens/AddWeeklyQuiz.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -124,7 +125,8 @@ const AddWeeklyQuiz = () => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <View style={styles.container}>
+      {/* Fixed Header */}
       <View style={styles.headerRow}>
         <Text style={styles.headerText}>
           {existingQuiz ? 'Edit Weekly Quiz' : 'Add Weekly Quiz'}
@@ -134,95 +136,113 @@ const AddWeeklyQuiz = () => {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.label}>Title</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter title"
-        placeholderTextColor="#888"
-        value={title}
-        onChangeText={setTitle}
-      />
-
-      <Text style={styles.label}>Question</Text>
-      <TextInput
-        style={[styles.input, { height: 100 }]}
-        placeholder="Enter question"
-        placeholderTextColor="#888"
-        value={question}
-        onChangeText={setQuestion}
-        multiline
-      />
-
-      <Text style={styles.label}>Options</Text>
-      {options.map((opt, idx) => (
+      <ScrollView contentContainerStyle={{ paddingTop: 80, paddingHorizontal: 16, paddingBottom: 40 }}>
+        <Text style={styles.label}>Title</Text>
         <TextInput
-          key={idx}
           style={styles.input}
-          placeholder={`Option ${idx + 1}`}
+          placeholder="Enter title"
           placeholderTextColor="#888"
-          value={opt}
-          onChangeText={(text) => {
-            const newOptions = [...options];
-            newOptions[idx] = text;
-            setOptions(newOptions);
-          }}
+          value={title}
+          onChangeText={setTitle}
         />
-      ))}
 
-      <Text style={styles.label}>Correct Answer</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Correct option index"
-        placeholderTextColor="#888"
-        keyboardType="numeric"
-        value={correctIndex !== null ? String(correctIndex) : ''}
-        onChangeText={(v) => setCorrectIndex(v)}
-      />
-
-      <Text style={styles.label}>Image</Text>
-      {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.previewImage} />
-      ) : imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.previewImage} />
-      ) : null}
-      <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-        <Text style={styles.uploadButtonText}>Upload</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.label}>Quiz Date</Text>
-      <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
-        <Text style={{ color: '#fff' }}>{date.toDateString()}</Text>
-      </TouchableOpacity>
-      {showDatePicker && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display="default"
-          onChange={(event, selectedDate) => {
-            setShowDatePicker(false);
-            if (selectedDate) setDate(selectedDate);
-          }}
+        <Text style={styles.label}>Question</Text>
+        <TextInput
+          style={[styles.input, { height: 100 }]}
+          placeholder="Enter question"
+          placeholderTextColor="#888"
+          value={question}
+          onChangeText={setQuestion}
+          multiline
         />
-      )}
 
-      <TouchableOpacity
-        style={styles.submitButton}
-        onPress={handleSubmit}
-        disabled={saving}
-      >
-        <Text style={styles.submitButtonText}>
-          {saving ? 'Saving...' : 'Save Weekly Quiz'}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <Text style={styles.label}>Options</Text>
+        {options.map((opt, idx) => (
+          <TextInput
+            key={idx}
+            style={styles.input}
+            placeholder={`Option ${idx + 1}`}
+            placeholderTextColor="#888"
+            value={opt}
+            onChangeText={(text) => {
+              const newOptions = [...options];
+              newOptions[idx] = text;
+              setOptions(newOptions);
+            }}
+          />
+        ))}
+
+        <Text style={styles.label}>Correct Answer</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Correct option index"
+          placeholderTextColor="#888"
+          keyboardType="numeric"
+          value={correctIndex !== null ? String(correctIndex) : ''}
+          onChangeText={(v) => setCorrectIndex(v)}
+        />
+
+        <Text style={styles.label}>Image</Text>
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.previewImage} />
+        ) : imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.previewImage} />
+        ) : null}
+        <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+          <Text style={styles.uploadButtonText}>Upload</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.label}>Quiz Date</Text>
+        <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
+          <Text style={{ color: '#fff' }}>{date.toDateString()}</Text>
+        </TouchableOpacity>
+        {showDatePicker && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display="default"
+            onChange={(event, selectedDate) => {
+              setShowDatePicker(false);
+              if (selectedDate) setDate(selectedDate);
+            }}
+          />
+        )}
+
+        <TouchableOpacity
+          style={styles.submitButton}
+          onPress={handleSubmit}
+          disabled={saving}
+        >
+          <Text style={styles.submitButtonText}>
+            {saving ? 'Saving...' : 'Save Weekly Quiz'}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#131313', padding: 16, paddingTop: 40 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  container: { flex: 1, backgroundColor: '#131313' },
+
+  /* Fixed Header */
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 30,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#131313',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
   headerText: { fontSize: 20, fontWeight: '700', color: '#709775' },
   backIcon: { width: 40, height: 40, resizeMode: 'contain' },
+
   label: { color: '#fff', marginTop: 12, marginBottom: 6, fontWeight: '600' },
   input: { backgroundColor: '#1E1E1E', color: '#fff', borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 10 },
   previewImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 10 },

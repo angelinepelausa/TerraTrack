@@ -241,6 +241,32 @@ export const updateCommunityProgress = async (originalYearQuarter, payload) => {
   }
 };
 
+// Get user's contribution count
+export const getUserContribution = async (userId) => {
+  try {
+    // Implementation depends on your backend
+    // This is a placeholder - replace with actual API call
+    const response = await api.get(`/user/${userId}/contribution`);
+    return response.data.contribution;
+  } catch (error) {
+    console.error('Error fetching user contribution:', error);
+    return 0;
+  }
+};
+
+// Get recent activities
+export const getRecentActivities = async (limit = 5) => {
+  try {
+    // Implementation depends on your backend
+    // This is a placeholder - replace with actual API call
+    const response = await api.get(`/community/activities?limit=${limit}`);
+    return response.data.activities;
+  } catch (error) {
+    console.error('Error fetching recent activities:', error);
+    return [];
+  }
+};
+
 export default {
   getCurrentYearQuarter,
   getCommunityProgress,
@@ -251,5 +277,7 @@ export default {
   getNextQuarter,
   getUpcomingQuarters,
   deleteCommunityProgress,
-  updateCommunityProgress
+  updateCommunityProgress,
+  getUserContribution,
+  getRecentActivities,
 };

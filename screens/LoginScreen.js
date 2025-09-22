@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { Text, View, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Switch } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkOnboardingStatus } from '../repositories/onboardingRepository';
 import { checkIfUserIsAdmin } from '../repositories/adminRepository';
 import { scale, vScale } from '../utils/scaling';
@@ -10,6 +11,7 @@ const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
     GoogleSignin.configure({
@@ -18,7 +20,24 @@ const LoginScreen = ({ navigation }) => {
       forceCodeForRefreshToken: true,
       scopes: ['openid', 'email', 'profile'],
     });
+
+    // Check if user was remembered
+    const checkRememberedUser = async () => {
+      const rememberedUid = await AsyncStorage.getItem('rememberedUser');
+      const currentUser = auth().currentUser;
+
+      if (rememberedUid && currentUser && currentUser.uid === rememberedUid) {
+        const isAdmin = await checkIfUserIsAdmin(currentUser.uid);
+        if (isAdmin) navigation.replace('AdminDashboard');
+        else navigation.replace('HomeScreen');
+      }
+    };
+    checkRememberedUser();
   }, []);
+
+  const handleRememberMe = (value) => {
+    setRememberMe(value);
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -29,9 +48,15 @@ const LoginScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const { user } = await auth().signInWithEmailAndPassword(email.trim(), password);
-      
+
+      if (rememberMe) {
+        await AsyncStorage.setItem('rememberedUser', user.uid);
+      } else {
+        await AsyncStorage.removeItem('rememberedUser');
+      }
+
       const isAdmin = await checkIfUserIsAdmin(user.uid);
-      
+
       if (isAdmin) {
         navigation.replace('AdminDashboard');
       } else {
@@ -53,15 +78,20 @@ const LoginScreen = ({ navigation }) => {
     setLoading(true);
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-
       const { idToken } = await GoogleSignin.signIn();
       if (!idToken) throw new Error('No ID token returned from Google Sign-In');
 
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
       const { user } = await auth().signInWithCredential(googleCredential);
 
+      if (rememberMe) {
+        await AsyncStorage.setItem('rememberedUser', user.uid);
+      } else {
+        await AsyncStorage.removeItem('rememberedUser');
+      }
+
       const isAdmin = await checkIfUserIsAdmin(user.uid);
-      
+
       if (isAdmin) {
         navigation.replace('AdminDashboard');
       } else {
@@ -98,7 +128,7 @@ const LoginScreen = ({ navigation }) => {
         </Text>
       </View>
 
-      <View style={styles.inputcontainer}>
+      <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
           placeholder="Email Address"
@@ -116,6 +146,18 @@ const LoginScreen = ({ navigation }) => {
           value={password}
           onChangeText={setPassword}
         />
+
+        {/* Remember Me */}
+        <View style={styles.rememberMeContainer}>
+          <Text style={styles.rememberMeText}>Remember Me</Text>
+          <Switch
+            trackColor={{ false: '#CBCBCB', true: '#709775' }}
+            thumbColor="#DDDDDD"
+            onValueChange={handleRememberMe}
+            value={rememberMe}
+          />
+        </View>
+
         <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
           <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
@@ -174,7 +216,7 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-Bold', 
     textAlign: 'center' 
   },
-  inputcontainer: { 
+  inputContainer: { 
     width: '80%', 
     marginTop: vScale(20), 
     alignItems: 'center' 
@@ -190,12 +232,25 @@ const styles = StyleSheet.create({
     width: '100%',
     color: '#000',
   },
+  rememberMeContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: vScale(15),
+    paddingHorizontal: scale(10),
+  },
+  rememberMeText: {
+    color: '#CCCCCC',
+    fontFamily: 'DMSans-Bold',
+    fontSize: scale(12),
+  },
   loginButton: {
     backgroundColor: '#415D43',
     fontFamily: 'DMSans-Bold',
     borderRadius: scale(30),
     height: vScale(50),
-    marginTop: vScale(15),
+    marginTop: vScale(10),
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
@@ -210,7 +265,7 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-Bold',
     fontSize: scale(11),
     textAlign: 'center',
-    marginTop: vScale(35),
+    marginTop: vScale(20),
     marginBottom: vScale(15),
   },
   signupNow: { 
