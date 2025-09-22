@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider } from './context/AuthContext';
-import { FilterProvider } from './context/FilterContext'; 
+import { FilterProvider } from './context/FilterContext';
+
+import { subscribeToNetwork, checkNetworkNow } from './services/networkService';
+import NoInternetPopup from './components/NoInternetPopup';
+
+// Screens
 import SplashScreen from './screens/Splash';
 import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
@@ -36,6 +41,17 @@ import AddAvatar from './screens/AddAvatar';
 const Stack = createNativeStackNavigator();
 
 const App = () => {
+  const [isConnected, setIsConnected] = useState(true);
+
+  useEffect(() => {
+    // Initial check
+    checkNetworkNow().then(setIsConnected);
+
+    // Subscribe to changes
+    const unsubscribe = subscribeToNetwork(setIsConnected);
+    return () => unsubscribe();
+  }, []);
+
   return (
     <AuthProvider>
       <NavigationContainer>
@@ -176,6 +192,10 @@ const App = () => {
             component={VerifyTaskScreen}
           />
         </Stack.Navigator>
+        <NoInternetPopup
+          visible={!isConnected}
+          onRetry={() => checkNetworkNow().then(setIsConnected)}
+        />
       </NavigationContainer>
     </AuthProvider>
   );

@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Text, View, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { 
+  Text, View, StyleSheet, TextInput, TouchableOpacity, 
+  Alert, ActivityIndicator 
+} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import auth from '@react-native-firebase/auth';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { checkOnboardingStatus } from '../repositories/onboardingRepository';
 import { checkIfUserIsAdmin } from '../repositories/adminRepository';
 import { scale, vScale } from '../utils/scaling';
@@ -10,15 +13,7 @@ const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: '311055895923-v5psnf225qdpe5rtpv2rpvfuqinboc0v.apps.googleusercontent.com',
-      offlineAccess: false,
-      forceCodeForRefreshToken: true,
-      scopes: ['openid', 'email', 'profile'],
-    });
-  }, []);
+  const [secureText, setSecureText] = useState(true);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -31,7 +26,6 @@ const LoginScreen = ({ navigation }) => {
       const { user } = await auth().signInWithEmailAndPassword(email.trim(), password);
       
       const isAdmin = await checkIfUserIsAdmin(user.uid);
-      
       if (isAdmin) {
         navigation.replace('AdminDashboard');
       } else {
@@ -44,37 +38,6 @@ const LoginScreen = ({ navigation }) => {
       }
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    try {
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-
-      const { idToken } = await GoogleSignin.signIn();
-      if (!idToken) throw new Error('No ID token returned from Google Sign-In');
-
-      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-      const { user } = await auth().signInWithCredential(googleCredential);
-
-      const isAdmin = await checkIfUserIsAdmin(user.uid);
-      
-      if (isAdmin) {
-        navigation.replace('AdminDashboard');
-      } else {
-        const hasOnboarding = await checkOnboardingStatus(user.uid);
-        if (hasOnboarding) {
-          navigation.replace('HomeScreen');
-        } else {
-          navigation.replace('Onboarding');
-        }
-      }
-    } catch (err) {
-      console.error('Google Sign-In error:', err);
-      Alert.alert('Sign-In Failed', err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -108,14 +71,29 @@ const LoginScreen = ({ navigation }) => {
           autoCapitalize="none"
           keyboardType="email-address"
         />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#666"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+
+        {/* Password with Eye Icon */}
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={[styles.input, { flex: 1, marginBottom: 0 }]}
+            placeholder="Password"
+            placeholderTextColor="#666"
+            secureTextEntry={secureText}
+            value={password}
+            onChangeText={setPassword}
+          />
+          <TouchableOpacity 
+            style={styles.iconContainer} 
+            onPress={() => setSecureText(!secureText)}
+          >
+            <Ionicons 
+              name={secureText ? 'eye-off' : 'eye'} 
+              size={20} 
+              color="#333" 
+            />
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
           <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
@@ -129,13 +107,6 @@ const LoginScreen = ({ navigation }) => {
             Sign up
           </Text>
         </Text>
-      </View>
-
-      <View style={styles.texts}>
-        <Text style={styles.signupText}>Or continue with</Text>
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn} disabled={loading}>
-          <Text style={styles.loginButtonText}>Google</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -190,6 +161,19 @@ const styles = StyleSheet.create({
     width: '100%',
     color: '#000',
   },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#CBCBCB',
+    borderRadius: scale(30),
+    marginBottom: vScale(15),
+    width: '100%',
+    height: vScale(50),
+    paddingRight: scale(15),
+  },
+  iconContainer: {
+    paddingLeft: scale(10),
+  },
   loginButton: {
     backgroundColor: '#415D43',
     fontFamily: 'DMSans-Bold',
@@ -217,21 +201,6 @@ const styles = StyleSheet.create({
     color: '#709775', 
     fontFamily: 'DMSans-Bold', 
     fontSize: scale(11) 
-  },
-  texts: { 
-    marginTop: vScale(15), 
-    width: '80%', 
-    alignItems: 'center' 
-  },
-  googleButton: {
-    backgroundColor: '#415D43',
-    fontFamily: 'DMSans-Bold',
-    borderRadius: scale(30),
-    height: vScale(50),
-    marginTop: vScale(10),
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });
 
