@@ -228,8 +228,6 @@ const AddEducationalMaterial = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
-
-  /* Fixed Header */
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

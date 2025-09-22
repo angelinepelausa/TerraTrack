@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Text, View, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Switch } from 'react-native';
 import auth from '@react-native-firebase/auth';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { checkOnboardingStatus } from '../repositories/onboardingRepository';
 import { checkIfUserIsAdmin } from '../repositories/adminRepository';
 import { scale, vScale } from '../utils/scaling';
@@ -12,15 +12,9 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: '311055895923-v5psnf225qdpe5rtpv2rpvfuqinboc0v.apps.googleusercontent.com',
-      offlineAccess: false,
-      forceCodeForRefreshToken: true,
-      scopes: ['openid', 'email', 'profile'],
-    });
-
     // Check if user was remembered
     const checkRememberedUser = async () => {
       const rememberedUid = await AsyncStorage.getItem('rememberedUser');
@@ -74,42 +68,6 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    try {
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      const { idToken } = await GoogleSignin.signIn();
-      if (!idToken) throw new Error('No ID token returned from Google Sign-In');
-
-      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-      const { user } = await auth().signInWithCredential(googleCredential);
-
-      if (rememberMe) {
-        await AsyncStorage.setItem('rememberedUser', user.uid);
-      } else {
-        await AsyncStorage.removeItem('rememberedUser');
-      }
-
-      const isAdmin = await checkIfUserIsAdmin(user.uid);
-
-      if (isAdmin) {
-        navigation.replace('AdminDashboard');
-      } else {
-        const hasOnboarding = await checkOnboardingStatus(user.uid);
-        if (hasOnboarding) {
-          navigation.replace('HomeScreen');
-        } else {
-          navigation.replace('Onboarding');
-        }
-      }
-    } catch (err) {
-      console.error('Google Sign-In error:', err);
-      Alert.alert('Sign-In Failed', err.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -138,14 +96,21 @@ const LoginScreen = ({ navigation }) => {
           autoCapitalize="none"
           keyboardType="email-address"
         />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#666"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+
+        {/* Password with Eye Icon */}
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={[styles.input, { flex: 1, marginBottom: 0 }]}
+            placeholder="Password"
+            placeholderTextColor="#666"
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={setPassword}
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+            <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
+          </TouchableOpacity>
+        </View>
 
         {/* Remember Me */}
         <View style={styles.rememberMeContainer}>
@@ -171,13 +136,6 @@ const LoginScreen = ({ navigation }) => {
             Sign up
           </Text>
         </Text>
-      </View>
-
-      <View style={styles.texts}>
-        <Text style={styles.signupText}>Or continue with</Text>
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn} disabled={loading}>
-          <Text style={styles.loginButtonText}>Google</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -232,6 +190,19 @@ const styles = StyleSheet.create({
     width: '100%',
     color: '#000',
   },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    backgroundColor: '#CBCBCB',
+    borderRadius: scale(30),
+    marginBottom: vScale(15),
+    height: vScale(50),
+    paddingRight: scale(15),
+  },
+  eyeIcon: {
+    paddingHorizontal: 10,
+  },
   rememberMeContainer: {
     width: '100%',
     flexDirection: 'row',
@@ -272,21 +243,6 @@ const styles = StyleSheet.create({
     color: '#709775', 
     fontFamily: 'DMSans-Bold', 
     fontSize: scale(11) 
-  },
-  texts: { 
-    marginTop: vScale(15), 
-    width: '80%', 
-    alignItems: 'center' 
-  },
-  googleButton: {
-    backgroundColor: '#415D43',
-    fontFamily: 'DMSans-Bold',
-    borderRadius: scale(30),
-    height: vScale(50),
-    marginTop: vScale(10),
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });
 

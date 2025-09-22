@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider } from './context/AuthContext';
-import { FilterProvider } from './context/FilterContext'; 
+import { FilterProvider } from './context/FilterContext';
+
+import { subscribeToNetwork, checkNetworkNow } from './services/networkService';
+import NoInternetPopup from './components/NoInternetPopup';
+
+// Screens
 import SplashScreen from './screens/Splash';
 import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
@@ -32,16 +37,21 @@ import AddTask from './screens/AddTask';
 import AdminLeaderboard from './screens/AdminLeaderboard';
 import AdminBadgeAvatar from './screens/AdminBadgeAvatar';
 import AddAvatar from './screens/AddAvatar';
-import ShopScreen from './screens/ShopScreen';
-import SettingsScreen from './screens/SettingsScreen';
-import AdminCommunityProgress from './screens/AdminCommunityProgress';
-import AddCommunityProgress from './screens/AddCommunityProgress';
-import AdminSettings from './screens/AdminSettings';
-import AdminReferral from './screens/AdminReferral';
 
 const Stack = createNativeStackNavigator();
 
 const App = () => {
+  const [isConnected, setIsConnected] = useState(true);
+
+  useEffect(() => {
+    // Initial check
+    checkNetworkNow().then(setIsConnected);
+
+    // Subscribe to changes
+    const unsubscribe = subscribeToNetwork(setIsConnected);
+    return () => unsubscribe();
+  }, []);
+
   return (
     <AuthProvider>
       <NavigationContainer>
@@ -181,31 +191,11 @@ const App = () => {
             name="VerifyTaskScreen"
             component={VerifyTaskScreen}
           />
-          <Stack.Screen 
-            name="ShopScreen"
-            component={ShopScreen}
-          />
-          <Stack.Screen
-            name="SettingsScreen"
-            component={SettingsScreen}
-          />
-          <Stack.Screen
-            name="AdminCommunityProgress"
-            component={AdminCommunityProgress}
-          />
-          <Stack.Screen
-            name="AddCommunityProgress"
-            component={AddCommunityProgress}
-          />
-          <Stack.Screen
-            name="AdminSettings"
-            component={AdminSettings}
-          />
-          <Stack.Screen
-            name="AdminReferral"
-            component={AdminReferral}
-          />
         </Stack.Navigator>
+        <NoInternetPopup
+          visible={!isConnected}
+          onRetry={() => checkNetworkNow().then(setIsConnected)}
+        />
       </NavigationContainer>
     </AuthProvider>
   );
