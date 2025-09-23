@@ -352,122 +352,131 @@ const RoutineScreen = () => {
     }
   };
 
-  const handleVerifyAction = async () => {
-    if (selectedTasks.length === 0) {
-      Alert.alert('No Task Selected', 'Please select at least one task to verify.');
+const handleVerifyAction = async () => {
+  if (selectedTasks.length === 0) {
+    Alert.alert('No Task Selected', 'Please select at least one task to verify.');
+    return;
+  }
+
+  const requiresPhoto = selectedTasks.some((t) => verificationTasks.includes(t.id));
+  if (requiresPhoto) {
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) {
+      Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
       return;
     }
+  }
 
-    const requiresPhoto = selectedTasks.some((t) => verificationTasks.includes(t.id));
-    if (requiresPhoto) {
-      const hasPermission = await requestCameraPermission();
-      if (!hasPermission) {
-        Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
-        return;
+  try {
+    const photoUris = {};
+
+    for (const task of selectedTasks) {
+      if (verificationTasks.includes(task.id)) {
+        const uri = await new Promise((resolve) => {
+          launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
+            if (response.didCancel || response.errorCode) resolve(null);
+            else resolve(response.assets?.[0]?.uri || null);
+          });
+        });
+        if (uri) photoUris[task.id] = uri;
       }
     }
 
-    try {
-      const photoUris = {};
+    const today = new Date().toISOString().split('T')[0];
 
-      for (const task of selectedTasks) {
-        if (verificationTasks.includes(task.id)) {
-          const uri = await new Promise((resolve) => {
-            launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
-              if (response.didCancel || response.errorCode) resolve(null);
-              else resolve(response.assets?.[0]?.uri || null);
-            });
-          });
-          if (uri) photoUris[task.id] = uri;
-        }
-      }
+    const tasksFinishedRef = firestore()
+      .collection('users')
+      .doc(user.uid)
+      .collection('tasks_finished')
+      .doc(today);
 
-      const today = new Date().toISOString().split('T')[0];
+    const verificationsRef = firestore()
+      .collection('users')
+      .doc(user.uid)
+      .collection('verifications')
+      .doc(today);
 
-      const tasksFinishedRef = firestore()
-        .collection('users')
-        .doc(user.uid)
-        .collection('tasks_finished')
-        .doc(today);
+    const batch = firestore().batch();
+    const now = new Date();
+    const quarter = `Q${Math.floor(now.getMonth() / 3) + 1}`;
+    const year = now.getFullYear();
+    const currentQuarter = `${year}-${quarter}`;
 
-      const verificationsRef = firestore()
-        .collection('users')
-        .doc(user.uid)
-        .collection('verifications')
-        .doc(today);
+    const communityRef = firestore().collection('community_progress').doc(currentQuarter);
+    const communityActivityRef = communityRef.collection('community_activity');
 
-      const batch = firestore().batch();
+    for (const task of selectedTasks) {
+      let photoUrl = null;
 
-      for (const task of selectedTasks) {
-        let photoUrl = null;
-
-        if (verificationTasks.includes(task.id) && photoUris[task.id]) {
-          photoUrl = await uploadImageToCloudinary(photoUris[task.id]);
-          console.log('Uploaded to Cloudinary:', photoUrl);
-
-          batch.set(
-            verificationsRef,
-            {
-              [task.id]: {
-                photoUrl,
-                status: 'pending',
-                verifiedBy: '',
-                submittedAt: firestore.FieldValue.serverTimestamp(),
-                title: task.title,
-              },
-            },
-            { merge: true }
-          );
-
-          await storeTaskForVerification(task.id, task.title, photoUrl, user.uid);
-        }
+      if (verificationTasks.includes(task.id) && photoUris[task.id]) {
+        photoUrl = await uploadImageToCloudinary(photoUris[task.id]);
+        console.log('Uploaded to Cloudinary:', photoUrl);
 
         batch.set(
-          tasksFinishedRef,
+          verificationsRef,
           {
             [task.id]: {
-              pointsEarned: 10,
-              coinsEarned: 1,
-              finishedAt: firestore.FieldValue.serverTimestamp(),
-              photoUrl: photoUrl || null,
+              photoUrl,
+              status: 'pending',
+              verifiedBy: '',
+              submittedAt: firestore.FieldValue.serverTimestamp(),
+              title: task.title,
             },
           },
           { merge: true }
         );
+
+        await storeTaskForVerification(task.id, task.title, photoUrl, user.uid);
       }
 
-      await batch.commit();
-
-      await addUserRewards(user.uid, selectedTasks.length, selectedTasks.length * 10);
-      setTerraCoins((prev) => prev + selectedTasks.length);
-
-      const now = new Date();
-      const quarter = `Q${Math.floor(now.getMonth() / 3) + 1}`;
-      const year = now.getFullYear();
-      const docId = `${year}-${quarter}`;
-
-      const communityRef = firestore().collection('community_progress').doc(docId);
-
-      await communityRef.set(
+      batch.set(
+        tasksFinishedRef,
         {
-          contributors: {
-            [user.uid]: firestore.FieldValue.increment(selectedTasks.length),
+          [task.id]: {
+            pointsEarned: 10,
+            coinsEarned: 1,
+            finishedAt: firestore.FieldValue.serverTimestamp(),
+            photoUrl: photoUrl || null,
           },
-          current: firestore.FieldValue.increment(selectedTasks.length),
         },
         { merge: true }
       );
 
-      setEasyTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
-      setHardTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
-
-      setSelectedTasks([]);
-      Alert.alert('Success', 'Tasks verified and rewards added!');
-    } catch (error) {
-      console.error('Error verifying tasks:', error);
-      Alert.alert('Error', 'Something went wrong verifying tasks.');
+      // ✅ Add task to community_activity under community_progress
+      await communityActivityRef.add({
+        taskId: task.id,
+        title: task.title,
+        userId: user.uid,
+        photoUrl: photoUrl || null,
+        timestamp: firestore.FieldValue.serverTimestamp(),
+      });
     }
-  };
+
+    await batch.commit();
+
+    await addUserRewards(user.uid, selectedTasks.length, selectedTasks.length * 10);
+    setTerraCoins((prev) => prev + selectedTasks.length);
+
+    await communityRef.set(
+      {
+        contributors: {
+          [user.uid]: firestore.FieldValue.increment(selectedTasks.length),
+        },
+        current: firestore.FieldValue.increment(selectedTasks.length),
+      },
+      { merge: true }
+    );
+
+    setEasyTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
+    setHardTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
+
+    setSelectedTasks([]);
+    Alert.alert('Success', 'Tasks verified and rewards added!');
+  } catch (error) {
+    console.error('Error verifying tasks:', error);
+    Alert.alert('Error', 'Something went wrong verifying tasks.');
+  }
+};
 
   const tasks = activeTab === 'easy' ? easyTasks : hardTasks;
 

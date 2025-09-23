@@ -37,6 +37,8 @@ import AddTask from './screens/AddTask';
 import AdminLeaderboard from './screens/AdminLeaderboard';
 import AdminBadgeAvatar from './screens/AdminBadgeAvatar';
 import AddAvatar from './screens/AddAvatar';
+import AdminCommunityProgress from './screens/AdminCommunityProgress';
+import SettingsScreen from './screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -176,6 +178,10 @@ const App = () => {
             component={AdminLeaderboard}
           />
           <Stack.Screen 
+            name="AdminCommunityProgress"
+            component={AdminCommunityProgress}
+          />
+          <Stack.Screen 
             name="AdminBadgeAvatar"
             component={AdminBadgeAvatar}
           />
@@ -190,6 +196,10 @@ const App = () => {
           <Stack.Screen 
             name="VerifyTaskScreen"
             component={VerifyTaskScreen}
+          />
+          <Stack.Screen 
+            name="SettingsScreen"
+            component={SettingsScreen}
           />
         </Stack.Navigator>
         <NoInternetPopup

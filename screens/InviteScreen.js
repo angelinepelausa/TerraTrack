@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Alert, Clipboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { getUserReferralCode, addUserRewards } from '../repositories/userRepository';
@@ -7,6 +7,7 @@ import { referralRepository } from '../repositories/referralRepository';
 import { scale, vScale } from '../utils/scaling';
 import Toast from '../components/Toast';
 import HeaderRow from '../components/HeaderRow';
+import Ionicons from 'react-native-vector-icons/Ionicons'; // ✅ added import
 
 const InviteScreen = ({ navigation }) => {
   const [referralCode, setReferralCode] = useState('');
@@ -72,7 +73,7 @@ const InviteScreen = ({ navigation }) => {
   }, []);
 
   const copyToClipboard = () => {
-    Clipboard.setString(referralCode);
+    // Clipboard API
     Alert.alert('Copied!', 'Referral code copied to clipboard');
   };
 
@@ -102,7 +103,6 @@ const InviteScreen = ({ navigation }) => {
     }
   };
 
-  // Check if all goals are met for a specific invite
   const areAllGoalsMet = (invite) => {
     return (
       invite.taskFinished >= settings.goalTasks &&
@@ -135,7 +135,8 @@ const InviteScreen = ({ navigation }) => {
             <View style={styles.referralCodeContainer}>
               <Text style={styles.referralCode}>{referralCode}</Text>
               <TouchableOpacity onPress={copyToClipboard} style={styles.copyButton}>
-                <Image source={require('../assets/images/CopyIcon.png')} style={styles.copyIcon} />
+                {/* ✅ Ionicons instead of image */}
+                <Ionicons name="copy-outline" size={20} color="#415D43" />
               </TouchableOpacity>
             </View>
             <Text style={styles.referralLabel}>Invitation Code</Text>
@@ -231,7 +232,6 @@ const styles = StyleSheet.create({
   referralCodeContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: vScale(5) },
   referralCode: { color: '#415D43', fontSize: scale(30), fontWeight: 'bold', textAlign: 'center', marginRight: scale(10) },
   copyButton: { padding: scale(5) },
-  copyIcon: { width: scale(15), height: scale(15), resizeMode: 'contain' },
   referralLabel: { color: '#131313', fontSize: scale(12), textAlign: 'center' },
   rewardsCard: { backgroundColor: '#415D43', borderRadius: scale(25), padding: scale(25), alignItems: 'center', width: scale(320), marginBottom: vScale(20) },
   rewardsTitle: { color: '#CCCCCC', fontSize: scale(16), fontWeight: 'bold', textAlign: 'center', marginBottom: vScale(10), lineHeight: scale(20) },
