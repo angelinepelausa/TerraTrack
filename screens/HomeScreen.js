@@ -78,6 +78,9 @@ const HomeScreen = ({ navigation }) => {
     else if (item.title === 'Invite') {
       navigation.navigate('InviteScreen');
     }
+    else if (item.title === 'Achievements') {
+      navigation.navigate('AchievementsScreen');
+    }
   };
 
   const features = [

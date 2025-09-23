@@ -28,16 +28,33 @@ const { width } = Dimensions.get('window');
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dgdzmrhc4/image/upload';
 const UPLOAD_PRESET = 'terratrack';
 
+// 🔥 Increment total task finished counter for a user
+const incrementTaskFinished = async (uid, count = 1) => {
+  try {
+    const totalRef = firestore()
+      .collection("users")
+      .doc(uid)
+      .collection("total")
+      .doc("stats");
+
+    await totalRef.set(
+      { taskFinished: firestore.FieldValue.increment(count) },
+      { merge: true }
+    );
+
+    console.log(`✅ Incremented ${count} task(s) for user: ${uid}`);
+  } catch (error) {
+    console.error("❌ Error incrementing taskFinished:", error);
+  }
+};
+
 // ✅ local distribution (was in Firebase function before)
 // ✅ New distribution logic for subcollection structure
-// utils/distribution.js (or inside RoutineScreen if you prefer)
-
 export const distributeTasksForVerification = async () => {
   try {
     const today = new Date().toISOString().split("T")[0];
     const runId = Date.now().toString();
 
-    // --- Get all submitted tasks ---
     const tasksSnap = await firestore()
       .collection("tasks_verification")
       .doc(today)
@@ -60,7 +77,6 @@ export const distributeTasksForVerification = async () => {
       };
     });
 
-    // --- Determine eligible users (only those who submitted today) ---
     const submitterIds = [...new Set(tasksArray.map((t) => t.userId))];
     if (submitterIds.length === 0) {
       console.log("⚡ No eligible submitters today");
@@ -71,34 +87,28 @@ export const distributeTasksForVerification = async () => {
 
     console.log("Eligible verifiers:", eligibleUsers.map((u) => u.id));
 
-    // --- Load balancing tracker ---
     const loadMap = Object.fromEntries(eligibleUsers.map((u) => [u.id, 0]));
     let batch = firestore().batch();
     let opCount = 0;
 
-    // --- Assign 3 verifiers per task ---
     for (const task of tasksArray) {
       const assignedUsers = [];
 
       for (let i = 0; i < 3; i++) {
-        // candidates = all eligible except owner + already assigned
         const candidates = eligibleUsers
           .filter((u) => u.id !== task.userId && !assignedUsers.includes(u.id))
-          .sort((a, b) => loadMap[a.id] - loadMap[b.id]); // pick from lowest load first
+          .sort((a, b) => loadMap[a.id] - loadMap[b.id]);
 
         if (candidates.length === 0) break;
 
-        // get users with same lowest load
         const minLoad = loadMap[candidates[0].id];
         const lowest = candidates.filter((c) => loadMap[c.id] === minLoad);
 
-        // pick one randomly among lowest
         const verifier = lowest[Math.floor(Math.random() * lowest.length)];
 
         assignedUsers.push(verifier.id);
         loadMap[verifier.id]++;
 
-        // store under verifier
         const ref = firestore()
           .collection("users")
           .doc(verifier.id)
@@ -130,7 +140,6 @@ export const distributeTasksForVerification = async () => {
 
     if (opCount > 0) await batch.commit();
 
-    // --- Log run ---
     await firestore().collection("distribution").add({
       date: today,
       runId,
@@ -166,13 +175,10 @@ const uploadImageToCloudinary = async (uri) => {
   }
 };
 
-// ✅ Save submitted task into subcollection to avoid overwrites
-// ✅ Save submitted task into subcollection to avoid overwrites
 const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => {
   try {
     const today = new Date().toISOString().split("T")[0];
 
-    // ✅ 1. Save into global pool (composite docId for uniqueness)
     const globalRef = firestore()
       .collection("tasks_verification")
       .doc(today)
@@ -180,7 +186,7 @@ const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => 
       .doc(`${userId}_${taskId}`);
 
     await globalRef.set({
-      taskId, // 🔑 store real taskId for later distribution
+      taskId,
       title: taskTitle,
       status: "pending",
       submittedAt: firestore.FieldValue.serverTimestamp(),
@@ -190,7 +196,6 @@ const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => 
       date: today,
     });
 
-    // ✅ 2. Save into user's personal verification log
     const userRef = firestore()
       .collection("users")
       .doc(userId)
@@ -206,7 +211,7 @@ const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => 
           submittedAt: firestore.FieldValue.serverTimestamp(),
         },
       },
-      { merge: true } // ensures multiple tasks don’t overwrite each other
+      { merge: true }
     );
 
     console.log("✅ Task stored in both global + user verifications:", taskId);
@@ -214,7 +219,6 @@ const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => 
     console.error("❌ Error storing task for verification:", error);
   }
 };
-
 
 const RoutineScreen = () => {
   const { user } = useAuth();
@@ -457,6 +461,8 @@ const RoutineScreen = () => {
         },
         { merge: true }
       );
+
+      await incrementTaskFinished(user.uid, selectedTasks.length);
 
       setEasyTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
       setHardTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));

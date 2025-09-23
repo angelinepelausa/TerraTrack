@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { getUserTerraCoins } from '../repositories/userRepository'; 
+import { getUserTerraCoins } from '../repositories/userRepository';
+import { incrementUserStat } from '../repositories/userStatsRepository';
 
 const EducationalDetailScreen = ({ route, navigation }) => {
   const { content } = route.params;
@@ -22,6 +23,16 @@ const EducationalDetailScreen = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error('Error fetching TerraCoins:', error);
+    }
+  };
+
+  const handleMaterialRead = async () => {
+    try {
+      if (!user?.uid) return;
+      await incrementUserStat(user.uid, "educationalMaterialsRead");
+      Alert.alert("Progress Saved", "Marked as read! 📘");
+    } catch (error) {
+      console.error("Error incrementing educationalMaterialsRead:", error);
     }
   };
 
@@ -48,6 +59,15 @@ const EducationalDetailScreen = ({ route, navigation }) => {
               <Text style={styles.contentText}>{content.content}</Text>
             </View>
 
+            {/* ✅ Button to mark material as read */}
+            <TouchableOpacity
+              style={styles.readButton}
+              onPress={handleMaterialRead}
+            >
+              <Text style={styles.quizButtonText}>Mark as Read</Text>
+            </TouchableOpacity>
+
+            {/* ✅ Button to take quiz */}
             <TouchableOpacity
               style={styles.quizButton}
               onPress={() => {
@@ -147,6 +167,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'DMSans-Regular',
     textAlign: 'center',
+  },
+  readButton: {
+    backgroundColor: '#709775',
+    paddingVertical: 14,
+    borderRadius: 30,
+    width: '100%',
+    marginBottom: 12,
   },
   quizButton: {
     backgroundColor: '#415D43',
