@@ -13,6 +13,43 @@ import {
 import { scale } from "../utils/scaling";
 import CommentItem from "./CommentItem";
 
+// ✅ Extracted input into its own component
+const CommentInput = ({
+  commentText,
+  setCommentText,
+  postingComment,
+  handlePostComment,
+}) => (
+  <KeyboardAvoidingView
+    behavior={Platform.OS === "ios" ? "padding" : undefined}
+    keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 0}
+    style={{ marginBottom: scale(16) }}
+  >
+    <View style={styles.inputContainer}>
+      <TextInput
+        value={commentText}
+        onChangeText={setCommentText}
+        placeholder="Give some motivation..."
+        placeholderTextColor="#888"
+        style={styles.commentInput}
+        multiline
+        textAlignVertical="top"
+      />
+      <TouchableOpacity
+        onPress={handlePostComment}
+        disabled={postingComment || !commentText.trim()}
+        style={[styles.postButton, { opacity: commentText.trim() ? 1 : 0.6 }]}
+      >
+        {postingComment ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.postButtonText}>Post</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  </KeyboardAvoidingView>
+);
+
 const CommentsTab = ({
   comments,
   onPostComment,
@@ -39,42 +76,19 @@ const CommentsTab = ({
     }
   };
 
-  const renderHeader = () => (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 0}
-      style={{ marginBottom: scale(16) }}
-    >
-      <View style={styles.inputContainer}>
-        <TextInput
-          value={commentText}
-          onChangeText={setCommentText}
-          placeholder="Give some motivation..."
-          placeholderTextColor="#888"
-          style={styles.commentInput}
-          multiline
-        />
-        <TouchableOpacity
-          onPress={handlePostComment}
-          disabled={postingComment || !commentText.trim()}
-          style={[styles.postButton, { opacity: commentText.trim() ? 1 : 0.6 }]}
-        >
-          {postingComment ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.postButtonText}>Post</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
-  );
-
   return (
     <View style={{ flex: 1, backgroundColor: "#000", padding: scale(16) }}>
       <FlatList
         data={comments}
         keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={
+          <CommentInput
+            commentText={commentText}
+            setCommentText={setCommentText}
+            postingComment={postingComment}
+            handlePostComment={handlePostComment}
+          />
+        }
         renderItem={({ item }) => (
           <CommentItem
             comment={item}
@@ -107,16 +121,20 @@ const styles = {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: scale(12),
+    paddingRight: scale(8),
   },
   commentInput: {
     flex: 1,
     backgroundColor: "#111D13",
     color: "#fff",
-    padding: scale(12),
+    paddingHorizontal: scale(12),
+    paddingTop: scale(10),
+    paddingBottom: scale(10),
     borderRadius: scale(8),
     fontSize: scale(14),
     minHeight: scale(44),
-    maxHeight: scale(100),
+    maxHeight: scale(120),
+    textAlignVertical: "top",
   },
   postButton: {
     backgroundColor: "#415D43",

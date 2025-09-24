@@ -16,7 +16,6 @@ const CurrentProgressTab = ({ progressData, userContribution, recentActivity, ge
 
   const { title, description, current, goal, image } = progressData;
   const progressPercentage = goal > 0 ? (current / goal) * 100 : 0;
-
   return (
     <View style={styles.section}>
       <View style={styles.rowHeader}>
@@ -42,7 +41,7 @@ const CurrentProgressTab = ({ progressData, userContribution, recentActivity, ge
           />
         </View>
         <View style={{ marginTop: vScale(12) }}>
-          <Text style={{ fontWeight: "bold", color: "#415D43" }}>
+          <Text style={{ fontWeight: "bold", color: "#415D43", alignSelf: "center" }}>
             Your Contribution: {userContribution} task(s)
           </Text>
         </View>
