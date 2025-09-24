@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { getUserTerraCoins } from '../repositories/userRepository'; 
+import { getUserTerraCoins } from '../repositories/userRepository';
+import { incrementUserStat } from '../repositories/userStatsRepository';
+import firestore from '@react-native-firebase/firestore';
 
 const EducationalDetailScreen = ({ route, navigation }) => {
-  const { content } = route.params;
+  const { content } = route.params; // content should have an "id"
   const { user } = useAuth();
   const [terraCoins, setTerraCoins] = useState(0);
+  const [isRead, setIsRead] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchTerraCoins();
+      checkIfRead(); // ✅ check read status from Firestore
     }
   }, [user]);
 
@@ -22,6 +26,49 @@ const EducationalDetailScreen = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error('Error fetching TerraCoins:', error);
+    }
+  };
+
+  // ✅ Check Firestore if this content is already read
+  const checkIfRead = async () => {
+    try {
+      const docRef = firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('materialsRead')
+        .doc(content.id); // assumes content has an id
+      const doc = await docRef.get();
+      if (doc.exists && doc.data().read) {
+        setIsRead(true);
+      }
+    } catch (error) {
+      console.error("Error checking read status:", error);
+    }
+  };
+
+  // ✅ Handle marking as read
+  const handleMaterialRead = async () => {
+    try {
+      if (!user?.uid) return;
+
+      // 1. Increment stats
+      await incrementUserStat(user.uid, "educationalMaterialsRead");
+
+      // 2. Save read status in Firestore
+      await firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('materialsRead')
+        .doc(content.id) // each material tracked separately
+        .set({
+          read: true,
+          timestamp: firestore.FieldValue.serverTimestamp(),
+        });
+
+      setIsRead(true);
+      Alert.alert("Progress Saved", "Marked as read! 📘");
+    } catch (error) {
+      console.error("Error incrementing educationalMaterialsRead:", error);
     }
   };
 
@@ -48,10 +95,24 @@ const EducationalDetailScreen = ({ route, navigation }) => {
               <Text style={styles.contentText}>{content.content}</Text>
             </View>
 
+            {/* ✅ Mark as Read button */}
+            <TouchableOpacity
+              style={[
+                styles.readButton,
+                isRead && { backgroundColor: '#888' }
+              ]}
+              onPress={handleMaterialRead}
+              disabled={isRead}
+            >
+              <Text style={styles.quizButtonText}>
+                {isRead ? "Already Read" : "Mark as Read"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* ✅ Quiz button */}
             <TouchableOpacity
               style={styles.quizButton}
               onPress={() => {
-                console.log("Navigating to EducationalQuizScreen with content:", content);
                 navigation.navigate('EducationalQuizScreen', { content });
               }}
             >
@@ -63,6 +124,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -147,6 +209,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'DMSans-Regular',
     textAlign: 'center',
+  },
+  readButton: {
+    backgroundColor: '#709775',
+    paddingVertical: 14,
+    borderRadius: 30,
+    width: '100%',
+    marginBottom: 12,
   },
   quizButton: {
     backgroundColor: '#415D43',

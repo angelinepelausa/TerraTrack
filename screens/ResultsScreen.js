@@ -1,13 +1,13 @@
 // screens/ResultsScreen.js
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
 
 const PH_AVERAGE = 2.9; // tonnes annual average
 const MAX_BAR_HEIGHT = vScale(210); // instead of SCREEN_HEIGHT * 0.25
 
 const ResultsScreen = ({ route, navigation }) => {
-  const { results } = route.params;
+  const { results, compareWithLastMonth } = route.params;
 
   // Convert kilograms → tonnes
   const totalAnnualTonnes = results.totalAnnual / 1000;
@@ -15,8 +15,20 @@ const ResultsScreen = ({ route, navigation }) => {
   const electricityTonnes = results.electricityEmissionAnnual / 1000;
   const dietTonnes = results.dietEmissionAnnual / 1000;
 
+  // Decide comparison value (last month OR PH average)
+// Decide comparison value
+// If compareWithLastMonth exists, use it
+// Otherwise, fallback to PH_AVERAGE
+const comparisonValue = compareWithLastMonth && compareWithLastMonth.totalAnnual
+  ? compareWithLastMonth.totalAnnual / 1000
+  : PH_AVERAGE;
+
+const comparisonLabel = compareWithLastMonth && compareWithLastMonth.totalAnnual
+  ? 'Last Month'
+  : 'Philippines Average';
+
   // Find largest footprint value for scaling
-  const maxValue = Math.max(totalAnnualTonnes, PH_AVERAGE);
+  const maxValue = Math.max(totalAnnualTonnes, comparisonValue);
 
   // Scale function to keep bars proportional
   const scaleHeight = (value) => (value / maxValue) * MAX_BAR_HEIGHT;
@@ -24,7 +36,11 @@ const ResultsScreen = ({ route, navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Your Carbon Footprint</Text>
-      <Text style={styles.subtitle}>See how you compare!</Text>
+      <Text style={styles.subtitle}>
+        {compareWithLastMonth
+          ? 'See how you compare with last month!'
+          : 'See how you compare with the Philippine average!'}
+      </Text>
 
       {/* Chart container */}
       <View style={styles.chartContainer}>
@@ -51,24 +67,36 @@ const ResultsScreen = ({ route, navigation }) => {
           <Text style={styles.xLabel}>Your Carbon Footprint</Text>
         </View>
 
-        {/* PH Average Bar with Bear */}
+        {/* Comparison Bar */}
         <View style={styles.barWrapper}>
           <View style={{ alignItems: 'center' }}>
-            <Image
-              source={require('../assets/images/bear.png')}
-              style={styles.bearImage}
-              resizeMode="contain"
+            {!compareWithLastMonth && (
+              <Image
+                source={require('../assets/images/bear.png')}
+                style={styles.bearImage}
+                resizeMode="contain"
+              />
+            )}
+            <View
+              style={[
+                styles.bar,
+                {
+                  height: scaleHeight(comparisonValue),
+                  backgroundColor: '#709775',
+                },
+              ]}
             />
-            <View style={[styles.bar, { height: scaleHeight(PH_AVERAGE), backgroundColor: '#709775' }]} />
           </View>
-          <Text style={styles.barLabel}>{PH_AVERAGE.toFixed(2)} Tonnes</Text>
-          <Text style={styles.xLabel}>Philippines Average</Text>
+          <Text style={styles.barLabel}>{comparisonValue.toFixed(2)} Tonnes</Text>
+          <Text style={styles.xLabel}>{comparisonLabel}</Text>
         </View>
       </View>
 
       {/* Info */}
       <Text style={styles.info}>
-        Find out how to maximize your environmental impact with TerraTrack’s features.
+        {compareWithLastMonth
+          ? 'Track your progress month by month with TerraTrack.'
+          : 'Find out how to maximize your environmental impact with TerraTrack’s features.'}
       </Text>
 
       {/* Continue Button */}

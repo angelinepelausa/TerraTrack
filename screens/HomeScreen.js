@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ActivityIndicator, Alert, Modal } from 'react-native';
 import { getCommunityProgress } from '../repositories/communityProgressRepository';
 import { getUserTerraCoins } from '../repositories/userRepository';
 import { hasAttemptedQuiz } from '../repositories/quizAttemptsRepository';
 import ProgressBar from '../components/ProgressBar';
 import { scale, vScale } from '../utils/scaling';
 import { useAuth } from '../context/AuthContext';
+import firestore from '@react-native-firebase/firestore';
 
 const { width } = Dimensions.get('window');
 const PADDING = scale(20);
@@ -28,6 +29,10 @@ const HomeScreen = ({ navigation }) => {
   const [error, setError] = useState(null);
   const [weeklyQuizAttempted, setWeeklyQuizAttempted] = useState(false);
   const { user } = useAuth();
+
+  // new states for monthly footprint popup
+  const [showPopup, setShowPopup] = useState(false);
+  const [lastMonthResult, setLastMonthResult] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,6 +64,77 @@ const HomeScreen = ({ navigation }) => {
     fetchData();
   }, [user]);
 
+  useEffect(() => {
+    if (user?.uid) {
+      fetchTerraCoins();
+      checkMonthlyFootprint();
+    }
+  }, [user?.uid]);
+
+  const fetchTerraCoins = async () => {
+    try {
+      const result = await getUserTerraCoins(user.uid);
+      if (result.success) {
+        setTerraCoins(result.terraCoins);
+      }
+    } catch (error) {
+      console.error('Error fetching TerraCoins:', error);
+    }
+  };
+
+  // 🔥 Monthly footprint check
+// 🔥 Monthly footprint check
+const checkMonthlyFootprint = async () => {
+  try {
+    console.log("👀 Running checkMonthlyFootprint for", user.uid);
+
+    const now = new Date();
+    const currentDay = now.getDate();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const currentMonthKey = `${year}-${month}`;
+
+    const lastMonthDate = new Date(year, now.getMonth() - 1, 1);
+    const lastMonthKey = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
+    // Get current month footprint
+    const currentDoc = await firestore()
+      .collection('users')
+      .doc(user.uid)
+      .collection('footprints')
+      .doc(currentMonthKey)
+      .get({ source: 'server' });
+
+    // Check if current month is missing or empty
+    const currentData = currentDoc.exists ? currentDoc.data() : null;
+    const hasCurrentFootprint = currentData && currentData.results && Object.keys(currentData.results).length > 0;
+
+    // Show popup if today is the 1st OR footprint is missing/empty
+    if (currentDay === 1 || !hasCurrentFootprint) {
+      console.log(`📌 Showing popup for ${currentMonthKey}`);
+
+      const lastMonthDoc = await firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('footprints')
+        .doc(lastMonthKey)
+        .get({ source: 'server' });
+
+      if (lastMonthDoc.exists && lastMonthDoc.data().results) {
+        console.log("📌 Found last month’s result", lastMonthDoc.data());
+        setLastMonthResult(lastMonthDoc.data().results);
+      }
+
+      setShowPopup(true);
+    } else {
+      console.log(`✅ Already has footprint for ${currentMonthKey} → no popup`);
+    }
+  } catch (error) {
+    console.error('Error checking monthly footprint:', error);
+  }
+};
+
+
   const handleCardPress = (item) => {
     if (item.attempted) {
       Alert.alert(
@@ -68,23 +144,23 @@ const HomeScreen = ({ navigation }) => {
       );
       return;
     }
-    
+
     if (item.title === 'Read') {
       navigation.navigate('EducationalScreen');
-    }
-    else if (item.title === 'Weekly Quiz') {
+    } else if (item.title === 'Weekly Quiz') {
       navigation.navigate('WeeklyQuizScreen');
-    }
-    else if (item.title === 'Invite') {
+    } else if (item.title === 'Invite') {
       navigation.navigate('InviteScreen');
+    } else if (item.title === 'Achievements') {
+      navigation.navigate('AchievementsScreen');
     }
   };
 
   const features = [
     {
       title: 'Weekly Quiz',
-      subtitle: weeklyQuizAttempted 
-        ? 'Quiz completed for this week!' 
+      subtitle: weeklyQuizAttempted
+        ? 'Quiz completed for this week!'
         : 'Answer the weekly quiz to earn Terra Points and Coins!',
       image: require('../assets/images/WeeklyQuiz.png'),
       attempted: weeklyQuizAttempted,
@@ -108,23 +184,6 @@ const HomeScreen = ({ navigation }) => {
       attempted: false,
     },
   ];
-
-  useEffect(() => {
-    if (user) {
-      fetchTerraCoins();
-    }
-  }, [user]);
-
-  const fetchTerraCoins = async () => {
-    try {
-      const result = await getUserTerraCoins(user.uid); 
-      if (result.success) {
-        setTerraCoins(result.terraCoins);
-      }
-    } catch (error) {
-      console.error('Error fetching TerraCoins:', error);
-    }
-  };
 
   if (loading) {
     return (
@@ -154,10 +213,7 @@ const HomeScreen = ({ navigation }) => {
           {features.map((item, index) => (
             <TouchableOpacity
               key={index}
-              style={[
-                styles.card,
-                item.attempted && {backgroundColor: '#a7a7a7'}
-              ]}
+              style={[styles.card, item.attempted && { backgroundColor: '#a7a7a7' }]}
               onPress={() => handleCardPress(item)}
             >
               <View style={styles.cardTextArea}>
@@ -173,10 +229,9 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.shopBox}
-        onPress={() => navigation.navigate('ShopScreen')}>
+        <TouchableOpacity style={styles.shopBox} onPress={() => navigation.navigate('ShopScreen')}>
           <Text style={styles.shopText}>
-            Buy exclusive avatars and rewards from{'\n'}our partners from the Terra Shop!
+            Buy exclusive avatars and rewards from our partners from the Terra Shop!
           </Text>
           <Image source={require('../assets/images/TerraShop.png')} style={styles.shopImage} />
         </TouchableOpacity>
@@ -187,9 +242,7 @@ const HomeScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('CommunityProgressScreen')}
           >
             <Text style={styles.communityHeader}>Community Progress</Text>
-            <Text style={styles.communityTitle}>
-              Finish {communityProgress.goal} tasks
-            </Text>
+            <Text style={styles.communityTitle}>Finish {communityProgress.goal} tasks</Text>
             <View style={{ marginTop: vScale(8), width: '90%' }}>
               <ProgressBar
                 progress={
@@ -202,6 +255,43 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* 🔥 Monthly Carbon Footprint Popup */}
+      <Modal visible={showPopup} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>It’s a New Month!</Text>
+            <Text style={styles.modalSubtitle}>
+              {lastMonthResult
+                ? 'See how your footprint compares to last month.'
+                : 'Let’s calculate your footprint to see where you stand.'}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => {
+                setShowPopup(false);
+
+                // Normalize last month result
+                const normalizedLastMonth = lastMonthResult
+                  ? {
+                      totalAnnual: lastMonthResult.totalAnnual || 0,
+                      transportEmissionAnnual: lastMonthResult.transportEmissionAnnual || 0,
+                      electricityEmissionAnnual: lastMonthResult.electricityEmissionAnnual || 0,
+                      dietEmissionAnnual: lastMonthResult.dietEmissionAnnual || 0,
+                    }
+                  : null;
+
+                navigation.navigate('Calculator', {
+                  ...(normalizedLastMonth ? { compareWithLastMonth: normalizedLastMonth } : {}),
+                });
+              }}
+            >
+              <Text style={styles.modalButtonText}>Calculate Carbon Footprint</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -301,24 +391,30 @@ const styles = StyleSheet.create({
     color: '#131313',
   },
   communityTitle: { fontWeight: 'bold', fontSize: scale(15), marginBottom: vScale(4), color: '#415D43' },
-  communityTask: { fontSize: scale(12), color: '#131313' },
 
-  bottomNav: {
-    height: vScale(50),
-    backgroundColor: '#415D43',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  // 🔥 Popup styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  navItem: { alignItems: 'center', justifyContent: 'center' },
-  navText: { color: '#DDDDDD', fontSize: scale(12) },
-  navTextActive: { fontWeight: 'bold' },
-  activeUnderline: {
-    height: vScale(2),
-    backgroundColor: '#DDDDDD',
-    marginTop: vScale(2),
-    width: '100%',
+  modalBox: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
   },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
+  modalSubtitle: { fontSize: 14, color: '#555', marginBottom: 20, textAlign: 'center' },
+  modalButton: {
+    backgroundColor: '#415D43',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+  },
+  modalButtonText: { color: '#fff', fontWeight: 'bold' },
 });
 
 export default HomeScreen;

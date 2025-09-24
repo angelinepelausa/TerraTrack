@@ -28,16 +28,33 @@ const { width } = Dimensions.get('window');
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dgdzmrhc4/image/upload';
 const UPLOAD_PRESET = 'terratrack';
 
+// 🔥 Increment total task finished counter for a user
+const incrementTaskFinished = async (uid, count = 1) => {
+  try {
+    const totalRef = firestore()
+      .collection("users")
+      .doc(uid)
+      .collection("total")
+      .doc("stats");
+
+    await totalRef.set(
+      { taskFinished: firestore.FieldValue.increment(count) },
+      { merge: true }
+    );
+
+    console.log(`✅ Incremented ${count} task(s) for user: ${uid}`);
+  } catch (error) {
+    console.error("❌ Error incrementing taskFinished:", error);
+  }
+};
+
 // ✅ local distribution (was in Firebase function before)
 // ✅ New distribution logic for subcollection structure
-// utils/distribution.js (or inside RoutineScreen if you prefer)
-
 export const distributeTasksForVerification = async () => {
   try {
     const today = new Date().toISOString().split("T")[0];
     const runId = Date.now().toString();
 
-    // --- Get all submitted tasks ---
     const tasksSnap = await firestore()
       .collection("tasks_verification")
       .doc(today)
@@ -60,7 +77,6 @@ export const distributeTasksForVerification = async () => {
       };
     });
 
-    // --- Determine eligible users (only those who submitted today) ---
     const submitterIds = [...new Set(tasksArray.map((t) => t.userId))];
     if (submitterIds.length === 0) {
       console.log("⚡ No eligible submitters today");
@@ -71,34 +87,28 @@ export const distributeTasksForVerification = async () => {
 
     console.log("Eligible verifiers:", eligibleUsers.map((u) => u.id));
 
-    // --- Load balancing tracker ---
     const loadMap = Object.fromEntries(eligibleUsers.map((u) => [u.id, 0]));
     let batch = firestore().batch();
     let opCount = 0;
 
-    // --- Assign 3 verifiers per task ---
     for (const task of tasksArray) {
       const assignedUsers = [];
 
       for (let i = 0; i < 3; i++) {
-        // candidates = all eligible except owner + already assigned
         const candidates = eligibleUsers
           .filter((u) => u.id !== task.userId && !assignedUsers.includes(u.id))
-          .sort((a, b) => loadMap[a.id] - loadMap[b.id]); // pick from lowest load first
+          .sort((a, b) => loadMap[a.id] - loadMap[b.id]);
 
         if (candidates.length === 0) break;
 
-        // get users with same lowest load
         const minLoad = loadMap[candidates[0].id];
         const lowest = candidates.filter((c) => loadMap[c.id] === minLoad);
 
-        // pick one randomly among lowest
         const verifier = lowest[Math.floor(Math.random() * lowest.length)];
 
         assignedUsers.push(verifier.id);
         loadMap[verifier.id]++;
 
-        // store under verifier
         const ref = firestore()
           .collection("users")
           .doc(verifier.id)
@@ -130,7 +140,6 @@ export const distributeTasksForVerification = async () => {
 
     if (opCount > 0) await batch.commit();
 
-    // --- Log run ---
     await firestore().collection("distribution").add({
       date: today,
       runId,
@@ -166,13 +175,10 @@ const uploadImageToCloudinary = async (uri) => {
   }
 };
 
-// ✅ Save submitted task into subcollection to avoid overwrites
-// ✅ Save submitted task into subcollection to avoid overwrites
 const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => {
   try {
     const today = new Date().toISOString().split("T")[0];
 
-    // ✅ 1. Save into global pool (composite docId for uniqueness)
     const globalRef = firestore()
       .collection("tasks_verification")
       .doc(today)
@@ -180,7 +186,7 @@ const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => 
       .doc(`${userId}_${taskId}`);
 
     await globalRef.set({
-      taskId, // 🔑 store real taskId for later distribution
+      taskId,
       title: taskTitle,
       status: "pending",
       submittedAt: firestore.FieldValue.serverTimestamp(),
@@ -190,7 +196,6 @@ const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => 
       date: today,
     });
 
-    // ✅ 2. Save into user's personal verification log
     const userRef = firestore()
       .collection("users")
       .doc(userId)
@@ -206,7 +211,7 @@ const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => 
           submittedAt: firestore.FieldValue.serverTimestamp(),
         },
       },
-      { merge: true } // ensures multiple tasks don’t overwrite each other
+      { merge: true }
     );
 
     console.log("✅ Task stored in both global + user verifications:", taskId);
@@ -214,7 +219,6 @@ const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => 
     console.error("❌ Error storing task for verification:", error);
   }
 };
-
 
 const RoutineScreen = () => {
   const { user } = useAuth();
@@ -352,131 +356,124 @@ const RoutineScreen = () => {
     }
   };
 
-const handleVerifyAction = async () => {
-  if (selectedTasks.length === 0) {
-    Alert.alert('No Task Selected', 'Please select at least one task to verify.');
-    return;
-  }
-
-  const requiresPhoto = selectedTasks.some((t) => verificationTasks.includes(t.id));
-  if (requiresPhoto) {
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
+  const handleVerifyAction = async () => {
+    if (selectedTasks.length === 0) {
+      Alert.alert('No Task Selected', 'Please select at least one task to verify.');
       return;
     }
-  }
 
-  try {
-    const photoUris = {};
-
-    for (const task of selectedTasks) {
-      if (verificationTasks.includes(task.id)) {
-        const uri = await new Promise((resolve) => {
-          launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
-            if (response.didCancel || response.errorCode) resolve(null);
-            else resolve(response.assets?.[0]?.uri || null);
-          });
-        });
-        if (uri) photoUris[task.id] = uri;
+    const requiresPhoto = selectedTasks.some((t) => verificationTasks.includes(t.id));
+    if (requiresPhoto) {
+      const hasPermission = await requestCameraPermission();
+      if (!hasPermission) {
+        Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
+        return;
       }
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    try {
+      const photoUris = {};
 
-    const tasksFinishedRef = firestore()
-      .collection('users')
-      .doc(user.uid)
-      .collection('tasks_finished')
-      .doc(today);
+      for (const task of selectedTasks) {
+        if (verificationTasks.includes(task.id)) {
+          const uri = await new Promise((resolve) => {
+            launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
+              if (response.didCancel || response.errorCode) resolve(null);
+              else resolve(response.assets?.[0]?.uri || null);
+            });
+          });
+          if (uri) photoUris[task.id] = uri;
+        }
+      }
 
-    const verificationsRef = firestore()
-      .collection('users')
-      .doc(user.uid)
-      .collection('verifications')
-      .doc(today);
+      const today = new Date().toISOString().split('T')[0];
 
-    const batch = firestore().batch();
-    const now = new Date();
-    const quarter = `Q${Math.floor(now.getMonth() / 3) + 1}`;
-    const year = now.getFullYear();
-    const currentQuarter = `${year}-${quarter}`;
+      const tasksFinishedRef = firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('tasks_finished')
+        .doc(today);
 
-    const communityRef = firestore().collection('community_progress').doc(currentQuarter);
-    const communityActivityRef = communityRef.collection('community_activity');
+      const verificationsRef = firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('verifications')
+        .doc(today);
 
-    for (const task of selectedTasks) {
-      let photoUrl = null;
+      const batch = firestore().batch();
 
-      if (verificationTasks.includes(task.id) && photoUris[task.id]) {
-        photoUrl = await uploadImageToCloudinary(photoUris[task.id]);
-        console.log('Uploaded to Cloudinary:', photoUrl);
+      for (const task of selectedTasks) {
+        let photoUrl = null;
+
+        if (verificationTasks.includes(task.id) && photoUris[task.id]) {
+          photoUrl = await uploadImageToCloudinary(photoUris[task.id]);
+          console.log('Uploaded to Cloudinary:', photoUrl);
+
+          batch.set(
+            verificationsRef,
+            {
+              [task.id]: {
+                photoUrl,
+                status: 'pending',
+                verifiedBy: '',
+                submittedAt: firestore.FieldValue.serverTimestamp(),
+                title: task.title,
+              },
+            },
+            { merge: true }
+          );
+
+          await storeTaskForVerification(task.id, task.title, photoUrl, user.uid);
+        }
 
         batch.set(
-          verificationsRef,
+          tasksFinishedRef,
           {
             [task.id]: {
-              photoUrl,
-              status: 'pending',
-              verifiedBy: '',
-              submittedAt: firestore.FieldValue.serverTimestamp(),
-              title: task.title,
+              pointsEarned: 10,
+              coinsEarned: 1,
+              finishedAt: firestore.FieldValue.serverTimestamp(),
+              photoUrl: photoUrl || null,
             },
           },
           { merge: true }
         );
-
-        await storeTaskForVerification(task.id, task.title, photoUrl, user.uid);
       }
 
-      batch.set(
-        tasksFinishedRef,
+      await batch.commit();
+
+      await addUserRewards(user.uid, selectedTasks.length, selectedTasks.length * 10);
+      setTerraCoins((prev) => prev + selectedTasks.length);
+
+      const now = new Date();
+      const quarter = `Q${Math.floor(now.getMonth() / 3) + 1}`;
+      const year = now.getFullYear();
+      const docId = `${year}-${quarter}`;
+
+      const communityRef = firestore().collection('community_progress').doc(docId);
+
+      await communityRef.set(
         {
-          [task.id]: {
-            pointsEarned: 10,
-            coinsEarned: 1,
-            finishedAt: firestore.FieldValue.serverTimestamp(),
-            photoUrl: photoUrl || null,
+          contributors: {
+            [user.uid]: firestore.FieldValue.increment(selectedTasks.length),
           },
+          current: firestore.FieldValue.increment(selectedTasks.length),
         },
         { merge: true }
       );
 
-      // ✅ Add task to community_activity under community_progress
-      await communityActivityRef.add({
-        taskId: task.id,
-        title: task.title,
-        userId: user.uid,
-        photoUrl: photoUrl || null,
-        timestamp: firestore.FieldValue.serverTimestamp(),
-      });
+      await incrementTaskFinished(user.uid, selectedTasks.length);
+
+      setEasyTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
+      setHardTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
+
+      setSelectedTasks([]);
+      Alert.alert('Success', 'Tasks verified and rewards added!');
+    } catch (error) {
+      console.error('Error verifying tasks:', error);
+      Alert.alert('Error', 'Something went wrong verifying tasks.');
     }
-
-    await batch.commit();
-
-    await addUserRewards(user.uid, selectedTasks.length, selectedTasks.length * 10);
-    setTerraCoins((prev) => prev + selectedTasks.length);
-
-    await communityRef.set(
-      {
-        contributors: {
-          [user.uid]: firestore.FieldValue.increment(selectedTasks.length),
-        },
-        current: firestore.FieldValue.increment(selectedTasks.length),
-      },
-      { merge: true }
-    );
-
-    setEasyTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
-    setHardTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
-
-    setSelectedTasks([]);
-    Alert.alert('Success', 'Tasks verified and rewards added!');
-  } catch (error) {
-    console.error('Error verifying tasks:', error);
-    Alert.alert('Error', 'Something went wrong verifying tasks.');
-  }
-};
+  };
 
   const tasks = activeTab === 'easy' ? easyTasks : hardTasks;
 

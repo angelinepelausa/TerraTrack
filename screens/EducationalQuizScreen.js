@@ -4,6 +4,7 @@ import auth from '@react-native-firebase/auth';
 import { addUserRewards } from '../repositories/userRepository';
 import { saveQuizAttempt } from '../repositories/quizAttemptsRepository';
 import QuizResult from '../components/QuizResult';
+import { incrementUserStat } from '../repositories/userStatsRepository';
 
 const EducationalQuizScreen = ({ route, navigation }) => {
   const { content } = route.params;
@@ -57,6 +58,11 @@ const EducationalQuizScreen = ({ route, navigation }) => {
           pointsEarned,
           timeTaken: 0,
         });
+
+      const userId = auth().currentUser?.uid;
+      if (userId) {
+        await incrementUserStat(userId, "educationalQuizFinished", 1);
+      }
 
         setRewards({ coins: coinsEarned, points: pointsEarned });
         setQuizFinished(true);
