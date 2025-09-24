@@ -43,6 +43,7 @@ const populateUserData = async (data) => {
     ...data,
     username,
     avatar,
+    avatarUrl: avatar, // ✅ ensure avatarUrl is always available
     timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp || Date.now())
   };
 };
@@ -121,9 +122,21 @@ export const getCommunityLeaderboard = async (yearQuarter = null) => {
 
     const contributorsArray = await Promise.all(
       Object.entries(contributorsMap).map(async ([uid, points]) => {
+        let username = uid;
+        let avatar = null;
+
         const userDoc = await firestore().collection('users').doc(uid).get();
-        const username = userDoc.exists ? userDoc.data().username : uid;
-        return { id: uid, username, terraPoints: points };
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          username = userData.username || uid;
+
+          if (userData.avatar) {
+            const avatarDoc = await firestore().collection('avatars').doc(userData.avatar).get();
+            if (avatarDoc.exists) avatar = avatarDoc.data()?.imageurl || null;
+          }
+        }
+
+        return { id: uid, username, avatar, avatarUrl: avatar, terraPoints: points }; // ✅ avatarUrl added
       })
     );
 
@@ -292,8 +305,6 @@ export const getRecentActivity = async (limit = 3) => {
 };
 
 // --- Helper: get reply likes count ---
-// Updated to accept optional progressId (so callers may pass the quarter id)
-// If progressId is not provided it falls back to current quarter.
 const getReplyLikesCount = async (commentId, replyId, progressId = null) => {
   const currentQuarter = progressId || getCurrentYearQuarter();
   const likesSnapshot = await firestore()
@@ -326,7 +337,6 @@ export const getRepliesForComment = async (progressId, commentId, parentReplyId 
     const replies = await Promise.all(snapshot.docs.map(async doc => {
       const data = doc.data();
 
-      // Likes for reply
       const likesSnap = await doc.ref.collection('likes').get();
       const likes = likesSnap.docs.map(likeDoc => likeDoc.id);
       const likesCount = likes.length;
@@ -341,7 +351,7 @@ export const getRepliesForComment = async (progressId, commentId, parentReplyId 
 
     return replies.filter(reply => {
       if (parentReplyId) return reply.parentReplyId === parentReplyId;
-      return !reply.parentReplyId; // top-level only
+      return !reply.parentReplyId;
     });
   } catch (error) {
     console.error("Error fetching replies:", error);
@@ -365,11 +375,7 @@ export const getComments = async (limit = 20) => {
 
     const comments = await Promise.all(snapshot.docs.map(async doc => {
       const data = doc.data();
-
-      // Replies (each reply now includes its likes and likesCount)
       const replies = await getRepliesForComment(currentQuarter, doc.id);
-
-      // Likes for comment
       const likesSnapshot = await doc.ref.collection('likes').get();
       const likes = likesSnapshot.docs.map(likeDoc => likeDoc.id);
 
@@ -418,7 +424,6 @@ export const postComment = async (commentText) => {
 };
 
 // --- Helper to get likes count for comment ---
-// Updated to accept optional progressId (falls back to current quarter)
 const getLikesCount = async (commentId, progressId = null) => {
   const currentQuarter = progressId || getCurrentYearQuarter();
   const likesSnapshot = await firestore()
@@ -433,8 +438,6 @@ const getLikesCount = async (commentId, progressId = null) => {
 };
 
 // --- Like/Unlike comment ---
-// Signature kept backward-compatible: you can still call likeComment(commentId)
-// or optionally pass likeComment(commentId, '2025-Q3')
 export const likeComment = async (commentId, progressId = null) => {
   try {
     const currentUser = auth().currentUser;
@@ -465,7 +468,6 @@ export const likeComment = async (commentId, progressId = null) => {
 };
 
 // --- Like/Unlike reply ---
-// Signature kept backward-compatible: likeReply(commentId, replyId) or likeReply(commentId, replyId, '2025-Q3')
 export const likeReply = async (commentId, replyId, progressId = null) => {
   try {
     const currentUser = auth().currentUser;
@@ -524,7 +526,6 @@ export const replyToComment = async (commentId, replyText, parentReplyId = null)
     };
 
     await replyDoc.set(replyData);
-    // return populated object with empty likes initially
     return await populateUserData({ ...replyData, likes: [], likesCount: 0 });
   } catch (error) {
     console.error('Failed to post reply:', error);

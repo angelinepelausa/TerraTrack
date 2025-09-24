@@ -36,6 +36,8 @@ const CommunityProgressScreen = () => {
     handleDeleteReply,
   } = useCommunityProgress();
 
+  
+
   const renderActiveTab = () => {
     switch (activeTab) {
       case "current":

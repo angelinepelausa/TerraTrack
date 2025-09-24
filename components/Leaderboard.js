@@ -13,17 +13,17 @@ const Leaderboard = ({
   // Process leaderboard data to handle ties
   const processedLeaderboard = React.useMemo(() => {
     if (!leaderboard.length) return [];
-    
+
     const sorted = [...leaderboard].sort((a, b) => {
       if (b.terraPoints !== a.terraPoints) {
         return b.terraPoints - a.terraPoints;
       }
       return a.username.localeCompare(b.username);
     });
-    
+
     let currentRank = 1;
     let previousPoints = null;
-    
+
     return sorted.map((item, index) => {
       if (previousPoints !== null && item.terraPoints === previousPoints) {
         return { ...item, rank: currentRank };
@@ -119,7 +119,10 @@ const Leaderboard = ({
                 >
                   {item.rank}
                 </Text>
-                <Image source={Avatar} style={styles.listAvatar} />
+                <Image
+                  source={item.avatarUrl ? { uri: item.avatarUrl } : Avatar}
+                  style={styles.listAvatar}
+                />
                 <Text
                   style={[
                     styles.listUsername,
@@ -155,7 +158,10 @@ const Leaderboard = ({
               >
                 {currentUserRank.rank}
               </Text>
-              <Image source={Avatar} style={styles.listAvatar} />
+              <Image
+                source={currentUserRank.avatarUrl ? { uri: currentUserRank.avatarUrl } : Avatar}
+                style={styles.listAvatar}
+              />
               <Text style={[styles.listUsername, { color: "#D9D9D9" }]}>
                 {currentUserRank.username}
               </Text>
@@ -181,8 +187,8 @@ const RankedAvatar = ({ user, currentUserId, avatarSize, rankCircleSize }) => {
       <Image
         source={user.avatarUrl ? { uri: user.avatarUrl } : Avatar}
         style={[
-          { width: avatarSize, height: avatarSize },
-          isCurrentUser && { borderWidth: 3, borderColor: '#415D43', borderRadius: avatarSize / 2 },
+          { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 },
+          isCurrentUser && { borderWidth: 3, borderColor: '#415D43' },
         ]}
       />
       <View
@@ -289,7 +295,8 @@ const styles = StyleSheet.create({
   listAvatar: {
     width: 40,
     height: 40,
-    resizeMode: 'contain',
+    borderRadius: 20,
+    resizeMode: 'cover',
     marginRight: 10,
   },
   listUsername: {
