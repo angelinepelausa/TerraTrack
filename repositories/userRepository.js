@@ -1,6 +1,31 @@
 import firestore from '@react-native-firebase/firestore';
 import { avatarsRepository } from './avatarsRepository';
 
+// --- Helper: fetch username and avatar for a user ---
+export const populateUserData = async (userId) => {
+  let username = "Unknown User";
+  let avatar = null;
+
+  if (!userId) return { username, avatar };
+
+  try {
+    const userDoc = await firestore().collection('users').doc(userId).get();
+    if (!userDoc.exists) return { username, avatar };
+
+    const userData = userDoc.data();
+    username = userData.username || username;
+
+    if (userData.avatar) {
+      const avatarDoc = await firestore().collection('avatars').doc(userData.avatar).get();
+      if (avatarDoc.exists) avatar = avatarDoc.data()?.imageurl || null;
+    }
+  } catch (err) {
+    console.warn('populateUserData error:', err);
+  }
+
+  return { username, avatar };
+};
+
 // Generate a 6-character referral code
 const generateReferralCode = () => {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -87,7 +112,7 @@ export const deductTerraCoins = async (userId, amount) => {
   }
 };
 
-// Get user's TerraCoins and TerraPoints
+// Get user's TerraCoins, TerraPoints, username, and avatar
 export const getUserTerraCoins = async (userId) => {
   try {
     const userDoc = await firestore()
@@ -97,23 +122,20 @@ export const getUserTerraCoins = async (userId) => {
 
     if (userDoc.exists) {
       const { terraCoins = 0, terraPoints = 0 } = userDoc.data();
+      const { username, avatar } = await populateUserData(userId);
       return { 
         success: true, 
         terraCoins, 
-        terraPoints
+        terraPoints,
+        username,
+        avatar
       };
     } else {
-      return { 
-        success: false, 
-        error: 'User not found' 
-      };
+      return { success: false, error: 'User not found' };
     }
   } catch (error) {
     console.error('Error fetching terraCoins:', error);
-    return { 
-      success: false, 
-      error: error.message 
-    };
+    return { success: false, error: error.message };
   }
 };
 
@@ -127,22 +149,19 @@ export const getUserReferralCode = async (userId) => {
 
     if (userDoc.exists) {
       const { referralCode = '' } = userDoc.data();
+      const { username, avatar } = await populateUserData(userId);
       return { 
         success: true, 
-        referralCode
+        referralCode,
+        username,
+        avatar
       };
     } else {
-      return { 
-        success: false, 
-        error: 'User not found' 
-      };
+      return { success: false, error: 'User not found' };
     }
   } catch (error) {
     console.error('Error fetching referral code:', error);
-    return { 
-      success: false, 
-      error: error.message 
-    };
+    return { success: false, error: error.message };
   }
 };
 
@@ -162,7 +181,13 @@ export const getUsersByFilter = async (filter = {}) => {
     }
 
     const snapshot = await query.get();
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    // Populate username and avatar for each user
+    return Promise.all(snapshot.docs.map(async (doc) => {
+      const data = doc.data();
+      const { username, avatar } = await populateUserData(doc.id);
+      return { id: doc.id, ...data, username, avatar };
+    }));
   } catch (error) {
     console.error("Error fetching filtered users:", error);
     return [];

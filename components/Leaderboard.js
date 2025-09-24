@@ -8,12 +8,12 @@ const Leaderboard = ({
   currentUserRank = null,
   currentUserId = null,
   loading = false,
+  showTitle = true, // new prop to control title visibility
 }) => {
   // Process leaderboard data to handle ties
   const processedLeaderboard = React.useMemo(() => {
     if (!leaderboard.length) return [];
     
-    // Sort by terraPoints descending, then by username ascending for consistent ordering
     const sorted = [...leaderboard].sort((a, b) => {
       if (b.terraPoints !== a.terraPoints) {
         return b.terraPoints - a.terraPoints;
@@ -21,17 +21,13 @@ const Leaderboard = ({
       return a.username.localeCompare(b.username);
     });
     
-    // Assign ranks with ties
     let currentRank = 1;
     let previousPoints = null;
     
     return sorted.map((item, index) => {
-      // If same points as previous item, use same rank
       if (previousPoints !== null && item.terraPoints === previousPoints) {
         return { ...item, rank: currentRank };
       }
-      
-      // Different points, increment rank
       currentRank = index + 1;
       previousPoints = item.terraPoints;
       return { ...item, rank: currentRank };
@@ -57,7 +53,7 @@ const Leaderboard = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Leaderboards</Text>
+      {showTitle && <Text style={styles.title}>Leaderboards</Text>}
 
       <View style={styles.podium}>
         {top3[1] && (
@@ -180,11 +176,10 @@ const Leaderboard = ({
 
 const RankedAvatar = ({ user, currentUserId, avatarSize, rankCircleSize }) => {
   const isCurrentUser = user.id === currentUserId;
-
   return (
     <View style={styles.avatarWrapper}>
       <Image
-        source={Avatar}
+        source={user.avatarUrl ? { uri: user.avatarUrl } : Avatar}
         style={[
           { width: avatarSize, height: avatarSize },
           isCurrentUser && { borderWidth: 3, borderColor: '#415D43', borderRadius: avatarSize / 2 },

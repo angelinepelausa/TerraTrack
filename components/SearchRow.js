@@ -1,6 +1,6 @@
-// components/SearchRow.js
 import React from "react";
-import { View, TextInput, TouchableOpacity, Image, StyleSheet, Text } from "react-native";
+import { View, TextInput, TouchableOpacity, Image, StyleSheet } from "react-native";
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const SearchRow = ({ searchValue, onSearchChange, onAddPress, placeholder = "Search" }) => {
   return (
@@ -19,7 +19,7 @@ const SearchRow = ({ searchValue, onSearchChange, onAddPress, placeholder = "Sea
         />
       </View>
       <TouchableOpacity style={styles.addButton} onPress={onAddPress}>
-        <Text style={styles.addButtonText}>Add</Text>
+        <Ionicons name="add" size={24} color="#fff" />
       </TouchableOpacity>
     </View>
   );
@@ -59,11 +59,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 8,
-  },
-  addButtonText: { 
-    color: "#fff", 
-    fontWeight: "500", 
-    fontSize: 12 
   },
 });
 

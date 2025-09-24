@@ -68,15 +68,22 @@ const HomeScreen = ({ navigation }) => {
       );
       return;
     }
-    
-    if (item.title === 'Read') {
-      navigation.navigate('EducationalScreen');
-    }
-    else if (item.title === 'Weekly Quiz') {
-      navigation.navigate('WeeklyQuizScreen');
-    }
-    else if (item.title === 'Invite') {
-      navigation.navigate('InviteScreen');
+
+    switch(item.title) {
+      case 'Read':
+        navigation.navigate('EducationalScreen');
+        break;
+      case 'Weekly Quiz':
+        navigation.navigate('WeeklyQuizScreen');
+        break;
+      case 'Invite':
+        navigation.navigate('InviteScreen');
+        break;
+      case 'Achievements':
+        navigation.navigate('AchievementsScreen');
+        break;
+      default:
+        console.warn('Unknown feature pressed:', item.title);
     }
   };
 

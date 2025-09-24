@@ -26,6 +26,8 @@ import CommunityProgressScreen from './screens/CommunityProgressScreen';
 import CameraVerificationScreen from './screens/CameraVerificationScreen';
 import TaskVerifyScreen from './screens/TaskVerifyScreen';
 import VerifyTaskScreen from './screens/VerifyTaskScreen';
+import AchievementsScreen from './screens/AchievementsScreen';
+import AchievementDetailScreen from './screens/AchievementDetailScreen';
 import AdminDashboard from './screens/AdminDashboard';
 import AdminUserManagement from './screens/AdminUserManagement';
 import AdminEducationalMaterials from './screens/AdminEducationalMaterials';
@@ -39,6 +41,9 @@ import AdminBadgeAvatar from './screens/AdminBadgeAvatar';
 import AddAvatar from './screens/AddAvatar';
 import AdminCommunityProgress from './screens/AdminCommunityProgress';
 import SettingsScreen from './screens/SettingsScreen';
+import ShopScreen from './screens/ShopScreen';
+import AddBadge from './screens/AddBadge';
+import AdminSettings from './screens/AdminSettings';
 
 const Stack = createNativeStackNavigator();
 
@@ -136,6 +141,14 @@ const App = () => {
             component={CameraVerificationScreen}
           />
           <Stack.Screen 
+            name="AchievementsScreen" 
+            component={AchievementsScreen}
+          />
+          <Stack.Screen
+            name="AchievementDetailScreen"
+            component={AchievementDetailScreen}
+          />
+          <Stack.Screen 
             name="AdminDashboard"
             component={AdminDashboard}
           />
@@ -185,9 +198,17 @@ const App = () => {
             name="AdminBadgeAvatar"
             component={AdminBadgeAvatar}
           />
+          <Stack.Screen
+            name="AdminSettings"
+            component={AdminSettings}
+          />
           <Stack.Screen 
             name="AddAvatar"
             component={AddAvatar}
+          />
+          <Stack.Screen
+            name="AddBadge"
+            component={AddBadge}
           />
           <Stack.Screen 
             name="TaskVerifyScreen"
@@ -200,6 +221,10 @@ const App = () => {
           <Stack.Screen 
             name="SettingsScreen"
             component={SettingsScreen}
+          />
+          <Stack.Screen 
+            name="ShopScreen"
+            component={ShopScreen}
           />
         </Stack.Navigator>
         <NoInternetPopup

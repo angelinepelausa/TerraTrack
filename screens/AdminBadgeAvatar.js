@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, Dimensions, Alert } from "react-native";
+import { 
+  View, StyleSheet, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, Dimensions, Alert 
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { avatarsRepository } from "../repositories/avatarsRepository";
+import { badgesRepository } from "../repositories/badgesRepository";
 import HeaderRow from "../components/HeaderRow";
 import SearchRow from "../components/SearchRow";
 
@@ -12,13 +15,16 @@ const AdminBadgeAvatarScreen = () => {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState("avatars");
   const [avatars, setAvatars] = useState([]);
+  const [badges, setBadges] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (activeTab === "avatars") fetchAvatars();
+    else if (activeTab === "badges") fetchBadges();
   }, [activeTab]);
 
+  // --- Avatars ---
   const fetchAvatars = async () => {
     setLoading(true);
     try {
@@ -31,51 +37,116 @@ const AdminBadgeAvatarScreen = () => {
     }
   };
 
-  const handleAddPress = () => {
-    if (activeTab === "avatars") navigation.navigate("AddAvatar", { onSaved: fetchAvatars });
-    else alert("Badges not available yet.");
-  };
-
-  const handleDelete = (id) => {
+  const handleDeleteAvatar = (id) => {
     Alert.alert(
       "Delete Avatar",
       "Are you sure you want to delete this avatar?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: async () => {
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
             try {
               await avatarsRepository.deleteAvatar(id);
               fetchAvatars();
             } catch (err) {
               console.error("Failed to delete avatar:", err);
             }
-          }
+          } 
         },
       ]
     );
+  };
+
+  const renderAvatarItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.itemBox}
+      onPress={() => navigation.navigate("AddAvatar", { avatar: item, onSaved: fetchAvatars })}
+    >
+      {item.imageurl ? (
+        <Image source={{ uri: item.imageurl }} style={styles.itemImage} />
+      ) : (
+        <View style={[styles.itemImage, { justifyContent: "center", alignItems: "center" }]}>
+          <Text style={{ color: "#888" }}>No Image</Text>
+        </View>
+      )}
+      <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+      <TouchableOpacity onPress={() => handleDeleteAvatar(item.id)}>
+        <Text style={styles.deleteText}>Delete</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
+  // --- Badges ---
+  const fetchBadges = async () => {
+    setLoading(true);
+    try {
+      const badgeData = await badgesRepository.getAllBadges();
+      setBadges(badgeData);
+    } catch (err) {
+      console.error("Error fetching badges:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteBadge = (id) => {
+    Alert.alert(
+      "Delete Badge",
+      "Are you sure you want to delete this badge?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              await badgesRepository.deleteBadge(id);
+              fetchBadges();
+            } catch (err) {
+              console.error("Failed to delete badge:", err);
+            }
+          } 
+        },
+      ]
+    );
+  };
+
+  const renderBadgeItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.itemBox}
+      onPress={() => navigation.navigate("AddBadge", { badge: item, onSaved: fetchBadges })}
+    >
+      {item.imageurl ? (
+        <Image source={{ uri: item.imageurl }} style={styles.itemImage} />
+      ) : (
+        <View style={[styles.itemImage, { justifyContent: "center", alignItems: "center" }]}>
+          <Text style={{ color: "#888" }}>No Image</Text>
+        </View>
+      )}
+      <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+      <TouchableOpacity onPress={() => handleDeleteBadge(item.id)}>
+        <Text style={styles.deleteText}>Delete</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
+  // --- Add Button ---
+  const handleAddPress = () => {
+    if (activeTab === "avatars") {
+      navigation.navigate("AddAvatar", { onSaved: fetchAvatars });
+    } else if (activeTab === "badges") {
+      navigation.navigate("AddBadge", { onSaved: fetchBadges });
+    }
   };
 
   const filteredAvatars = avatars.filter((item) =>
     (item.name || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderAvatarItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.avatarBox}
-      onPress={() => navigation.navigate("AddAvatar", { avatar: item, onSaved: fetchAvatars })}
-    >
-      {item.imageurl ? (
-        <Image source={{ uri: item.imageurl }} style={styles.avatarImage} />
-      ) : (
-        <View style={[styles.avatarImage, { justifyContent: "center", alignItems: "center" }]}>
-          <Text style={{ color: "#888" }}>No Image</Text>
-        </View>
-      )}
-      <Text style={styles.avatarName} numberOfLines={1}>{item.name}</Text>
-      <TouchableOpacity onPress={() => handleDelete(item.id)}>
-        <Text style={styles.deleteText}>Delete</Text>
-      </TouchableOpacity>
-    </TouchableOpacity>
+  const filteredBadges = badges.filter((item) =>
+    (item.name || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -89,7 +160,7 @@ const AdminBadgeAvatarScreen = () => {
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         onAddPress={handleAddPress}
-        placeholder="Search avatars..."
+        placeholder={`Search ${activeTab}...`}
       />
 
       {/* Tabs */}
@@ -107,10 +178,10 @@ const AdminBadgeAvatarScreen = () => {
         ))}
       </View>
 
-      {activeTab === "avatars" ? (
-        loading ? (
-          <ActivityIndicator size="large" color="#709775" style={{ marginTop: 50 }} />
-        ) : filteredAvatars.length === 0 ? (
+      {loading ? (
+        <ActivityIndicator size="large" color="#709775" style={{ marginTop: 50 }} />
+      ) : activeTab === "avatars" ? (
+        filteredAvatars.length === 0 ? (
           <Text style={styles.emptyText}>No avatars yet.</Text>
         ) : (
           <FlatList
@@ -122,8 +193,17 @@ const AdminBadgeAvatarScreen = () => {
             columnWrapperStyle={{ justifyContent: "space-between", marginBottom: 16 }}
           />
         )
+      ) : filteredBadges.length === 0 ? (
+        <Text style={styles.emptyText}>No badges yet.</Text>
       ) : (
-        <Text style={styles.emptyText}>Badges not available yet.</Text>
+        <FlatList
+          data={filteredBadges}
+          keyExtractor={(item) => item.id}
+          renderItem={renderBadgeItem}
+          contentContainerStyle={styles.listContainer}
+          numColumns={2}
+          columnWrapperStyle={{ justifyContent: "space-between", marginBottom: 16 }}
+        />
       )}
     </View>
   );
@@ -141,7 +221,7 @@ const styles = StyleSheet.create({
   listContainer: { paddingBottom: 100 },
   emptyText: { textAlign: "center", color: "#888", marginTop: 20 },
 
-  avatarBox: {
+  itemBox: {
     width: ITEM_WIDTH,
     backgroundColor: "#333",
     borderRadius: 12,
@@ -149,8 +229,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 8,
   },
-  avatarImage: { width: ITEM_WIDTH - 16, height: ITEM_WIDTH - 16, borderRadius: 12, resizeMode: "cover" },
-  avatarName: { color: "#fff", fontWeight: "bold", paddingVertical: 6 },
+  itemImage: { width: ITEM_WIDTH - 16, height: ITEM_WIDTH - 16, borderRadius: 12, resizeMode: "cover" },
+  itemName: { color: "#fff", fontWeight: "bold", paddingVertical: 6 },
   deleteText: { color: "red", fontWeight: "bold", marginBottom: 4 },
 });
 

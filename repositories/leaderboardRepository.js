@@ -1,9 +1,11 @@
 import firestore from '@react-native-firebase/firestore';
 import { computeWeeklyCycle } from '../utils/leaderboardUtils';
+import { populateUserData } from './userRepository'; // centralized user data
 
 const CONFIG_DOC = firestore().collection('leaderboard').doc('config');
 const RESULTS_COLLECTION = firestore().collection('leaderboard');
 
+// Leaderboard config
 export const getLeaderboardConfig = async () => {
   const snapshot = await CONFIG_DOC.get();
 
@@ -26,6 +28,7 @@ export const getLeaderboardConfig = async () => {
   return snapshot.data();
 };
 
+// Save or update pending config
 export const saveOrUpdatePendingConfig = async (rewards) => {
   const currentConfig = await getLeaderboardConfig();
   const pendingConfig = currentConfig.pendingConfig
@@ -35,10 +38,12 @@ export const saveOrUpdatePendingConfig = async (rewards) => {
   await CONFIG_DOC.set({ pendingConfig }, { merge: true });
 };
 
+// Delete pending config
 export const deletePendingConfig = async () => {
   await CONFIG_DOC.set({ pendingConfig: null }, { merge: true });
 };
 
+// Get leaderboard top users
 export const getLeaderboard = async (limit = 10) => {
   const snapshot = await firestore()
     .collection('users')
@@ -46,30 +51,48 @@ export const getLeaderboard = async (limit = 10) => {
     .limit(limit)
     .get();
 
-  return snapshot.docs.map((doc, index) => ({
-    id: doc.id,
-    rank: index + 1,
-    username: doc.data().username,
-    terraPoints: doc.data().terraPoints || 0,
-  }));
+  const leaderboard = await Promise.all(
+    snapshot.docs.map(async (doc, index) => {
+      const data = doc.data();
+      const { username, avatar: avatarUrl } = await populateUserData(doc.id);
+
+      return {
+        id: doc.id,
+        rank: index + 1,
+        username,
+        terraPoints: data.terraPoints || 0,
+        avatarUrl,
+      };
+    })
+  );
+
+  return leaderboard;
 };
 
+// Get user rank
 export const getUserRank = async (userId) => {
   const snapshot = await firestore()
     .collection('users')
     .orderBy('terraPoints', 'desc')
     .get();
 
-  const allUsers = snapshot.docs.map((doc, index) => ({
-    id: doc.id,
-    rank: index + 1,
-    username: doc.data().username,
-    terraPoints: doc.data().terraPoints || 0,
-  }));
+  const allUsers = await Promise.all(
+    snapshot.docs.map(async (doc, index) => {
+      const { username, avatar: avatarUrl } = await populateUserData(doc.id);
+      return {
+        id: doc.id,
+        rank: index + 1,
+        username,
+        terraPoints: doc.data().terraPoints || 0,
+        avatarUrl,
+      };
+    })
+  );
 
   return allUsers.find(user => user.id === userId) || null;
 };
 
+// Get all users with rank
 export const getAllUsers = async () => {
   const snapshot = await firestore()
     .collection('users')
@@ -77,14 +100,21 @@ export const getAllUsers = async () => {
     .get();
 
   let rank = 1;
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    rank: rank++,
-    username: doc.data().username,
-    terraPoints: doc.data().terraPoints || 0,
-  }));
+  return Promise.all(
+    snapshot.docs.map(async (doc) => {
+      const { username, avatar: avatarUrl } = await populateUserData(doc.id);
+      return {
+        id: doc.id,
+        rank: rank++,
+        username,
+        terraPoints: doc.data().terraPoints || 0,
+        avatarUrl,
+      };
+    })
+  );
 };
 
+// Add rewards to user
 export const addUserRewards = async (userId, terraCoins, terraPoints) => {
   try {
     const userRef = firestore().collection('users').doc(userId);
@@ -99,22 +129,17 @@ export const addUserRewards = async (userId, terraCoins, terraPoints) => {
   }
 };
 
+// Distribute leaderboard rewards
 export const distributeLeaderboardRewards = async (config) => {
   try {
     const allUsers = await getAllUsers();
 
-    // Compute current cycle
     const { start: currentStart } = computeWeeklyCycle();
-
-    // Last completed cycle = day before current cycle start
     const lastCycleEnd = new Date(currentStart);
     lastCycleEnd.setDate(lastCycleEnd.getDate() - 1);
-
-    // Last cycle start = 6 days before lastCycleEnd
     const lastCycleStart = new Date(lastCycleEnd);
     lastCycleStart.setDate(lastCycleEnd.getDate() - 6);
 
-    // Use last cycle END date for document ID
     const resultId = `result_${lastCycleEnd.toISOString().split('T')[0]}`;
     const resultDocRef = RESULTS_COLLECTION.doc(resultId);
 
@@ -152,6 +177,7 @@ export const distributeLeaderboardRewards = async (config) => {
         score: user.terraPoints,
         terraCoins: rewardConfig.terraCoins,
         terraPoints: rewardConfig.terraPoints,
+        avatarUrl: user.avatarUrl,
       });
 
       totalCoins += rewardConfig.terraCoins;
@@ -181,6 +207,7 @@ export const distributeLeaderboardRewards = async (config) => {
   }
 };
 
+// Apply pending config if needed
 export const applyPendingConfigIfNeeded = async () => {
   const { start: currentStart } = computeWeeklyCycle(); 
   const config = await getLeaderboardConfig();
@@ -223,20 +250,16 @@ export const applyPendingConfigIfNeeded = async () => {
   };
 };
 
+// Get last reward of a user
 export const getUserLastReward = async (userId) => {
   try {
     if (!userId) return null;
 
-    // Compute current cycle
     const { start: currentStart } = computeWeeklyCycle();
-
-    // Last completed cycle = day before current cycle start
     const lastCycleEnd = new Date(currentStart);
     lastCycleEnd.setDate(lastCycleEnd.getDate() - 1);
 
-    // Document ID based on last completed cycle
     const resultId = `result_${lastCycleEnd.toISOString().split('T')[0]}`;
-    console.log('Looking for reward document:', resultId);
 
     const userDoc = await firestore()
       .collection('leaderboard')
@@ -245,18 +268,15 @@ export const getUserLastReward = async (userId) => {
       .doc(userId)
       .get();
 
-    if (!userDoc.exists) {
-      console.log('No user reward found for cycle:', resultId);
-      return null;
-    }
+    if (!userDoc.exists) return null;
 
     const data = userDoc.data();
-    console.log('Found reward data:', data);
-
     return {
       terraCoins: data?.terraCoins || 0,
       terraPoints: data?.terraPoints || data?.score || 0,
       cycleDate: resultId,
+      avatarUrl: data?.avatarUrl || null,
+      username: data?.username || null,
     };
   } catch (error) {
     console.error('Error fetching user last reward:', error);
@@ -264,28 +284,16 @@ export const getUserLastReward = async (userId) => {
   }
 };
 
+// Get last cycle summary
 export const getLastCycleSummary = async () => {
   try {
-    // Compute current cycle
     const { start: currentStart } = computeWeeklyCycle();
-
-    // Last completed cycle = day before current cycle start
     const lastCycleEnd = new Date(currentStart);
     lastCycleEnd.setDate(lastCycleEnd.getDate() - 1);
-
-    // Document ID based on last completed cycle
     const resultId = `result_${lastCycleEnd.toISOString().split("T")[0]}`;
-    console.log("Fetching cycle summary:", resultId);
 
-    const resultDoc = await firestore()
-      .collection("leaderboard")
-      .doc(resultId)
-      .get();
-
-    if (!resultDoc.exists) {
-      console.log("No summary found for cycle:", resultId);
-      return null;
-    }
+    const resultDoc = await firestore().collection("leaderboard").doc(resultId).get();
+    if (!resultDoc.exists) return null;
 
     return { id: resultId, ...resultDoc.data() };
   } catch (error) {
@@ -294,19 +302,14 @@ export const getLastCycleSummary = async () => {
   }
 };
 
+// Get user's leaderboard history
 export const getUserLeaderboardHistory = async (userId) => {
   try {
-    const snapshot = await firestore()
-      .collection("leaderboard")
-      .orderBy("cycleEnd", "desc")
-      .get();
-
+    const snapshot = await firestore().collection("leaderboard").orderBy("cycleEnd", "desc").get();
     const history = [];
 
     for (const doc of snapshot.docs) {
-      const userResultRef = doc.ref.collection("users").doc(userId);
-      const userResultSnap = await userResultRef.get();
-
+      const userResultSnap = await doc.ref.collection("users").doc(userId).get();
       if (userResultSnap.exists) {
         history.push({
           cycleId: doc.id,
