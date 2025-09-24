@@ -1,4 +1,3 @@
-// repositories/badgesRepository.js
 import firestore from '@react-native-firebase/firestore';
 
 const badgesCollection = firestore().collection('badges');
@@ -72,6 +71,45 @@ export const badgesRepository = {
     } catch (err) {
       console.error('Error fetching badges by category:', err);
       throw err;
+    }
+  },
+
+  // --- New functions for unlocked badges ---
+  
+  // Unlock a badge for a user
+  unlockBadgeForUser: async (userId, badgeId) => {
+    try {
+      await firestore()
+        .collection('users')
+        .doc(userId)
+        .collection('unlockedBadges')
+        .doc(badgeId)
+        .set({
+          unlockedAt: firestore.FieldValue.serverTimestamp(),
+        });
+    } catch (err) {
+      console.error('Error unlocking badge for user:', err);
+      throw err;
+    }
+  },
+
+  // Get all unlocked badges for a user
+  getUnlockedBadgesForUser: async (userId) => {
+    try {
+      const snapshot = await firestore()
+        .collection('users')
+        .doc(userId)
+        .collection('unlockedBadges')
+        .get();
+
+      const unlocked = {};
+      snapshot.forEach((doc) => {
+        unlocked[doc.id] = true;
+      });
+      return unlocked;
+    } catch (err) {
+      console.error('Error fetching unlocked badges for user:', err);
+      return {};
     }
   },
 };
