@@ -112,27 +112,28 @@ export const deductTerraCoins = async (userId, amount) => {
   }
 };
 
-// Get user's TerraCoins, TerraPoints, username, and avatar
 export const getUserTerraCoins = async (userId) => {
   try {
-    const userDoc = await firestore()
-      .collection('users')
-      .doc(userId)
-      .get();
+    const userDoc = await firestore().collection('users').doc(userId).get();
 
-    if (userDoc.exists) {
-      const { terraCoins = 0, terraPoints = 0 } = userDoc.data();
-      const { username, avatar } = await populateUserData(userId);
-      return { 
-        success: true, 
-        terraCoins, 
-        terraPoints,
-        username,
-        avatar
-      };
-    } else {
+    if (!userDoc.exists) {
       return { success: false, error: 'User not found' };
     }
+
+    const userData = userDoc.data() || {};
+    const terraCoins = userData.terraCoins ?? 0;
+    const terraPoints = userData.terraPoints ?? 0;
+
+    // Populate username and avatar safely
+    const { username, avatar } = await populateUserData(userId);
+
+    return { 
+      success: true, 
+      terraCoins, 
+      terraPoints,
+      username,
+      avatar
+    };
   } catch (error) {
     console.error('Error fetching terraCoins:', error);
     return { success: false, error: error.message };

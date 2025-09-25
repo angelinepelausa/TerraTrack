@@ -1,16 +1,25 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  Text, 
+  Image, 
+  StyleSheet, 
+  ActivityIndicator, 
+  TouchableOpacity 
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import Avatar from '../assets/images/Avatar.png';
 import Crown from '../assets/images/Crown.png';
 
 const Leaderboard = ({
-  leaderboard = [], // default to empty array
+  leaderboard = [],
   currentUserRank = null,
   currentUserId = null,
   loading = false,
-  showTitle = true, // new prop to control title visibility
+  showTitle = true,
 }) => {
-  // Process leaderboard data to handle ties
+  const navigation = useNavigation();
+
   const processedLeaderboard = React.useMemo(() => {
     if (!leaderboard.length) return [];
 
@@ -34,6 +43,14 @@ const Leaderboard = ({
     });
   }, [leaderboard]);
 
+  const handleUserPress = (user) => {
+    if (user.id === currentUserId) {
+      navigation.navigate('ProfileScreen', { userId: user.id }); 
+    } else {
+      navigation.navigate('PublicProfileScreen', { userId: user.id });
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -50,6 +67,43 @@ const Leaderboard = ({
   const podiumAvatarSize = isBeyond10 ? 70 : 90;
   const rankCircleSize = isBeyond10 ? 20 : 28;
   const restContainerPaddingVertical = isBeyond10 ? 5 : 10;
+
+  const RankedAvatar = ({ user, currentUserId, avatarSize, rankCircleSize }) => {
+    const isCurrentUser = user.id === currentUserId;
+    return (
+      <TouchableOpacity 
+        style={styles.avatarWrapper}
+        onPress={() => handleUserPress(user)}
+      >
+        <Image
+          source={user.avatarUrl ? { uri: user.avatarUrl } : Avatar}
+          style={[
+            { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 },
+            isCurrentUser && { borderWidth: 3, borderColor: '#415D43' },
+          ]}
+        />
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 40,
+            left: '50%',
+            transform: [{ translateX: -rankCircleSize / 2 }],
+            backgroundColor: '#415D43',
+            width: rankCircleSize,
+            height: rankCircleSize,
+            borderRadius: rankCircleSize / 2,
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 3,
+          }}
+        >
+          <Text style={styles.rankText}>{user.rank}</Text>
+        </View>
+        <Text style={styles.username}>{user.username}</Text>
+        <Text style={styles.points}>{user.terraPoints} pts</Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -103,72 +157,80 @@ const Leaderboard = ({
             const highlight = isCurrentUser && item.rank >= 4 && item.rank <= 10;
 
             return (
-              <View
+              <TouchableOpacity 
                 key={item.id}
+                onPress={() => handleUserPress(item)}
+              >
+                <View
+                  style={[
+                    styles.listItem,
+                    { paddingVertical: listItemPaddingVertical },
+                    highlight && { backgroundColor: "#415D43" },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.listRank,
+                      highlight && { color: "#D9D9D9", backgroundColor: "transparent" },
+                    ]}
+                  >
+                    {item.rank}
+                  </Text>
+                  <Image
+                    source={item.avatarUrl ? { uri: item.avatarUrl } : Avatar}
+                    style={styles.listAvatar}
+                  />
+                  <Text
+                    style={[
+                      styles.listUsername,
+                      highlight && { color: "#D9D9D9" },
+                    ]}
+                  >
+                    {item.username}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.listPoints,
+                      highlight && { color: "#D9D9D9" },
+                    ]}
+                  >
+                    {item.terraPoints} pts
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+
+          {isBeyond10 && currentUserRank && (
+            <TouchableOpacity 
+              onPress={() => handleUserPress(currentUserRank)}
+            >
+              <View
                 style={[
                   styles.listItem,
-                  { paddingVertical: listItemPaddingVertical },
-                  highlight && { backgroundColor: "#415D43" },
+                  { backgroundColor: "#415D43", marginTop: 10, paddingVertical: 4 },
                 ]}
               >
                 <Text
                   style={[
                     styles.listRank,
-                    highlight && { color: "#D9D9D9", backgroundColor: "transparent" },
+                    { color: "#D9D9D9", backgroundColor: "transparent" },
                   ]}
                 >
-                  {item.rank}
+                  {currentUserRank.rank}
                 </Text>
                 <Image
-                  source={item.avatarUrl ? { uri: item.avatarUrl } : Avatar}
+                  source={currentUserRank.avatarUrl ? { uri: currentUserRank.avatarUrl } : Avatar}
                   style={styles.listAvatar}
                 />
-                <Text
-                  style={[
-                    styles.listUsername,
-                    highlight && { color: "#D9D9D9" },
-                  ]}
-                >
-                  {item.username}
+                <Text style={[styles.listUsername, { color: "#D9D9D9" }]}>
+                  {currentUserRank.username}
                 </Text>
-                <Text
-                  style={[
-                    styles.listPoints,
-                    highlight && { color: "#D9D9D9" },
-                  ]}
-                >
-                  {item.terraPoints} pts
+                <Text style={[styles.listPoints, { color: "#D9D9D9" }]}>
+                  {currentUserRank.terraPoints} pts
                 </Text>
               </View>
-            );
-          })}
-
-          {isBeyond10 && currentUserRank && (
-            <View
-              style={[
-                styles.listItem,
-                { backgroundColor: "#415D43", marginTop: 10, paddingVertical: 4 },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.listRank,
-                  { color: "#D9D9D9", backgroundColor: "transparent" },
-                ]}
-              >
-                {currentUserRank.rank}
-              </Text>
-              <Image
-                source={currentUserRank.avatarUrl ? { uri: currentUserRank.avatarUrl } : Avatar}
-                style={styles.listAvatar}
-              />
-              <Text style={[styles.listUsername, { color: "#D9D9D9" }]}>
-                {currentUserRank.username}
-              </Text>
-              <Text style={[styles.listPoints, { color: "#D9D9D9" }]}>
-                {currentUserRank.terraPoints} pts
-              </Text>
-            </View>
+            </TouchableOpacity>
           )}
         </View>
       )}
@@ -176,40 +238,6 @@ const Leaderboard = ({
       {processedLeaderboard.length === 0 && !loading && (
         <Text style={styles.noDataText}>No leaderboard data available</Text>
       )}
-    </View>
-  );
-};
-
-const RankedAvatar = ({ user, currentUserId, avatarSize, rankCircleSize }) => {
-  const isCurrentUser = user.id === currentUserId;
-  return (
-    <View style={styles.avatarWrapper}>
-      <Image
-        source={user.avatarUrl ? { uri: user.avatarUrl } : Avatar}
-        style={[
-          { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 },
-          isCurrentUser && { borderWidth: 3, borderColor: '#415D43' },
-        ]}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 40,
-          left: '50%',
-          transform: [{ translateX: -rankCircleSize / 2 }],
-          backgroundColor: '#415D43',
-          width: rankCircleSize,
-          height: rankCircleSize,
-          borderRadius: rankCircleSize / 2,
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 3,
-        }}
-      >
-        <Text style={styles.rankText}>{user.rank}</Text>
-      </View>
-      <Text style={styles.username}>{user.username}</Text>
-      <Text style={styles.points}>{user.terraPoints} pts</Text>
     </View>
   );
 };

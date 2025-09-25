@@ -159,8 +159,6 @@ const styles = {
     backgroundColor: "#1E1E1E",
     marginHorizontal: scale(16),
     borderRadius: scale(12),
-    marginBottom: scale(16),
-    marginTop: scale(8),
     padding: scale(2),
   },
   tab: {

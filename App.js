@@ -28,8 +28,11 @@ import TaskVerifyScreen from './screens/TaskVerifyScreen';
 import VerifyTaskScreen from './screens/VerifyTaskScreen';
 import AchievementsScreen from './screens/AchievementsScreen';
 import AchievementDetailScreen from './screens/AchievementDetailScreen';
+import PublicProfileScreen from './screens/PublicProfileScreen';
+import ProfileScreen from './screens/ProfileScreen';
 import AdminDashboard from './screens/AdminDashboard';
 import AdminUserManagement from './screens/AdminUserManagement';
+import AdminUserProfile from './screens/AdminUserProfile';
 import AdminEducationalMaterials from './screens/AdminEducationalMaterials';
 import AddEducationalMaterial from './screens/AddEducationalMaterial';
 import AdminWeeklyQuiz from './screens/AdminWeeklyQuiz';
@@ -44,6 +47,8 @@ import SettingsScreen from './screens/SettingsScreen';
 import ShopScreen from './screens/ShopScreen';
 import AddBadge from './screens/AddBadge';
 import AdminSettings from './screens/AdminSettings';
+import AdminSupport from './screens/AdminSupport';
+import AdminPostDetailScreen from './screens/AdminPostDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -149,6 +154,14 @@ const App = () => {
             component={AchievementDetailScreen}
           />
           <Stack.Screen 
+            name="PublicProfileScreen"
+            component={PublicProfileScreen}
+          />
+          <Stack.Screen 
+            name="ProfileScreen"
+            component={ProfileScreen}
+          />
+          <Stack.Screen 
             name="AdminDashboard"
             component={AdminDashboard}
           />
@@ -162,6 +175,10 @@ const App = () => {
               </FilterProvider>
             )}
           </Stack.Screen>
+          <Stack.Screen 
+            name="AdminUserProfile"
+            component={AdminUserProfile}
+          />
           <Stack.Screen 
             name="AdminEducationalMaterials"
             component={AdminEducationalMaterials}
@@ -202,7 +219,15 @@ const App = () => {
             name="AdminSettings"
             component={AdminSettings}
           />
-          <Stack.Screen 
+          <Stack.Screen
+            name="AdminSupport"
+            component={AdminSupport}
+          />
+          <Stack.Screen
+            name="AdminPostDetailScreen"
+            component={AdminPostDetailScreen}
+          />
+          <Stack.Screen
             name="AddAvatar"
             component={AddAvatar}
           />

@@ -1,8 +1,20 @@
 import React from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { scale, vScale } from "../utils/scaling";
 
-const RecentActivityItem = ({ activity }) => {
+const RecentActivityItem = ({ activity, currentUserId }) => {
+  const navigation = useNavigation();
+
+  // Navigate based on user - FIXED: use activity.userId instead of activity.id
+  const handleUserPress = (activity) => {
+    if (activity.userId === currentUserId) {
+      navigation.navigate("ProfileScreen", { userId: activity.userId }); // Own profile
+    } else {
+      navigation.navigate("PublicProfileScreen", { userId: activity.userId }); // Other's profile
+    }
+  };
+
   // Calculate relative time
   const getTimeAgo = (timestamp) => {
     if (!timestamp) return "";
@@ -25,19 +37,21 @@ const RecentActivityItem = ({ activity }) => {
   const timeAgo = getTimeAgo(activity.timestamp);
 
   return (
-    <View style={styles.container}>
-      {activity.avatar ? (
-        <Image source={{ uri: activity.avatar }} style={styles.avatar} />
-      ) : (
-        <View style={styles.avatarPlaceholder} />
-      )}
-      <View style={styles.textContainer}>
-        <Text style={styles.activityText}>
-          <Text style={styles.username}>{activity.username}</Text> finished a task!
-        </Text>
-        <Text style={styles.timeAgo}>{timeAgo}</Text>
+    <TouchableOpacity onPress={() => handleUserPress(activity)}>
+      <View style={styles.container}>
+        {activity.avatar ? (
+          <Image source={{ uri: activity.avatar }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarPlaceholder} />
+        )}
+        <View style={styles.textContainer}>
+          <Text style={styles.activityText}>
+            <Text style={styles.username}>{activity.username}</Text> finished a task!
+          </Text>
+          <Text style={styles.timeAgo}>{timeAgo}</Text>
+        </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

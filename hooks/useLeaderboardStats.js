@@ -9,8 +9,17 @@ export const useLeaderboardStats = (userId) => {
   const [bestRankStreak, setBestRankStreak] = useState(0);
 
   useEffect(() => {
+    // Reset all states when userId changes
+    setHistoryLoading(true);
+    setHistoryTotalResults(0);
+    setBestRank(null);
+    setBestRankDate(null);
+    setBestRankStreak(0);
+
     if (userId) {
       fetchLeaderboardHistoryStats(userId);
+    } else {
+      setHistoryLoading(false);
     }
   }, [userId]);
 
@@ -35,32 +44,42 @@ export const useLeaderboardStats = (userId) => {
   };
 
   const fetchLeaderboardHistoryStats = async (uid) => {
-    setHistoryLoading(true);
     try {
       if (!uid) {
         resetStats();
         return;
       }
 
+      console.log('Fetching leaderboard data for user:', uid);
+
       const leaderboardDocs = await firestore().collection('leaderboard').get();
+      console.log('Found leaderboard documents:', leaderboardDocs.size);
 
       if (leaderboardDocs.empty) {
+        console.log('No leaderboard documents found');
         resetStats();
         return;
       }
 
-      const { total, best, bestDateId, bestRankCount } =
-        await processLeaderboardData(leaderboardDocs, uid);
+      const { total, best, bestDateId, bestRankCount } = await processLeaderboardData(leaderboardDocs, uid);
+      
+      console.log('Processed data:', { total, best, bestDateId, bestRankCount });
 
       setHistoryTotalResults(total);
-      if (best === Number.POSITIVE_INFINITY) {
-        resetStats();
+      
+      if (best === Number.POSITIVE_INFINITY || best === null) {
+        console.log('No valid rank data found for user');
+        setBestRank(null);
+        setBestRankDate(null);
+        setBestRankStreak(0);
       } else {
         setBestRank(best);
         setBestRankDate(bestDateId ? formatResultIdToReadable(bestDateId) : null);
         setBestRankStreak(bestRankCount);
+        console.log('Best rank set:', best);
       }
     } catch (err) {
+      console.error('Error fetching leaderboard stats:', err);
       resetStats();
     } finally {
       setHistoryLoading(false);
@@ -71,13 +90,16 @@ export const useLeaderboardStats = (userId) => {
     let total = 0;
     let best = Number.POSITIVE_INFINITY;
     let bestRankCount = 0;
-    let latestBestRankDate = null;
+    let bestDateId = null;
 
+    // Sort documents by date (newest first)
     const sortedDocs = leaderboardDocs.docs.sort((a, b) => {
       const dateA = parseResultIdToDate(a.id)?.getTime() || 0;
       const dateB = parseResultIdToDate(b.id)?.getTime() || 0;
       return dateB - dateA;
     });
+
+    console.log('Processing', sortedDocs.length, 'leaderboard entries');
 
     for (const doc of sortedDocs) {
       try {
@@ -89,64 +111,49 @@ export const useLeaderboardStats = (userId) => {
           .get();
 
         if (userRankDoc.exists) {
-          const d = userRankDoc.data() || {};
-          let rank =
-            typeof d.rank === 'number' ? d.rank : parseInt(d.rank, 10);
+          const data = userRankDoc.data() || {};
+          console.log('Found user data in', doc.id, ':', data);
+          
+          let rank = typeof data.rank === 'number' ? data.rank : parseInt(data.rank, 10);
 
-          if (rank == null || Number.isNaN(rank)) continue;
+          // Validate rank
+          if (rank != null && !isNaN(rank) && rank > 0) {
+            total += 1;
+            console.log('Valid rank found:', rank, 'in', doc.id);
 
-          total += 1;
-
-          // ✅ update stats properly
-          const { newBest, newCount, newDate } = updateBestRankStats(
-            rank,
-            doc.id,
-            best,
-            bestRankCount,
-            latestBestRankDate
-          );
-
-          best = newBest;
-          bestRankCount = newCount;
-          latestBestRankDate = newDate;
+            // Update best rank logic
+            if (rank < best) {
+              best = rank;
+              bestRankCount = 1;
+              bestDateId = doc.id;
+              console.log('New best rank:', best);
+            } else if (rank === best) {
+              bestRankCount += 1;
+              // Keep the most recent date for the best rank
+              const currentDate = parseResultIdToDate(doc.id);
+              const existingDate = parseResultIdToDate(bestDateId);
+              if (!existingDate || (currentDate && currentDate > existingDate)) {
+                bestDateId = doc.id;
+              }
+            }
+          } else {
+            console.log('Invalid rank found:', rank, 'in', doc.id);
+          }
+        } else {
+          console.log('No user data found in', doc.id);
         }
       } catch (err) {
+        console.error('Error processing document', doc.id, ':', err);
         continue;
       }
     }
 
-    return { total, best, bestDateId: latestBestRankDate, bestRankCount };
-  };
-
-  const updateBestRankStats = (
-    rank,
-    docId,
-    currentBest,
-    currentCount,
-    currentDate
-  ) => {
-    let newBest = currentBest;
-    let newCount = currentCount;
-    let newDate = currentDate;
-
-    if (rank < newBest) {
-      newBest = rank;
-      newCount = 1;
-      newDate = docId;
-    } else if (rank === newBest) {
-      newCount += 1;
-      if (!newDate || isNewerDate(docId, newDate)) {
-        newDate = docId;
-      }
+    // If no valid ranks were found, reset best to null
+    if (best === Number.POSITIVE_INFINITY) {
+      best = null;
     }
 
-    return { newBest, newCount, newDate };
-  };
-
-  const isNewerDate = (dateId1, dateId2) => {
-    const date1 = parseResultIdToDate(dateId1);
-    const date2 = parseResultIdToDate(dateId2);
-    return date1 && date2 && date1.getTime() > date2.getTime();
+    return { total, best, bestDateId, bestRankCount };
   };
 
   const resetStats = () => {

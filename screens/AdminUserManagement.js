@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { useUserFilter } from "../hooks/useUserFilter";
 import FilterModal from "../components/FilterModal";
+import { populateUserData } from "../repositories/userRepository"; 
 
 const AdminUserManagement = () => {
   const navigation = useNavigation();
@@ -19,22 +20,58 @@ const AdminUserManagement = () => {
   const [search, setSearch] = useState("");
   const [filterVisible, setFilterVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [usersWithAvatars, setUsersWithAvatars] = useState([]);
 
-  const filteredUsers = users.filter((user) =>
+  useEffect(() => {
+    const fetchAvatars = async () => {
+      if (users.length > 0) {
+        setLoading(true);
+        try {
+          const updatedUsers = await Promise.all(
+            users.map(async (user) => {
+              const userData = await populateUserData(user.id);
+              return {
+                ...user,
+                avatarUrl: userData.avatar || null
+              };
+            })
+          );
+          setUsersWithAvatars(updatedUsers);
+        } catch (error) {
+          console.error("Error fetching avatars:", error);
+          setUsersWithAvatars(users);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setUsersWithAvatars([]);
+      }
+    };
+
+    fetchAvatars();
+  }, [users]);
+
+  const filteredUsers = usersWithAvatars.filter((user) =>
     user.username?.toLowerCase().includes(search.toLowerCase())
   );
 
   const renderUser = ({ item }) => (
-    <View style={styles.userCard}>
-      <Image
-        source={require("../assets/images/Avatar.png")}
-        style={styles.avatar}
-      />
-      <View style={styles.userInfo}>
-        <Text style={styles.username}>{item.username}</Text>
-      </View>
+  <TouchableOpacity 
+    style={styles.userCard}
+    onPress={() => navigation.navigate("AdminUserProfile", { 
+      userId: item.id, 
+      userData: item 
+    })}
+  >
+    <Image
+      source={item.avatarUrl ? { uri: item.avatarUrl } : require("../assets/images/Avatar.png")}
+      style={styles.avatar}
+    />
+    <View style={styles.userInfo}>
+      <Text style={styles.username}>{item.username}</Text>
     </View>
-  );
+  </TouchableOpacity>
+);
 
   return (
     <View style={styles.container}>
