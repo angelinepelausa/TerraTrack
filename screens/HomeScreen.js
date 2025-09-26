@@ -7,6 +7,7 @@ import ProgressBar from '../components/ProgressBar';
 import { scale, vScale } from '../utils/scaling';
 import { useAuth } from '../context/AuthContext';
 import firestore from '@react-native-firebase/firestore';
+import SuspensionPopup from '../components/SuspensionPopup'; // NEW IMPORT
 
 const { width } = Dimensions.get('window');
 const PADDING = scale(20);
@@ -33,6 +34,10 @@ const HomeScreen = ({ navigation }) => {
   // new states for monthly footprint popup
   const [showPopup, setShowPopup] = useState(false);
   const [lastMonthResult, setLastMonthResult] = useState(null);
+
+  // NEW STATES FOR SUSPENSION POPUP
+  const [showSuspensionPopup, setShowSuspensionPopup] = useState(false);
+  const [userStatus, setUserStatus] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,6 +73,7 @@ const HomeScreen = ({ navigation }) => {
     if (user?.uid) {
       fetchTerraCoins();
       checkMonthlyFootprint();
+      checkSuspensionStatus(); // NEW FUNCTION CALL
     }
   }, [user?.uid]);
 
@@ -82,60 +88,81 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  // NEW FUNCTION: Check user suspension status
+  const checkSuspensionStatus = async () => {
+    try {
+      const doc = await firestore().collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        const userData = doc.data();
+        setUserStatus(userData.status);
+        
+        // Show suspension popup if user is suspended, banned, or has a warning
+        if (userData.status === 'suspended' || userData.status === 'banned' || userData.suspendedCount === 1) {
+          setShowSuspensionPopup(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking suspension status:', error);
+    }
+  };
+
   // 🔥 Monthly footprint check
-// 🔥 Monthly footprint check
-const checkMonthlyFootprint = async () => {
-  try {
-    console.log("👀 Running checkMonthlyFootprint for", user.uid);
+  const checkMonthlyFootprint = async () => {
+    try {
+      console.log("👀 Running checkMonthlyFootprint for", user.uid);
 
-    const now = new Date();
-    const currentDay = now.getDate();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const currentMonthKey = `${year}-${month}`;
+      const now = new Date();
+      const currentDay = now.getDate();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const currentMonthKey = `${year}-${month}`;
 
-    const lastMonthDate = new Date(year, now.getMonth() - 1, 1);
-    const lastMonthKey = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+      const lastMonthDate = new Date(year, now.getMonth() - 1, 1);
+      const lastMonthKey = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
-    // Get current month footprint
-    const currentDoc = await firestore()
-      .collection('users')
-      .doc(user.uid)
-      .collection('footprints')
-      .doc(currentMonthKey)
-      .get({ source: 'server' });
-
-    // Check if current month is missing or empty
-    const currentData = currentDoc.exists ? currentDoc.data() : null;
-    const hasCurrentFootprint = currentData && currentData.results && Object.keys(currentData.results).length > 0;
-
-    // Show popup if today is the 1st OR footprint is missing/empty
-    if (currentDay === 1 || !hasCurrentFootprint) {
-      console.log(`📌 Showing popup for ${currentMonthKey}`);
-
-      const lastMonthDoc = await firestore()
+      // Get current month footprint
+      const currentDoc = await firestore()
         .collection('users')
         .doc(user.uid)
         .collection('footprints')
-        .doc(lastMonthKey)
+        .doc(currentMonthKey)
         .get({ source: 'server' });
 
-      if (lastMonthDoc.exists && lastMonthDoc.data().results) {
-        console.log("📌 Found last month’s result", lastMonthDoc.data());
-        setLastMonthResult(lastMonthDoc.data().results);
+      // Check if current month is missing or empty
+      const currentData = currentDoc.exists ? currentDoc.data() : null;
+      const hasCurrentFootprint = currentData && currentData.results && Object.keys(currentData.results).length > 0;
+
+      // Show popup if today is the 1st OR footprint is missing/empty
+      if (currentDay === 1 || !hasCurrentFootprint) {
+        console.log(`📌 Showing popup for ${currentMonthKey}`);
+
+        const lastMonthDoc = await firestore()
+          .collection('users')
+          .doc(user.uid)
+          .collection('footprints')
+          .doc(lastMonthKey)
+          .get({ source: 'server' });
+
+        if (lastMonthDoc.exists && lastMonthDoc.data().results) {
+          console.log("📌 Found last month's result", lastMonthDoc.data());
+          setLastMonthResult(lastMonthDoc.data().results);
+        }
+
+        setShowPopup(true);
+      } else {
+        console.log(`✅ Already has footprint for ${currentMonthKey} → no popup`);
       }
-
-      setShowPopup(true);
-    } else {
-      console.log(`✅ Already has footprint for ${currentMonthKey} → no popup`);
+    } catch (error) {
+      console.error('Error checking monthly footprint:', error);
     }
-  } catch (error) {
-    console.error('Error checking monthly footprint:', error);
-  }
-};
-
+  };
 
   const handleCardPress = (item) => {
+    // NEW: Block app interaction if user is suspended or banned
+    if (userStatus === 'suspended' || userStatus === 'banned') {
+      return;
+    }
+
     if (item.attempted) {
       Alert.alert(
         'Quiz Completed',
@@ -260,11 +287,11 @@ const checkMonthlyFootprint = async () => {
       <Modal visible={showPopup} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>It’s a New Month!</Text>
+            <Text style={styles.modalTitle}>It's a New Month!</Text>
             <Text style={styles.modalSubtitle}>
               {lastMonthResult
                 ? 'See how your footprint compares to last month.'
-                : 'Let’s calculate your footprint to see where you stand.'}
+                : "Let's calculate your footprint to see where you stand."}
             </Text>
 
             <TouchableOpacity
@@ -292,6 +319,13 @@ const checkMonthlyFootprint = async () => {
           </View>
         </View>
       </Modal>
+
+      {/* NEW: Suspension Popup */}
+      <SuspensionPopup
+        userId={user?.uid}
+        visible={showSuspensionPopup}
+        onClose={() => setShowSuspensionPopup(false)}
+      />
     </View>
   );
 };

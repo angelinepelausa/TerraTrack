@@ -12,85 +12,109 @@ const getYearQuarter = () => {
   return `${year}-Q${quarter}`; 
 }; 
 
-export const reportRepository = { 
-  submitReport: async (itemId, itemType, userId, category, subType, parentCommentId = null) => { 
-    try { 
-      // Prevent duplicate reports from same user 
+export const reportRepository = {
+  submitReport: async (itemId, itemType, userId, category, subType, parentCommentId = null) => {
+    try {
+      // Prevent duplicate reports from same user
       const existing = await reportsCollection
         .where("itemId", "==", itemId)
         .where("userId", "==", userId)
-        .get(); 
-      if (!existing.empty) { 
-        throw new Error("You have already reported this item."); 
-      } 
+        .get();
+      if (!existing.empty) {
+        throw new Error("You have already reported this item.");
+      }
 
-      // 1. Add to users/{userId}/reports/{itemId} to hide immediately 
-      await userReportsCollection(userId).doc(itemId).set({ 
-        hidden: true, 
-        reported: true, 
-        timestamp: firestore.FieldValue.serverTimestamp(), 
-        itemType, 
-        itemId, 
-        userId, 
-      }); 
+      // 1. Add to users/{userId}/reports/{itemId} to hide immediately
+      await userReportsCollection(userId).doc(itemId).set({
+        hidden: true,
+        reported: true,
+        timestamp: firestore.FieldValue.serverTimestamp(),
+        itemType,
+        itemId,
+        userId,
+      });
 
-      // 2. Add to global reports collection 
-      await reportsCollection.add({ 
-        itemId, 
-        itemType, 
-        userId, 
-        category, 
-        subType, 
-        timestamp: firestore.FieldValue.serverTimestamp(), 
-        parentCommentId: parentCommentId || null, 
-      }); 
+      // 2. Add to global reports collection
+      await reportsCollection.add({
+        itemId,
+        itemType,
+        userId,
+        category,
+        subType,
+        timestamp: firestore.FieldValue.serverTimestamp(),
+        parentCommentId: parentCommentId || null,
+      });
 
-      // 3. Increment report count on the item itself 
-      try { 
-        const itemRef = getItemRef(itemId, itemType, parentCommentId); 
-        const snapshot = await itemRef.get(); 
-        if (snapshot.exists) { 
-          const currentReports = snapshot.data().totalReports || 0; 
-          const newReports = currentReports + 1; 
-          console.log(`Updating reports: ${currentReports} -> ${newReports} for ${itemType} ${itemId}`); 
-          await itemRef.update({ totalReports: newReports }); 
+      // 3. Increment report count on the item itself
+      try {
+        const itemRef = getItemRef(itemId, itemType, parentCommentId);
+        const snapshot = await itemRef.get();
+        if (snapshot.exists) {
+          const currentReports = snapshot.data().totalReports || 0;
+          const newReports = currentReports + 1;
+          console.log(`Updating reports: ${currentReports} -> ${newReports} for ${itemType} ${itemId}`);
+          await itemRef.update({ totalReports: newReports });
 
-          // If >= 3 reports, hide globally + add to forReview if 
-          if (newReports >= 3) { 
-            console.log(`Item reached 3 reports, adding to forReview: ${itemId}`); 
-            await itemRef.update({ hidden: true }); 
+          // If >= 3 reports, hide globally + add to forReview
+          if (newReports >= 3) {
+            console.log(`Item reached 3 reports, adding to forReview: ${itemId}`);
+            await itemRef.update({ hidden: true });
+            
+            // NEW: Get the 3 reporters for this item
+            const reportsSnapshot = await reportsCollection
+              .where("itemId", "==", itemId)
+              .orderBy("timestamp", "asc")
+              .limit(3)
+              .get();
+            
+            const reporters = [];
+            reportsSnapshot.forEach(doc => {
+              const reportData = doc.data();
+              reporters.push({
+                userId: reportData.userId,
+                category: reportData.category,
+                subType: reportData.subType,
+                timestamp: reportData.timestamp,
+                reportId: doc.id
+              });
+            });
+
             const forReviewRef = firestore()
               .collection("forReview")
               .doc("posts")
               .collection("items")
-              .doc(itemId); 
-            await forReviewRef.set({ 
-              itemId, 
-              itemType, 
-              parentCommentId: itemType === "reply" ? parentCommentId : null, 
-              reportsCount: newReports, 
-              createdAt: firestore.FieldValue.serverTimestamp(), 
-              originalData: snapshot.data(), 
-              quarter: getYearQuarter(), 
-              reviewed: false, 
-              actionTaken: null 
-            }); 
-            console.log(`Successfully added ${itemId} to forReview`); 
-          } 
-        } else { 
-          console.log(`Item not found: ${itemId} of type ${itemType}`); 
-        } 
-      } catch (error) { 
-        console.error("Error updating report count:", error); 
-        console.error("Error details:", error.message, error.code); 
-        // Don't throw here – the user report was already successful 
-      } 
-      return true; 
-    } catch (error) { 
-      console.error("Error in submitReport:", error); 
-      throw error; 
-    } 
-  }, 
+              .doc(itemId);
+            
+            await forReviewRef.set({
+              itemId,
+              itemType,
+              parentCommentId: itemType === "reply" ? parentCommentId : null,
+              reportsCount: newReports,
+              createdAt: firestore.FieldValue.serverTimestamp(),
+              originalData: snapshot.data(),
+              quarter: getYearQuarter(),
+              status: "pending", // CHANGED: reviewed: false → status: "pending"
+              actionTaken: null,
+              // NEW: Include the 3 reporters
+              reporters: reporters
+            });
+            
+            console.log(`Successfully added ${itemId} to forReview with ${reporters.length} reporters`);
+          }
+        } else {
+          console.log(`Item not found: ${itemId} of type ${itemType}`);
+        }
+      } catch (error) {
+        console.error("Error updating report count:", error);
+        console.error("Error details:", error.message, error.code);
+        // Don't throw here – the user report was already successful
+      }
+      return true;
+    } catch (error) {
+      console.error("Error in submitReport:", error);
+      throw error;
+    }
+  },
 
   checkIfUserReported: async (itemId, userId) => { 
     try { 
