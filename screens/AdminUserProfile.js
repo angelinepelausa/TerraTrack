@@ -7,13 +7,64 @@ import {
     Image,
     ScrollView,
     ActivityIndicator,
-    Alert
+    Alert,
+    Modal
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { adminUserRepository } from "../repositories/adminUserRepository";
 import HeaderRow from "../components/HeaderRow";
-import { ChartSection } from "../components/ChartSection"; // Import the ChartSection
-import { useChartData } from "../hooks/useChartData"; // Import the chart hook
+import { ChartSection } from "../components/ChartSection";
+import { useChartData } from "../hooks/useChartData";
+
+// Suspension Modal Component
+const SuspensionModal = ({ visible, onClose, onConfirm }) => {
+  const [selectedDuration, setSelectedDuration] = useState('1');
+
+  const durationOptions = [
+    { label: '1 Day', value: '1' },
+    { label: '7 Days', value: '7' }
+  ];
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Select Suspension Duration</Text>
+          
+          {durationOptions.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.durationOption,
+                selectedDuration === option.value && styles.durationOptionSelected
+              ]}
+              onPress={() => setSelectedDuration(option.value)}
+            >
+              <Text style={[
+                styles.durationText,
+                selectedDuration === option.value && styles.durationTextSelected
+              ]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          
+          <View style={styles.modalButtons}>
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+              <Text style={styles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.confirmButton} 
+              onPress={() => onConfirm(selectedDuration)}
+            >
+              <Text style={styles.buttonText}>Confirm Suspension</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 // Tab Components
 const ProfileTab = ({ 
@@ -73,7 +124,7 @@ const ProfileTab = ({
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Admin Actions</Text>
             <View style={styles.adminActions}>
-                {userDetails?.status === 'Active' ? (
+                {userDetails?.status === 'active' ? (
                     <>
                         <TouchableOpacity style={[styles.adminActionBtn, styles.suspendBtn]} onPress={onSuspendUser}>
                             <Text style={styles.adminActionBtnText}>Suspend User</Text>
@@ -230,6 +281,7 @@ const AdminUserProfile = () => {
     const [userDetails, setUserDetails] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("profile");
+    const [showSuspensionModal, setShowSuspensionModal] = useState(false);
     
     // Chart state management
     const [dropdownOpen, setDropdownOpen] = useState({ year: false, category: false });
@@ -289,7 +341,7 @@ const AdminUserProfile = () => {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            await adminUserRepository.updateUserStatus(userId, 'Banned');
+                            await adminUserRepository.banUser(userId);
                             fetchUserDetails();
                             Alert.alert("Success", "User has been banned");
                         } catch (error) {
@@ -302,31 +354,23 @@ const AdminUserProfile = () => {
     };
 
     const handleSuspendUser = async () => {
-        Alert.alert(
-            "Suspend User",
-            "Are you sure you want to suspend this user?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Suspend",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            await adminUserRepository.updateUserStatus(userId, 'Suspended');
-                            fetchUserDetails();
-                            Alert.alert("Success", "User has been suspended");
-                        } catch (error) {
-                            Alert.alert("Error", "Failed to suspend user");
-                        }
-                    }
-                }
-            ]
-        );
+        setShowSuspensionModal(true);
+    };
+
+    const executeSuspension = async (durationDays) => {
+        try {
+            await adminUserRepository.suspendUser(userId, parseInt(durationDays));
+            fetchUserDetails();
+            Alert.alert("Success", `User has been suspended for ${durationDays} day(s)`);
+        } catch (error) {
+            Alert.alert("Error", "Failed to suspend user");
+        }
+        setShowSuspensionModal(false);
     };
 
     const handleActivateUser = async () => {
         try {
-            await adminUserRepository.updateUserStatus(userId, 'Active');
+            await adminUserRepository.activateUser(userId);
             fetchUserDetails();
             Alert.alert("Success", "User has been activated");
         } catch (error) {
@@ -472,6 +516,13 @@ const AdminUserProfile = () => {
             <View style={styles.tabContent}>
                 {renderTabContent()}
             </View>
+
+            {/* Suspension Modal */}
+            <SuspensionModal
+                visible={showSuspensionModal}
+                onClose={() => setShowSuspensionModal(false)}
+                onConfirm={executeSuspension}
+            />
         </View>
     );
 };
@@ -611,8 +662,8 @@ const styles = StyleSheet.create({
         borderTopColor: "#2A2A2A",
     },
     adminChartWrapper: {
-        width: '120%',        // Make it full width of parent
-        alignItems: 'center', // Center ChartSection inside
+        width: '120%',
+        alignItems: 'center',
         paddingTop: 20,
         paddingHorizontal: 10,
     },
@@ -733,6 +784,77 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        width: '100%',
+        backgroundColor: '#1E1E1E',
+        borderRadius: 15,
+        padding: 20,
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#2A2A2A',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#FFFFFF',
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    durationOption: {
+        width: '100%',
+        padding: 15,
+        backgroundColor: '#2A2A2A',
+        borderRadius: 8,
+        marginBottom: 10,
+        alignItems: 'center',
+    },
+    durationOptionSelected: {
+        backgroundColor: '#709775',
+    },
+    durationText: {
+        fontSize: 16,
+        color: '#FFFFFF',
+        fontWeight: '500',
+    },
+    durationTextSelected: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginTop: 20,
+    },
+    cancelButton: {
+        flex: 1,
+        backgroundColor: '#666',
+        paddingVertical: 12,
+        borderRadius: 8,
+        marginRight: 10,
+        alignItems: 'center',
+    },
+    confirmButton: {
+        flex: 1,
+        backgroundColor: '#F59E0B',
+        paddingVertical: 12,
+        borderRadius: 8,
+        marginLeft: 10,
+        alignItems: 'center',
+    },
+    buttonText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
 

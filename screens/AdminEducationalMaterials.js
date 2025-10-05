@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { educationalContentRepository } from "../repositories/educationalContentRepository";
 import EducationalContentCard from "../components/EducationalContentCard";
 import HeaderRow from "../components/HeaderRow";
@@ -15,25 +15,32 @@ import SearchRow from "../components/SearchRow";
 
 const AdminEducationalMaterials = () => {
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const [content, setContent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    fetchEducationalContent();
-  }, []);
+    let unsubscribe = null;
 
-  const fetchEducationalContent = async () => {
-    setLoading(true);
-    try {
-      const contentData = await educationalContentRepository.getAllContent();
-      setContent(contentData);
-    } catch (err) {
-      console.error("Error fetching content:", err);
-    } finally {
-      setLoading(false);
+    if (isFocused) {
+      // Set up real-time listener
+      setLoading(true);
+      unsubscribe = educationalContentRepository.subscribeToContent(
+        (contentData) => {
+          setContent(contentData);
+          setLoading(false);
+        }
+      );
     }
-  };
+
+    // Cleanup function
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [isFocused]);
 
   const handleDelete = (id) => {
     Alert.alert(
@@ -47,7 +54,7 @@ const AdminEducationalMaterials = () => {
           onPress: async () => {
             try {
               await educationalContentRepository.deleteContent(id);
-              setContent((prev) => prev.filter((item) => item.id !== id));
+              // No need to manually update state - real-time listener will handle it
             } catch (err) {
               console.error("Error deleting content:", err);
               Alert.alert("Error", "Failed to delete content. Please try again.");
@@ -89,7 +96,9 @@ const AdminEducationalMaterials = () => {
       />
 
       {filteredContent.length === 0 ? (
-        <Text style={styles.emptyText}>No educational content available</Text>
+        <Text style={styles.emptyText}>
+          {searchQuery ? "No content matching your search" : "No educational content available"}
+        </Text>
       ) : (
         <FlatList
           data={filteredContent}
@@ -105,6 +114,7 @@ const AdminEducationalMaterials = () => {
             />
           )}
           contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
         />
       )}
     </View>
@@ -112,10 +122,26 @@ const AdminEducationalMaterials = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#131313", padding: 16, paddingTop: 40 },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  listContainer: { paddingBottom: 20 },
-  emptyText: { textAlign: "center", color: "#888", marginTop: 20 },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#131313", 
+    padding: 16, 
+    paddingTop: 40 
+  },
+  centered: { 
+    flex: 1, 
+    justifyContent: "center", 
+    alignItems: "center" 
+  },
+  listContainer: { 
+    paddingBottom: 20 
+  },
+  emptyText: { 
+    textAlign: "center", 
+    color: "#888", 
+    marginTop: 20, 
+    fontSize: 16 
+  },
 });
 
 export default AdminEducationalMaterials;

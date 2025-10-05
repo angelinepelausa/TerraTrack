@@ -81,8 +81,7 @@ export const adminUserRepository = {
     }
   },
 
-
-    async getUnlockedBadges(userId) {
+  async getUnlockedBadges(userId) {
     try {
         const badgesSnapshot = await firestore()
         .collection('users')
@@ -106,7 +105,7 @@ export const adminUserRepository = {
                 id: unlockedBadge.id,
                 name: badgeData.name,
                 description: badgeData.description,
-                imageUrl: badgeData.imageUrl || badgeData.imageurl, // Try both common field names
+                imageUrl: badgeData.imageUrl || badgeData.imageurl,
                 category: badgeData.category,
                 targetNumber: badgeData.targetNumber,
                 unlockedAt: unlockedBadge.unlockedAt
@@ -156,7 +155,7 @@ export const adminUserRepository = {
                 id: avatarId,
                 name: avatarData.name,
                 description: avatarData.description,
-                imageUrl: avatarData.imageUrl || avatarData.imageurl, // Try both common field names
+                imageUrl: avatarData.imageUrl || avatarData.imageurl,
                 price: avatarData.price,
                 category: avatarData.category
                 });
@@ -225,6 +224,120 @@ export const adminUserRepository = {
       return true;
     } catch (error) {
       console.error('Error updating user status:', error);
+      throw error;
+    }
+  },
+
+  // Suspend user with duration (NO suspend count increment)
+  async suspendUser(userId, durationDays) {
+    try {
+      const userDoc = await firestore().collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        throw new Error('User not found');
+      }
+
+      const userData = userDoc.data();
+      const currentSuspendCount = userData.suspendedCount || 0;
+
+      // Calculate suspension times
+      const suspensionStart = firestore.FieldValue.serverTimestamp();
+      const now = new Date();
+      const endTime = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+      const suspensionEnd = firestore.Timestamp.fromDate(endTime);
+
+      // Update user data (keep current suspend count)
+      await firestore().collection('users').doc(userId).update({
+        status: 'suspended',
+        suspendedCount: currentSuspendCount, // Keep the same count
+        suspensionStart: suspensionStart,
+        suspensionEnd: suspensionEnd,
+        suspensionReason: `Admin suspension: ${durationDays} day(s)`,
+        lastActionAt: firestore.FieldValue.serverTimestamp()
+      });
+
+      // Log moderation action
+      await firestore().collection('moderationActions').add({
+        targetUserId: userId,
+        action: 'admin_suspension',
+        durationDays: durationDays,
+        suspendCount: currentSuspendCount,
+        timestamp: firestore.FieldValue.serverTimestamp(),
+        details: {
+          type: 'manual',
+          previousStatus: userData.status,
+          adminId: 'admin_dashboard'
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error suspending user:', error);
+      throw error;
+    }
+  },
+
+  // Ban user (NO suspend count increment)
+  async banUser(userId) {
+    try {
+      const userDoc = await firestore().collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        throw new Error('User not found');
+      }
+
+      const userData = userDoc.data();
+      const currentSuspendCount = userData.suspendedCount || 0;
+
+      // Update user data (keep current suspend count)
+      await firestore().collection('users').doc(userId).update({
+        status: 'banned',
+        suspendedCount: currentSuspendCount, // Keep the same count
+        suspensionReason: 'Permanent ban by admin',
+        lastActionAt: firestore.FieldValue.serverTimestamp()
+      });
+
+      // Log moderation action
+      await firestore().collection('moderationActions').add({
+        targetUserId: userId,
+        action: 'admin_ban',
+        suspendCount: currentSuspendCount,
+        timestamp: firestore.FieldValue.serverTimestamp(),
+        details: {
+          previousStatus: userData.status,
+          adminId: 'admin_dashboard'
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error banning user:', error);
+      throw error;
+    }
+  },
+
+  // Activate user
+  async activateUser(userId) {
+    try {
+      await firestore().collection('users').doc(userId).update({
+        status: 'active',
+        suspensionStart: null,
+        suspensionEnd: null,
+        suspensionReason: null,
+        lastActionAt: firestore.FieldValue.serverTimestamp()
+      });
+
+      // Log moderation action
+      await firestore().collection('moderationActions').add({
+        targetUserId: userId,
+        action: 'admin_activation',
+        timestamp: firestore.FieldValue.serverTimestamp(),
+        details: {
+          adminId: 'admin_dashboard'
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error activating user:', error);
       throw error;
     }
   },

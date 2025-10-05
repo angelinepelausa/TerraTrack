@@ -1,24 +1,35 @@
-import React, { createContext, useState } from "react";
+import React, { createContext, useState, useContext } from 'react';
 
-export const FilterContext = createContext();
+const FilterContext = createContext();
 
 export const FilterProvider = ({ children }) => {
-  const [filter, setFilter] = useState({
+  const [filters, setFilters] = useState({
     status: null,
-    dateRange: { from: null, to: null },
+    dateRange: { from: null, to: null }
   });
 
-  const updateFilter = (newFilter) => {
-    setFilter((prev) => ({ ...prev, ...newFilter }));
+  const updateFilter = (newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
   const resetFilter = () => {
-    setFilter({ status: null, dateRange: { from: null, to: null } });
+    setFilters({
+      status: null,
+      dateRange: { from: null, to: null }
+    });
   };
 
   return (
-    <FilterContext.Provider value={{ filter, updateFilter, resetFilter }}>
+    <FilterContext.Provider value={{ filters, updateFilter, resetFilter }}>
       {children}
     </FilterContext.Provider>
   );
+};
+
+export const useFilter = () => {
+  const context = useContext(FilterContext);
+  if (!context) {
+    throw new Error('useFilter must be used within a FilterProvider');
+  }
+  return context;
 };

@@ -1,22 +1,28 @@
 import React, { useState, useContext } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Platform } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { FilterContext } from "../context/FilterContext";
+import { useFilter } from "../context/FilterContext";
 
 const FilterModal = ({ visible, onClose }) => {
-  const { updateFilter, resetFilter } = useContext(FilterContext);
-  const [status, setStatus] = useState(null);
-  const [fromDate, setFromDate] = useState(null);
-  const [toDate, setToDate] = useState(null);
+  const { updateFilter, resetFilter, filters } = useFilter();
+  const [status, setStatus] = useState(filters.status);
+  const [fromDate, setFromDate] = useState(filters.dateRange.from);
+  const [toDate, setToDate] = useState(filters.dateRange.to);
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
 
   const applyFilter = () => {
-    updateFilter({ status, dateRange: { from: fromDate, to: toDate } });
+    updateFilter({ 
+      status, 
+      dateRange: { 
+        from: fromDate ? new Date(fromDate.setHours(0, 0, 0, 0)) : null, 
+        to: toDate ? new Date(toDate.setHours(23, 59, 59, 999)) : null 
+      } 
+    });
     onClose();
   };
 
-  const clearFilter = () => {
+  const handleClearFilter = () => {
     resetFilter();
     setStatus(null);
     setFromDate(null);
@@ -27,6 +33,24 @@ const FilterModal = ({ visible, onClose }) => {
   const formatDate = (date) => {
     if (!date) return "Select Date";
     return date.toLocaleDateString();
+  };
+
+  const onFromDateChange = (event, selectedDate) => {
+    setShowFromPicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setFromDate(selectedDate);
+      // If toDate is before fromDate, reset toDate
+      if (toDate && selectedDate > toDate) {
+        setToDate(null);
+      }
+    }
+  };
+
+  const onToDateChange = (event, selectedDate) => {
+    setShowToPicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setToDate(selectedDate);
+    }
   };
 
   return (
@@ -40,16 +64,16 @@ const FilterModal = ({ visible, onClose }) => {
             {["All", "Active", "Inactive", "Banned", "Suspended"].map((s) => (
               <TouchableOpacity
                 key={s}
-                onPress={() => setStatus(s === "All" ? null : s)}
+                onPress={() => setStatus(s === "All" ? null : s.toLowerCase())}
                 style={[
                   styles.statusButton,
-                  status === (s === "All" ? null : s) && styles.statusButtonSelected,
+                  status === (s === "All" ? null : s.toLowerCase()) && styles.statusButtonSelected,
                 ]}
               >
                 <Text
                   style={[
                     styles.statusText,
-                    status === (s === "All" ? null : s) && styles.statusTextSelected,
+                    status === (s === "All" ? null : s.toLowerCase()) && styles.statusTextSelected,
                   ]}
                 >
                   {s}
@@ -81,10 +105,7 @@ const FilterModal = ({ visible, onClose }) => {
               mode="date"
               display={Platform.OS === "ios" ? "inline" : "default"}
               maximumDate={toDate || new Date()}
-              onChange={(event, selectedDate) => {
-                setShowFromPicker(Platform.OS === "ios");
-                if (selectedDate) setFromDate(selectedDate);
-              }}
+              onChange={onFromDateChange}
             />
           )}
 
@@ -94,10 +115,8 @@ const FilterModal = ({ visible, onClose }) => {
               mode="date"
               display={Platform.OS === "ios" ? "inline" : "default"}
               minimumDate={fromDate || undefined}
-              onChange={(event, selectedDate) => {
-                setShowToPicker(Platform.OS === "ios");
-                if (selectedDate) setToDate(selectedDate);
-              }}
+              maximumDate={new Date()}
+              onChange={onToDateChange}
             />
           )}
 
@@ -105,7 +124,7 @@ const FilterModal = ({ visible, onClose }) => {
             <TouchableOpacity style={styles.applyButton} onPress={applyFilter}>
               <Text style={styles.applyButtonText}>Apply</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.clearButton} onPress={clearFilter}>
+            <TouchableOpacity style={styles.clearButton} onPress={handleClearFilter}>
               <Text style={styles.clearButtonText}>Reset</Text>
             </TouchableOpacity>
           </View>

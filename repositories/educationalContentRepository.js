@@ -31,12 +31,48 @@ export const getAllContent = async () => {
   }
 };
 
+export const subscribeToContent = (callback) => {
+  const unsubscribe = firestore()
+    .collection('educational_content')
+    .orderBy('lastUpdated', 'desc')
+    .onSnapshot(
+      (snapshot) => {
+        const contentData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        callback(contentData);
+      },
+      (error) => {
+        console.error('Error in real-time listener:', error);
+        callback([], error);
+      }
+    );
+
+  return unsubscribe;
+};
+
 export const addContent = async (data) => {
   try {
     const docRef = await firestore().collection('educational_content').add(data);
     return docRef.id;
   } catch (error) {
     console.error('Error adding educational content:', error);
+    throw error;
+  }
+};
+
+export const updateContent = async (contentId, data) => {
+  try {
+    await firestore()
+      .collection('educational_content')
+      .doc(contentId)
+      .update({
+        ...data,
+        lastUpdated: firestore.FieldValue.serverTimestamp()
+      });
+  } catch (error) {
+    console.error('Error updating educational content:', error);
     throw error;
   }
 };
@@ -56,6 +92,8 @@ export const deleteContent = async (contentId) => {
 export const educationalContentRepository = {
   getContent,
   getAllContent,
+  subscribeToContent, 
   addContent,
+  updateContent,
   deleteContent
 };
