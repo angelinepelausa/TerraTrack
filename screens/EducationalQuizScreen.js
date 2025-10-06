@@ -24,7 +24,7 @@ const EducationalQuizScreen = ({ route, navigation }) => {
     const isCorrect = selectedAnswer === question.correctIndex;
     const newScore = {
       correct: score.correct + (isCorrect ? 1 : 0),
-      total: score.total + 1
+      total: score.total + 1,
     };
     setScore(newScore);
 
@@ -32,17 +32,17 @@ const EducationalQuizScreen = ({ route, navigation }) => {
       try {
         const userId = auth().currentUser?.uid;
         if (userId) {
-          await addUserRewards(userId, 1, 10); 
+          await addUserRewards(userId, 1, 10);
         }
       } catch (error) {
-        console.error("Failed to add rewards:", error);
+        console.error('Failed to add rewards:', error);
       }
     }
   };
 
   const handleContinue = async () => {
     if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(prev => prev + 1);
+      setCurrentQuestion((prev) => prev + 1);
       setSelectedAnswer(null);
       setSubmitted(false);
     } else {
@@ -59,10 +59,10 @@ const EducationalQuizScreen = ({ route, navigation }) => {
           timeTaken: 0,
         });
 
-      const userId = auth().currentUser?.uid;
-      if (userId) {
-        await incrementUserStat(userId, "educationalQuizFinished", 1);
-      }
+        const userId = auth().currentUser?.uid;
+        if (userId) {
+          await incrementUserStat(userId, 'educationalQuizFinished', 1);
+        }
 
         setRewards({ coins: coinsEarned, points: pointsEarned });
         setQuizFinished(true);
@@ -78,10 +78,6 @@ const EducationalQuizScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-        <Text style={styles.backText}>{'<'}</Text>
-      </TouchableOpacity>
-
       <View style={styles.quizContainer}>
         <Text style={styles.quizTitle}>{content.title}</Text>
 
@@ -96,7 +92,7 @@ const EducationalQuizScreen = ({ route, navigation }) => {
               return (
                 <View key={index} style={styles.optionWrapper}>
                   <TouchableOpacity
-                    disabled={submitted} 
+                    disabled={submitted}
                     style={[
                       styles.optionButton,
                       isSelected && !submitted && styles.selectedOption,
@@ -108,15 +104,15 @@ const EducationalQuizScreen = ({ route, navigation }) => {
                     <Text style={styles.optionText}>{option}</Text>
 
                     {submitted && isCorrect && (
-                      <Image 
-                        source={require('../assets/images/QuizRight.png')} 
-                        style={styles.resultIcon} 
+                      <Image
+                        source={require('../assets/images/QuizRight.png')}
+                        style={styles.resultIcon}
                       />
                     )}
                     {submitted && isSelected && !isCorrect && (
-                      <Image 
-                        source={require('../assets/images/QuizWrong.png')} 
-                        style={styles.resultIcon} 
+                      <Image
+                        source={require('../assets/images/QuizWrong.png')}
+                        style={styles.resultIcon}
                       />
                     )}
                   </TouchableOpacity>
@@ -128,8 +124,8 @@ const EducationalQuizScreen = ({ route, navigation }) => {
       </View>
 
       {!submitted && selectedAnswer !== null && (
-        <TouchableOpacity 
-          style={[styles.optionButton, styles.submitButton, styles.fixedButton]} 
+        <TouchableOpacity
+          style={[styles.optionButton, styles.submitButton, styles.fixedButton]}
           onPress={handleSubmit}
         >
           <Text style={styles.submitText}>Submit</Text>
@@ -137,47 +133,38 @@ const EducationalQuizScreen = ({ route, navigation }) => {
       )}
 
       {submitted && (
-        <TouchableOpacity 
-          style={[styles.optionButton, styles.continueButton, styles.fixedButton]} 
+        <TouchableOpacity
+          style={[styles.optionButton, styles.continueButton, styles.fixedButton]}
           onPress={handleContinue}
         >
           <Text style={styles.submitText}>
-            {currentQuestion < questions.length - 1 ? "Continue" : "Finish"}
+            {currentQuestion < questions.length - 1 ? 'Continue' : 'Finish'}
           </Text>
         </TouchableOpacity>
       )}
 
-      <Image 
-        source={require('../assets/images/BearQuiz.png')} 
-        style={styles.bearImage} 
+      <Image
+        source={require('../assets/images/BearQuiz.png')}
+        style={styles.bearImage}
       />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: '#131313',
     paddingHorizontal: 16,
     paddingTop: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backBtn: { 
-    marginBottom: 16,
-    alignSelf: 'flex-start'
-  },
-  backText: { 
-    color: '#CCCCCC', 
-    fontSize: 20, 
-    fontWeight: 'bold' 
-  },
   quizContainer: {
     flex: 1,
-    justifyContent: 'flex-start', 
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: 120, 
+    paddingTop: 100, // adjusted since back button removed
   },
   quizTitle: {
     color: '#709775',
@@ -219,6 +206,12 @@ const styles = StyleSheet.create({
   selectedOption: {
     backgroundColor: '#709775',
   },
+  correctOption: {
+    backgroundColor: '#4CAF50',
+  },
+  wrongOption: {
+    backgroundColor: '#E57373',
+  },
   optionText: {
     color: '#131313',
     fontSize: 13,
@@ -247,7 +240,7 @@ const styles = StyleSheet.create({
   },
   fixedButton: {
     position: 'absolute',
-    bottom: 40, 
+    bottom: 40,
     alignSelf: 'center',
     zIndex: 2,
   },

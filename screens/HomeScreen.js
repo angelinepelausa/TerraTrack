@@ -69,11 +69,13 @@ const HomeScreen = ({ navigation }) => {
     fetchData();
   }, [user]);
 
-  useEffect(() => {
-    if (user?.uid) {
+    useEffect(() => {
+    if (!user?.uid) return;
+
+    if (!user.isAdmin) {
       fetchTerraCoins();
       checkMonthlyFootprint();
-      checkSuspensionStatus(); // NEW FUNCTION CALL
+      checkSuspensionStatus();
     }
   }, [user?.uid]);
 

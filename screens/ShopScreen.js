@@ -13,6 +13,7 @@ import { getUserTerraCoins } from '../repositories/userRepository';
 import { avatarsRepository } from '../repositories/avatarsRepository';
 import { purchasesRepository } from '../repositories/purchasesRepository';
 import BuyAvatar from '../components/BuyAvatar';
+import HeaderRow from '../components/HeaderRow';
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = (width - 64) / 3;
@@ -86,6 +87,9 @@ const ShopScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Header Row with consistent horizontal padding */}
+      <HeaderRow title="Shop" />
+
       <View style={styles.topBar}>
         <View style={styles.coinBox}>
           <Image

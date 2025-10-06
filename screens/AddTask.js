@@ -16,6 +16,7 @@ import { tasksRepository } from '../repositories/tasksRepository';
 import { uploadImageToCloudinary } from '../services/cloudinary';
 import { onboardingQuestions } from '../services/onboardingService';
 import auth from '@react-native-firebase/auth';
+import HeaderRow from '../components/HeaderRow';
 
 const AddTask = () => {
   const navigation = useNavigation();
@@ -113,18 +114,20 @@ const AddTask = () => {
 
   return (
     <View style={styles.container}>
-      {/* Fixed Header */}
-      <View style={styles.headerRow}>
-        <Text style={styles.headerText}>
-          {existingTask ? 'Edit Task' : 'Add Task'}
-        </Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image source={require('../assets/icons/back.png')} style={styles.backIcon} />
-        </TouchableOpacity>
+      {/* Fixed Header using HeaderRow component */}
+      <View style={styles.headerWrapper}>
+        <HeaderRow
+          title={existingTask ? 'Edit Task' : 'Add Task'}
+          onBackPress={() => navigation.goBack()}
+        />
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40, paddingTop: 80 }}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.label}>Title</Text>
         <TextInput
           style={styles.input}
@@ -136,7 +139,7 @@ const AddTask = () => {
 
         <Text style={styles.label}>Description</Text>
         <TextInput
-          style={[styles.input, { height: 100 }]}
+          style={[styles.input, styles.textArea]}
           value={description}
           onChangeText={setDescription}
           placeholder="Task description"
@@ -179,7 +182,7 @@ const AddTask = () => {
           const allOptions = group.questions.flatMap(q => q.options);
 
           return (
-            <View key={group.field} style={{ marginBottom: 16 }}>
+            <View key={group.field} style={styles.optionGroup}>
               <Text style={styles.label}>{group.field.charAt(0).toUpperCase() + group.field.slice(1)}</Text>
               <View style={styles.tagsContainer}>
                 {selected.map(opt => (
@@ -208,7 +211,9 @@ const AddTask = () => {
         })}
 
         <TouchableOpacity style={styles.submitButton} onPress={handleSave} disabled={saving}>
-          <Text style={styles.submitButtonText}>{saving ? 'Saving...' : existingTask ? 'Update Task' : 'Save Task'}</Text>
+          <Text style={styles.submitButtonText}>
+            {saving ? 'Saving...' : existingTask ? 'Update Task' : 'Save Task'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -216,39 +221,115 @@ const AddTask = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#131313' },
-
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 30,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  container: { 
+    flex: 1, 
     backgroundColor: '#131313',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
   },
-  headerText: { fontSize: 20, fontWeight: '700', color: '#709775' },
-  backIcon: { width: 40, height: 40, resizeMode: 'contain' },
-
-  label: { color: '#fff', marginTop: 12, marginBottom: 6, fontWeight: '600' },
-  input: { backgroundColor: '#1E1E1E', color: '#fff', borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 10 },
-  dropdownButton: { backgroundColor: '#1E1E1E', padding: 12, borderRadius: 12, marginBottom: 6 },
-  dropdownButtonText: { color: '#fff' },
-  option: { padding: 12, backgroundColor: '#1E1E1E', borderRadius: 12, marginVertical: 2 },
-  tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: 8 },
-  tag: { flexDirection: 'row', backgroundColor: '#415D43', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, marginRight: 6, marginBottom: 6, alignItems: 'center' },
-  tagText: { color: '#fff', marginRight: 6 },
-  removeTag: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  previewImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 10 },
-  uploadButton: { backgroundColor: '#709775', paddingVertical: 12, borderRadius: 25, alignItems: 'center', marginBottom: 16 },
-  uploadButtonText: { color: '#fff', fontWeight: '600' },
-  submitButton: { backgroundColor: '#709775', paddingVertical: 14, borderRadius: 25, alignItems: 'center', marginBottom: 40 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: { 
+    padding: 16,
+  },
+  headerWrapper: {
+  paddingHorizontal: 16,
+  paddingTop: 30,
+  marginBottom: -20,
+  },
+  label: { 
+    color: '#fff', 
+    marginTop: 16, 
+    marginBottom: 8, 
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  input: { 
+    backgroundColor: '#1E1E1E', 
+    color: '#fff', 
+    borderRadius: 12, 
+    padding: 12, 
+    fontSize: 16, 
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  dropdownButton: { 
+    backgroundColor: '#1E1E1E', 
+    padding: 12, 
+    borderRadius: 12, 
+    marginTop: 8,
+  },
+  dropdownButtonText: { 
+    color: '#fff',
+    fontSize: 16,
+  },
+  option: { 
+    padding: 12, 
+    backgroundColor: '#1E1E1E', 
+    borderRadius: 12, 
+    marginTop: 4,
+  },
+  optionGroup: {
+    marginBottom: 8,
+  },
+  tagsContainer: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    marginVertical: 8,
+  },
+  tag: { 
+    flexDirection: 'row', 
+    backgroundColor: '#415D43', 
+    paddingHorizontal: 12,
+    paddingVertical: 8, 
+    borderRadius: 20, 
+    marginRight: 8, 
+    marginBottom: 8, 
+    alignItems: 'center' 
+  },
+  tagText: { 
+    color: '#fff', 
+    marginRight: 6,
+    fontSize: 14,
+  },
+  removeTag: { 
+    color: '#fff', 
+    fontWeight: '700', 
+    fontSize: 16,
+  },
+  previewImage: { 
+    width: '100%', 
+    height: 200, 
+    borderRadius: 12, 
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  uploadButton: { 
+    backgroundColor: '#709775', 
+    paddingVertical: 14, 
+    borderRadius: 25, 
+    alignItems: 'center', 
+    marginTop: 8,
+  },
+  uploadButtonText: { 
+    color: '#fff', 
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  submitButton: { 
+    backgroundColor: '#709775', 
+    paddingVertical: 16, 
+    borderRadius: 25, 
+    alignItems: 'center', 
+    marginTop: 24,
+    marginBottom: 24,
+  },
+  submitButtonText: { 
+    color: '#fff', 
+    fontSize: 18, 
+    fontWeight: '700' 
+  },
 });
 
 export default AddTask;

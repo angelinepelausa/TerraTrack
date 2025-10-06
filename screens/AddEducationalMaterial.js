@@ -14,6 +14,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { uploadImageToCloudinary } from '../services/cloudinary';
 import { educationalContentRepository } from '../repositories/educationalContentRepository';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import HeaderRow from '../components/HeaderRow'; // ✅ using the reusable header
 
 const AddEducationalMaterial = () => {
   const navigation = useNavigation();
@@ -116,18 +118,16 @@ const AddEducationalMaterial = () => {
 
   return (
     <View style={styles.container}>
-      {/* Fixed Header */}
-      <View style={styles.headerRow}>
-        <Text style={styles.headerText}>
-          {existingContent ? 'Edit Educational Material' : 'Add Educational Material'}
-        </Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image source={require('../assets/icons/back.png')} style={styles.backIcon} />
-        </TouchableOpacity>
+      {/* ✅ Replaced fixed header with reusable HeaderRow */}
+      <View style={styles.fixedHeader}>
+        <HeaderRow
+          title={existingContent ? 'Edit Educational Material' : 'Add Educational Material'}
+          onBackPress={() => navigation.goBack()}
+        />
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 40, paddingTop: 80, paddingHorizontal: 16 }}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.label}>Title</Text>
         <TextInput
           style={styles.input}
@@ -172,11 +172,11 @@ const AddEducationalMaterial = () => {
         <Text style={styles.label}>Quiz Questions</Text>
         {quiz.map((q, idx) => (
           <View key={idx} style={styles.quizCard}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={styles.quizHeader}>
               <Text style={styles.quizLabel}>Question {idx + 1}</Text>
               {idx !== 0 && (
                 <TouchableOpacity onPress={() => handleDeleteQuestion(idx)}>
-                  <Text style={{ color: 'red', fontWeight: '600' }}>Delete</Text>
+                  <Ionicons name="trash-outline" size={18} color="#ff4d4d" />
                 </TouchableOpacity>
               )}
             </View>
@@ -228,23 +228,22 @@ const AddEducationalMaterial = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 30,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#131313',
+  fixedHeader: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
+    paddingHorizontal: 16, // ✅ matches scroll padding
+    paddingTop: 30,
+    paddingBottom: 12,
+    backgroundColor: '#131313',
     zIndex: 10,
   },
-  headerText: { fontSize: 20, fontWeight: '700', color: '#709775' },
-  backIcon: { width: 40, height: 40, resizeMode: 'contain' },
-
+  scrollContainer: {
+    paddingBottom: 40,
+    paddingTop: 90, // space for header
+    paddingHorizontal: 16,
+  },
   label: { color: '#fff', marginTop: 12, marginBottom: 6, fontWeight: '600' },
   input: {
     backgroundColor: '#1E1E1E',
@@ -280,6 +279,11 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginBottom: 12,
+  },
+  quizHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   quizLabel: { color: '#fff', fontWeight: '600', marginBottom: 8 },
   addQuestionButton: {

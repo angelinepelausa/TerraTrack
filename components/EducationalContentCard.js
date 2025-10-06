@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons'; // 👈 import Ionicons
 
 const CARD_HEIGHT = 120; 
 const IMAGE_SIZE = 100; 
@@ -33,10 +34,12 @@ const EducationalContentCard = ({ item, onPress, onDelete, variant = 'user' }) =
         </View>
 
         {onDelete && (
-          <TouchableOpacity onPress={onDelete}>
-            <Text style={[styles.deleteText, { color: isAdmin ? '#ff4d4d' : '#d32f2f' }]}>
-              Delete
-            </Text>
+          <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
+            <Ionicons
+              name="trash-outline"
+              size={18}
+              color={isAdmin ? '#ff4d4d' : '#d32f2f'}
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -44,7 +47,6 @@ const EducationalContentCard = ({ item, onPress, onDelete, variant = 'user' }) =
   );
 };
 
-// Keep the base styles as is
 const styles = StyleSheet.create({
   contentCard: {
     borderRadius: 12,
@@ -87,10 +89,8 @@ const styles = StyleSheet.create({
   cardDescription: {
     fontSize: 14,
   },
-  deleteText: {
-    fontWeight: '700',
-    fontSize: 12,
-    marginLeft: 8,
+  deleteButton: {
+    padding: 6,
   },
 });
 

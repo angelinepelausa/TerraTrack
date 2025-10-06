@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { referralRepository } from "../repositories/referralRepository";
-import HeaderRow from "../components/HeaderRow"; // Import HeaderRow
+import HeaderRow from "../components/HeaderRow";
 
 const AdminReferral = () => {
   const navigation = useNavigation();
@@ -106,15 +106,19 @@ const AdminReferral = () => {
     </View>
   );
 
+  // ✅ Updated to show labels above input fields
   const renderInputField = (label, value, onChange) => (
-    <TextInput
-      style={styles.input}
-      keyboardType="numeric"
-      value={value?.toString()}
-      onChangeText={onChange}
-      placeholder={label}
-      placeholderTextColor="#888"
-    />
+    <View style={styles.inputGroup}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <TextInput
+        style={styles.input}
+        keyboardType="numeric"
+        value={value?.toString()}
+        onChangeText={onChange}
+        placeholder={label}
+        placeholderTextColor="#888"
+      />
+    </View>
   );
 
   return (
@@ -190,13 +194,22 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
+  // ✅ Labeled input field styles
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: "#CCCCCC",
+    fontWeight: "600",
+    marginBottom: 6,
+    fontSize: 14,
+  },
   input: {
     backgroundColor: "#1F1F1F",
     color: "#fff",
     padding: 12,
     borderRadius: 10,
     fontSize: 14,
-    marginBottom: 12,
   },
 
   saveButton: {

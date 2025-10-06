@@ -49,6 +49,7 @@ import AddBadge from './screens/AddBadge';
 import AdminSettings from './screens/AdminSettings';
 import AdminSupport from './screens/AdminSupport';
 import AdminPostDetailScreen from './screens/AdminPostDetailScreen';
+import AdminReferral from './screens/AdminReferral';
 
 const Stack = createNativeStackNavigator();
 
@@ -226,6 +227,10 @@ const App = () => {
           <Stack.Screen
             name="AdminPostDetailScreen"
             component={AdminPostDetailScreen}
+          />
+          <Stack.Screen
+            name="AdminReferral"
+            component={AdminReferral}
           />
           <Stack.Screen
             name="AddAvatar"

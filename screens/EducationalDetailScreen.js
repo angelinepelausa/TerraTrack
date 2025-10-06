@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getUserTerraCoins } from '../repositories/userRepository';
 import { incrementUserStat } from '../repositories/userStatsRepository';
 import firestore from '@react-native-firebase/firestore';
+import HeaderRow from '../components/HeaderRow'; // ✅ Import HeaderRow
 
 const EducationalDetailScreen = ({ route, navigation }) => {
   const { content } = route.params; // content should have an "id"
@@ -20,7 +21,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
 
   const fetchTerraCoins = async () => {
     try {
-      const result = await getUserTerraCoins(user.uid); 
+      const result = await getUserTerraCoins(user.uid);
       if (result.success) {
         setTerraCoins(result.terraCoins);
       }
@@ -32,34 +33,39 @@ const EducationalDetailScreen = ({ route, navigation }) => {
   // ✅ Check Firestore if this content is already read
   const checkIfRead = async () => {
     try {
+      if (!user?.uid || !content?.id) return;
+
       const docRef = firestore()
         .collection('users')
         .doc(user.uid)
         .collection('materialsRead')
-        .doc(content.id); // assumes content has an id
+        .doc(content.id);
+
       const doc = await docRef.get();
-      if (doc.exists && doc.data().read) {
-        setIsRead(true);
+
+      if (doc.exists) {
+        const data = doc.data();
+        setIsRead(!!data.read);
+      } else {
+        setIsRead(false);
       }
     } catch (error) {
-      console.error("Error checking read status:", error);
+      console.log("⚠️ No existing read record (not an error):", error?.message);
+      setIsRead(false);
     }
   };
 
-  // ✅ Handle marking as read
   const handleMaterialRead = async () => {
     try {
       if (!user?.uid) return;
 
-      // 1. Increment stats
       await incrementUserStat(user.uid, "educationalMaterialsRead");
 
-      // 2. Save read status in Firestore
       await firestore()
         .collection('users')
         .doc(user.uid)
         .collection('materialsRead')
-        .doc(content.id) // each material tracked separately
+        .doc(content.id)
         .set({
           read: true,
           timestamp: firestore.FieldValue.serverTimestamp(),
@@ -74,18 +80,27 @@ const EducationalDetailScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* ✅ Top bar with TerraCoins */}
       <View style={styles.topBar}>
         <View style={styles.coinBox}>
-          <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
+          <Image
+            source={require('../assets/images/TerraCoin.png')}
+            style={styles.coinImage}
+          />
           <Text style={styles.coinText}>{terraCoins}</Text>
         </View>
       </View>
 
-      <View style={styles.content}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>{'<'}</Text>
-        </TouchableOpacity>
+      {/* ✅ HeaderRow BELOW top bar, aligned with same padding as content */}
+      <View style={styles.headerContainer}>
+        <HeaderRow
+          title="Educational Material"
+          onBackPress={() => navigation.goBack()}
+        />
+      </View>
 
+      {/* ✅ Main Content */}
+      <View style={styles.content}>
         <View style={styles.detailWrapper}>
           <View style={styles.detailContainer}>
             <Text style={styles.detailTitle}>{content.title}</Text>
@@ -131,11 +146,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#131313',
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
   topBar: {
     height: 90,
     backgroundColor: '#415D43',
@@ -144,7 +154,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
     padding: 10,
-    marginBottom: 12,
+  },
+  headerContainer: {
+    paddingHorizontal: 16, // ✅ same as content
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16, // ✅ consistent alignment
   },
   coinBox: {
     flexDirection: 'row',
@@ -165,19 +183,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 12,
   },
-  backBtn: {
-    marginBottom: 16,
-  },
-  backText: {
-    color: '#CCCCCC',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
   detailWrapper: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -80,
   },
   detailContainer: {
     width: '100%',

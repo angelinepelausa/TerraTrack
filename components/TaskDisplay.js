@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const TaskDisplay = ({ easyTasks, hardTasks, onTaskPress, onDelete }) => {
   const [activeTab, setActiveTab] = useState('easy');
@@ -28,8 +29,12 @@ const TaskDisplay = ({ easyTasks, hardTasks, onTaskPress, onDelete }) => {
         <Text style={styles.taskDesc}>{item.description}</Text>
       </View>
 
-      <TouchableOpacity onPress={() => onDelete && onDelete(item.id)}>
-        <Text style={styles.deleteText}>Delete</Text>
+      <TouchableOpacity
+        onPress={() => onDelete && onDelete(item.id)}
+        style={styles.deleteButton}
+        accessibilityLabel="Delete task"
+      >
+        <Ionicons name="trash-outline" size={18} color="#ff4d4d" />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -93,6 +98,14 @@ const styles = StyleSheet.create({
   taskTitle: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   taskDesc: { color: '#aaa', fontSize: 12, marginTop: 2 },
   deleteText: { color: '#ff4d4d', fontWeight: 'bold', marginLeft: 12 },
+
+  deleteButton: {
+    marginLeft: 12,
+    padding: 6,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 export default TaskDisplay;

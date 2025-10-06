@@ -7,6 +7,7 @@ import { avatarsRepository } from "../repositories/avatarsRepository";
 import { badgesRepository } from "../repositories/badgesRepository";
 import HeaderRow from "../components/HeaderRow";
 import SearchRow from "../components/SearchRow";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = (width - 48) / 2; // 16 padding * 2 + 16 margin between items
@@ -73,7 +74,7 @@ const AdminBadgeAvatarScreen = () => {
       )}
       <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
       <TouchableOpacity onPress={() => handleDeleteAvatar(item.id)}>
-        <Text style={styles.deleteText}>Delete</Text>
+        <Ionicons name="trash-outline" size={18} color="#ff4d4d" />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -127,7 +128,7 @@ const AdminBadgeAvatarScreen = () => {
       )}
       <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
       <TouchableOpacity onPress={() => handleDeleteBadge(item.id)}>
-        <Text style={styles.deleteText}>Delete</Text>
+        <Ionicons name="trash-outline" size={18} color="#ff4d4d" />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -231,7 +232,6 @@ const styles = StyleSheet.create({
   },
   itemImage: { width: ITEM_WIDTH - 16, height: ITEM_WIDTH - 16, borderRadius: 12, resizeMode: "cover" },
   itemName: { color: "#fff", fontWeight: "bold", paddingVertical: 6 },
-  deleteText: { color: "red", fontWeight: "bold", marginBottom: 4 },
 });
 
 export default AdminBadgeAvatarScreen;

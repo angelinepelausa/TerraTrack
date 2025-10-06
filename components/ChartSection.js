@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { BarChart } from 'react-native-chart-kit';
-import { Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 
 const { width } = Dimensions.get('window');
 
@@ -17,6 +16,14 @@ export const ChartSection = ({
   setSelectedYear,
   setSelectedCategory
 }) => {
+  // Compute chart width to fit all data
+  const barCount = chartData.labels?.length || 0;
+  const minBarWidth = 35;
+  const maxBarWidth = 60;
+  const availableWidth = width * 0.85;
+  const calculatedWidth = Math.max(availableWidth, barCount * minBarWidth);
+  const chartWidth = Math.min(calculatedWidth, barCount * maxBarWidth);
+
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeaderRow}>
@@ -42,18 +49,26 @@ export const ChartSection = ({
       {chartLoading ? (
         <ActivityIndicator size="small" color="#709775" style={{ marginTop: 20 }} />
       ) : chartData.labels.length > 0 ? (
-        <BarChart
-          data={chartData}
-          width={width * 0.9}
-          height={160}
-          fromZero
-          showValuesOnTopOfBars
-          yAxisSuffix=""
-          chartConfig={chartConfig}
-          style={styles.chartStyle}
-          verticalLabelRotation={0}
-          yLabelsOffset={10}
-        />
+        <View style={styles.chartContainer}>
+          <LineChart
+            data={chartData}
+            width={chartWidth}
+            height={200}
+            fromZero
+            yAxisSuffix=""
+            chartConfig={chartConfig}
+            style={styles.chartStyle}
+            verticalLabelRotation={barCount > 6 ? -45 : 0}
+            yLabelsOffset={10}
+            withVerticalLabels={true}
+            segments={4}
+            yAxisLabel=""
+            bezier
+            withDots={true}
+            withInnerLines={true}
+            withOuterLines={true}
+          />
+        </View>
       ) : (
         <Text style={styles.noDataText}>No data available</Text>
       )}
@@ -62,22 +77,22 @@ export const ChartSection = ({
 };
 
 const YearDropdown = ({ selectedYear, years, dropdownOpen, setDropdownOpen, setSelectedYear }) => (
-  <View style={styles.dropdownWrapperLeft}>
+  <View style={styles.dropdownWrapper}>
     <TouchableOpacity
-      style={styles.dropdownButtonSmall}
+      style={styles.dropdownButton}
       onPress={() => setDropdownOpen({ year: !dropdownOpen, category: false })}
     >
-      <Text style={styles.dropdownButtonTextSmall}>{selectedYear}</Text>
+      <Text style={styles.dropdownButtonText}>{selectedYear}</Text>
     </TouchableOpacity>
     {dropdownOpen && (
-      <View style={styles.dropdownOverlayFull}>
+      <View style={styles.dropdownOverlay}>
         {years.map(y => (
           <TouchableOpacity
             key={y}
-            style={[styles.optionFull, { backgroundColor: selectedYear === y ? '#709775' : 'transparent' }]}
+            style={[styles.option, { backgroundColor: selectedYear === y ? '#709775' : 'transparent' }]}
             onPress={() => { setSelectedYear(y); setDropdownOpen({}); }}
           >
-            <Text style={{ color: selectedYear === y ? '#fff' : '#ccc' }}>{y}</Text>
+            <Text style={{ color: selectedYear === y ? '#fff' : '#ccc', fontSize: 12 }}>{y}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -86,22 +101,22 @@ const YearDropdown = ({ selectedYear, years, dropdownOpen, setDropdownOpen, setS
 );
 
 const CategoryDropdown = ({ selectedCategory, categories, dropdownOpen, setDropdownOpen, setSelectedCategory }) => (
-  <View style={styles.dropdownWrapperRight}>
+  <View style={styles.dropdownWrapper}>
     <TouchableOpacity
-      style={styles.dropdownButtonSmall}
+      style={styles.dropdownButton}
       onPress={() => setDropdownOpen({ year: false, category: !dropdownOpen })}
     >
-      <Text style={styles.dropdownButtonTextSmall}>{selectedCategory}</Text>
+      <Text style={styles.dropdownButtonText}>{selectedCategory}</Text>
     </TouchableOpacity>
     {dropdownOpen && (
-      <View style={styles.dropdownOverlayFull}>
+      <View style={styles.dropdownOverlay}>
         {categories.map(c => (
           <TouchableOpacity
             key={c}
-            style={[styles.optionFull, { backgroundColor: selectedCategory === c ? '#709775' : 'transparent' }]}
+            style={[styles.option, { backgroundColor: selectedCategory === c ? '#709775' : 'transparent' }]}
             onPress={() => { setSelectedCategory(c); setDropdownOpen({}); }}
           >
-            <Text style={{ color: selectedCategory === c ? '#fff' : '#ccc' }}>{c}</Text>
+            <Text style={{ color: selectedCategory === c ? '#fff' : '#ccc', fontSize: 12 }}>{c}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -116,7 +131,22 @@ const chartConfig = {
   decimalPlaces: 0,
   color: (opacity = 1) => `rgba(112, 151, 117, ${opacity})`,
   labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-  style: { borderRadius: 16 }
+  style: { 
+    borderRadius: 16,
+  },
+  propsForLabels: {
+    fontSize: 10,
+  },
+  propsForVerticalLabels: {
+    dx: -5,
+  },
+  strokeWidth: 3,
+  propsForDots: {
+    r: "5",
+    strokeWidth: "2",
+    stroke: "#709775",
+    fill: "#1c1c1c"
+  }
 };
 
 const styles = {
@@ -138,7 +168,7 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   sectionTitle: {
     color: '#709775',
@@ -147,34 +177,31 @@ const styles = {
   },
   dropdownRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    flex: 1
   },
-  dropdownWrapperLeft: {
-    marginRight: 8
+  dropdownWrapper: {
+    marginLeft: 8,
   },
-  dropdownWrapperRight: {
-    marginLeft: 8
-  },
-  dropdownButtonSmall: {
+  dropdownButton: {
     backgroundColor: '#2A2A2A',
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    minWidth: 50,
   },
-  dropdownButtonTextSmall: {
+  dropdownButtonText: {
     color: 'white',
     fontSize: 12,
     fontWeight: '500',
   },
-  dropdownOverlayFull: {
+  dropdownOverlay: {
     position: 'absolute',
     top: 35,
-    width: '200%',
+    right: 0,
+    minWidth: 100,
     backgroundColor: '#2A2A2A',
-    borderRadius: 12,
+    borderRadius: 8,
     paddingVertical: 4,
     zIndex: 1000,
     shadowColor: '#000',
@@ -183,19 +210,24 @@ const styles = {
     shadowRadius: 6,
     elevation: 6,
   },
-  optionFull: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+  option: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     borderBottomColor: '#333',
     borderBottomWidth: 1,
   },
+  chartContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
   chartStyle: {
     borderRadius: 12,
-    marginVertical: 8
+    marginVertical: 8,
   },
   noDataText: {
     color: '#888',
     fontStyle: 'italic',
-    marginTop: 12
+    marginTop: 12,
+    textAlign: 'center',
   }
 };
