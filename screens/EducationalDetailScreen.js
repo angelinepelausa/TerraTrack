@@ -11,13 +11,13 @@ const EducationalDetailScreen = ({ route, navigation }) => {
   const { user } = useAuth();
   const [terraCoins, setTerraCoins] = useState(0);
   const [isRead, setIsRead] = useState(false);
-  const [hasTakenQuiz, setHasTakenQuiz] = useState(false); // ✅ new state
+  const [hasTakenQuiz, setHasTakenQuiz] = useState(false); // new state
 
   useEffect(() => {
     if (user) {
       fetchTerraCoins();
       checkIfRead();
-      checkIfQuizTaken(); // ✅ check if quiz has been answered
+      checkIfQuizTaken(); // check if quiz has been answered
     }
   }, [user]);
 
@@ -32,7 +32,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
     }
   };
 
-  // ✅ Check if material already read
+  // Check if material already read
   const checkIfRead = async () => {
     try {
       if (!user?.uid || !content?.id) return;
@@ -55,7 +55,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
     }
   };
 
-  // ✅ Check Firestore if quiz already answered
+  // Check Firestore if quiz already answered
   const checkIfQuizTaken = async () => {
     try {
       if (!user?.uid || !content?.id) return;
@@ -94,7 +94,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
         });
 
       setIsRead(true);
-      Alert.alert('Progress Saved', 'Marked as read! 📘');
+      Alert.alert('Progress Saved', 'Marked as read!');
     } catch (error) {
       console.error('Error incrementing educationalMaterialsRead:', error);
     }
@@ -102,7 +102,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* ✅ Top bar with TerraCoins */}
+      {/* Top bar with TerraCoins */}
       <View style={styles.topBar}>
         <View style={styles.coinBox}>
           <Image
@@ -113,7 +113,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      {/* ✅ HeaderRow BELOW top bar */}
+      {/* HeaderRow BELOW top bar */}
       <View style={styles.headerContainer}>
         <HeaderRow
           title="Educational Material"
@@ -121,7 +121,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
         />
       </View>
 
-      {/* ✅ Main Content */}
+      {/* Main Content */}
       <View style={styles.content}>
         <View style={styles.detailWrapper}>
           <View style={styles.detailContainer}>
@@ -132,7 +132,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
               <Text style={styles.contentText}>{content.content}</Text>
             </View>
 
-            {/* ✅ Mark as Read button */}
+            {/* Mark as Read button */}
             <TouchableOpacity
               style={[
                 styles.readButton,
@@ -146,7 +146,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
               </Text>
             </TouchableOpacity>
 
-            {/* ✅ Quiz button (disabled if quiz taken) */}
+            {/* Quiz button (disabled if quiz taken) */}
             <TouchableOpacity
               style={[
                 styles.quizButton,
