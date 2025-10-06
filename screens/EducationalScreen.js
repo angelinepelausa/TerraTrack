@@ -95,7 +95,7 @@ const EducationalScreen = ({ navigation }) => {
         <HeaderRow
           title="Educational Materials"
           showBack={true}
-          onBackPress={() => navigation.goBack()}
+          onBackPress={() => navigation.navigate('HomeScreen')}
         />
       </View>
 
