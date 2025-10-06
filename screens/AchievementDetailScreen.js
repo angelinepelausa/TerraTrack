@@ -30,7 +30,7 @@ const AchievementDetailScreen = ({ route, navigation }) => {
         ? statsDoc.data()
         : {
             educationalMaterialsRead: 0,
-            educationalQuizFinished: 0,
+            weeklyQuizFinished: 0,
             taskFinished: 0,
           };
       setStats(statsData);
@@ -64,9 +64,12 @@ const AchievementDetailScreen = ({ route, navigation }) => {
   const userValue =
     currentBadge.category.toLowerCase() === 'tasks'
       ? stats.taskFinished
-      : currentBadge.category.toLowerCase() === 'quiz'
-      ? stats.educationalQuizFinished
-      : stats.educationalMaterialsRead;
+      : currentBadge.category.toLowerCase() === 'weekly quiz'
+      ? stats.weeklyQuizFinished
+      : currentBadge.category.toLowerCase() === 'educational materials'
+      ? stats.educationalMaterialsRead
+      : 0;
+      
 
   const progress = Math.min(userValue / currentBadge.targetNumber, 1);
   const progressText = `${userValue}/${currentBadge.targetNumber}`;

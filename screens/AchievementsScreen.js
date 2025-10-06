@@ -55,7 +55,7 @@ const AchievementsScreen = ({ navigation }) => {
         ? statsDoc.data()
         : {
             educationalMaterialsRead: 0,
-            educationalQuizFinished: 0,
+            weeklyQuizFinished: 0,
             taskFinished: 0,
           };
       setStats(statsData);
@@ -83,7 +83,7 @@ const AchievementsScreen = ({ navigation }) => {
         if (cat === 'tasks') {
           userValue = statsData.taskFinished;
         } else if (cat === 'weekly quiz') {
-          userValue = statsData.educationalQuizFinished;
+          userValue = statsData.weeklyQuizFinished;
         } else if (cat === 'educational materials') {
           userValue = statsData.educationalMaterialsRead;
         } else {
@@ -150,7 +150,7 @@ const AchievementsScreen = ({ navigation }) => {
     if (item.category === 'tasks') {
       userValue = stats.taskFinished;
     } else if (item.category === 'weekly quiz') {
-      userValue = stats.educationalQuizFinished;
+      userValue = stats.weeklyQuizFinished;
     } else if (item.category === 'educational materials') {
       userValue = stats.educationalMaterialsRead;
     } else {
