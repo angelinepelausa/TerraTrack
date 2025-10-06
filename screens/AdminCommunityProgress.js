@@ -125,7 +125,7 @@ const AdminCommunityProgress = () => {
       );
     }
 
-    const { description, current, goal, rewards, image, endDate } = progressData;
+    const { title, description, current, goal, rewards, image, endDate } = progressData;
     const daysLeft = endDate ? Math.max(Math.floor((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24)), 0) : 0;
     const progressPercentage = goal > 0 ? (current / goal) * 100 : 0;
 
@@ -135,11 +135,14 @@ const AdminCommunityProgress = () => {
           <Image 
             source={{ uri: image }} 
             style={styles.image}
-            resizeMode="cover"
+            resizeMode="contain"
           />
         )}
         
         <View style={styles.infoCard}>
+          {title && (
+            <Text style={styles.title}>{title}</Text>
+          )}
           <Text style={styles.description}>{description}</Text>
           <Text style={styles.timeLeft}>Time remaining: {daysLeft} day{daysLeft !== 1 ? 's' : ''}</Text>
 
@@ -315,6 +318,17 @@ const QuarterDetailsModal = ({ visible, quarter, onEdit, onDelete, onClose }) =>
           </View>
 
           <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            {quarter.image && (
+              <Image 
+                source={{ uri: quarter.image }} 
+                style={styles.modalImage}
+                resizeMode="contain"
+              />
+            )}
+
+            {quarter.title && (
+              <Text style={styles.modalTitleText}>{quarter.title}</Text>
+            )}
             <Text style={styles.modalDescription}>{quarter.description}</Text>
             
             <View style={styles.modalInfoRow}>
@@ -428,6 +442,34 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
+  // Title
+  title: {
+    fontSize: scale(20),
+    color: '#709775',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: scale(12),
+    letterSpacing: 0.5,
+  },
+
+  // Image Styles
+  image: {
+    width: '100%',
+    height: scale(180),
+    borderRadius: scale(12),
+    marginBottom: scale(16),
+    alignSelf: 'center',
+  },
+
+  // Modal Image Styles
+  modalImage: {
+    width: '100%',
+    height: scale(200),
+    borderRadius: scale(12),
+    marginBottom: scale(16),
+    alignSelf: 'center',
+  },
+
   // Cards
   infoCard: { 
     backgroundColor: '#1E1E1E', 
@@ -500,14 +542,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Image
-  image: { 
-    width: '100%', 
-    height: scale(200), 
-    borderRadius: scale(12), 
-    marginBottom: scale(16),
-  },
-
   // Buttons
   addButton: {
     backgroundColor: '#709775',
@@ -554,6 +588,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 0.5,
     flex: 1,
+  },
+  modalTitleText: {
+    fontSize: scale(20),
+    color: '#709775',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: scale(12),
+    letterSpacing: 0.5,
   },
   closeButtonContainer: {
     padding: scale(4),

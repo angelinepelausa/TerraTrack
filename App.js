@@ -50,6 +50,7 @@ import AdminSettings from './screens/AdminSettings';
 import AdminSupport from './screens/AdminSupport';
 import AdminPostDetailScreen from './screens/AdminPostDetailScreen';
 import AdminReferral from './screens/AdminReferral';
+import AddCommunityProgress from './screens/AddCommunityProgress';
 
 const Stack = createNativeStackNavigator();
 
@@ -231,6 +232,10 @@ const App = () => {
           <Stack.Screen
             name="AdminReferral"
             component={AdminReferral}
+          />
+          <Stack.Screen
+            name="AddCommunityProgress"
+            component={AddCommunityProgress}
           />
           <Stack.Screen
             name="AddAvatar"

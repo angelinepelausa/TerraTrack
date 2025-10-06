@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, UIManager, Image
+  View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, UIManager, Image, Modal
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { addCommunityProgress, updateCommunityProgress } from '../repositories/communityProgressRepository';
+import { addCommunityProgress, updateCommunityProgress, getCommunityProgress } from '../repositories/communityProgressRepository';
 import { uploadImageToCloudinary } from '../services/cloudinary';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -12,6 +12,28 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
 const rankOptions = ["top1", "top2", "top3", "top4to10", "top11plus"];
+
+// Helper function to get current quarter
+const getCurrentQuarter = () => {
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+  
+  if (month >= 0 && month <= 2) return { year, quarter: 'Q1' };
+  else if (month >= 3 && month <= 5) return { year, quarter: 'Q2' };
+  else if (month >= 6 && month <= 8) return { year, quarter: 'Q3' };
+  else return { year, quarter: 'Q4' };
+};
+
+// Generate years array (current year to +20 years)
+const generateYears = () => {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let i = 0; i <= 20; i++) {
+    years.push((currentYear + i).toString());
+  }
+  return years;
+};
 
 const AddCommunityProgress = ({ navigation, route }) => {
   const [year, setYear] = useState(new Date().getFullYear().toString());
@@ -30,6 +52,15 @@ const AddCommunityProgress = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [originalYearQuarter, setOriginalYearQuarter] = useState('');
+  const [existingQuarters, setExistingQuarters] = useState({});
+  const [showYearDropdown, setShowYearDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0, width: 0 });
+  const years = generateYears();
+
+  // Check existing quarters and set initial year
+  useEffect(() => {
+    checkExistingQuartersAndSetYear();
+  }, []);
 
   // Check if we're editing an existing quarter
   useEffect(() => {
@@ -56,6 +87,139 @@ const AddCommunityProgress = ({ navigation, route }) => {
     }
   }, [route.params?.quarterData]);
 
+  // Check existing quarters when year changes
+  useEffect(() => {
+    if (!isEditing) {
+      checkExistingQuarters();
+    }
+  }, [year]);
+
+  const checkExistingQuartersAndSetYear = async () => {
+    try {
+      const current = getCurrentQuarter();
+      let foundAvailableYear = false;
+      
+      // Check current year first
+      const currentYearQuarters = {};
+      for (const q of quarters) {
+        const yearQuarter = `${current.year}-${q}`;
+        try {
+          const data = await getCommunityProgress(yearQuarter);
+          currentYearQuarters[q] = !!data;
+        } catch (error) {
+          currentYearQuarters[q] = false;
+        }
+      }
+      
+      // If all quarters exist in current year, check next year
+      const allQuartersExist = quarters.every(q => currentYearQuarters[q]);
+      
+      if (allQuartersExist) {
+        // Check next year
+        const nextYear = current.year + 1;
+        const nextYearQuarters = {};
+        
+        for (const q of quarters) {
+          const yearQuarter = `${nextYear}-${q}`;
+          try {
+            const data = await getCommunityProgress(yearQuarter);
+            nextYearQuarters[q] = !!data;
+          } catch (error) {
+            nextYearQuarters[q] = false;
+          }
+        }
+        
+        // Set to next year and its existing quarters
+        setYear(nextYear.toString());
+        setExistingQuarters(nextYearQuarters);
+        
+        // Find first available quarter in next year
+        const availableQuarter = quarters.find(q => !nextYearQuarters[q]);
+        if (availableQuarter) {
+          setQuarter(availableQuarter);
+        }
+      } else {
+        // Use current year and its existing quarters
+        setYear(current.year.toString());
+        setExistingQuarters(currentYearQuarters);
+        
+        // Find first available quarter in current year
+        const availableQuarter = quarters.find(q => !currentYearQuarters[q]);
+        if (availableQuarter) {
+          setQuarter(availableQuarter);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking existing quarters:', error);
+      // Fallback to current year and quarter
+      const current = getCurrentQuarter();
+      setYear(current.year.toString());
+      setQuarter(current.quarter);
+    }
+  };
+
+  const checkExistingQuarters = async () => {
+    try {
+      const existing = {};
+      for (const q of quarters) {
+        const yearQuarter = `${year}-${q}`;
+        try {
+          const data = await getCommunityProgress(yearQuarter);
+          existing[q] = !!data;
+        } catch (error) {
+          existing[q] = false;
+        }
+      }
+      setExistingQuarters(existing);
+    } catch (error) {
+      console.error('Error checking existing quarters:', error);
+    }
+  };
+
+  const isQuarterDisabled = (q) => {
+    if (isEditing) return false;
+
+    const current = getCurrentQuarter();
+    const currentYear = current.year;
+    const currentQuarter = current.quarter;
+    
+    // Convert quarter to number for comparison
+    const quarterNum = { 'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4 };
+    const selectedQuarterNum = quarterNum[q];
+    const currentQuarterNum = quarterNum[currentQuarter];
+    
+    // Disable if:
+    // 1. Year is in the past compared to current year, OR
+    // 2. Same year but quarter is in the past compared to current quarter
+    if (parseInt(year) < currentYear) {
+      return true; // Past year
+    }
+    
+    if (parseInt(year) === currentYear && selectedQuarterNum < currentQuarterNum) {
+      return true; // Past quarter in current year
+    }
+    
+    // 3. Quarter already exists in database
+    if (existingQuarters[q]) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const handleYearSelect = (selectedYear) => {
+    setYear(selectedYear);
+    setShowYearDropdown(false);
+  };
+
+    const handleYearButtonPress = (event) => {
+      if (isEditing) return;
+      event.target.measure((fx, fy, width, height, px, py) => {
+        setDropdownPosition({ x: px, y: py + height + 5, width });
+        setShowYearDropdown(true);
+      });
+    };
+
   const handleRewardChange = (key, field, value) => {
     setRewards(prev => ({
       ...prev,
@@ -78,6 +242,11 @@ const AddCommunityProgress = ({ navigation, route }) => {
   const handleSubmit = async () => {
     if (!year || !quarter || !title || !description || !goal || !imageUri) {
       return Alert.alert('Error', 'Please fill all required fields.');
+    }
+
+    // Double-check if quarter is disabled
+    if (isQuarterDisabled(quarter) && !isEditing) {
+      return Alert.alert('Error', 'This quarter is not available for creation.');
     }
 
     setLoading(true);
@@ -145,34 +314,48 @@ const AddCommunityProgress = ({ navigation, route }) => {
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40, paddingTop: 90 }}>
+      <ScrollView 
+        contentContainerStyle={{ padding: 20, paddingBottom: 40, paddingTop: 90 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
           <View style={{ flex: 0.58, marginRight: 10 }}>
             <Text style={styles.label}>Year</Text>
-            <TextInput
-              style={styles.input}
-              value={year}
-              onChangeText={setYear}
-              keyboardType="numeric"
-              placeholder="Enter year"
-              placeholderTextColor="#888"
-              editable={!isEditing}
-            />
+            <TouchableOpacity
+              style={styles.dropdownButton}
+              onPress={handleYearButtonPress}
+              disabled={isEditing}
+            >
+              <Text style={styles.dropdownButtonText}>{year}</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>Quarter</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {quarters.map(q => (
-                <TouchableOpacity
-                  key={q}
-                  style={[styles.quarterButton, quarter === q && styles.quarterSelected, { marginRight: 6, marginBottom: 6 }]}
-                  onPress={() => setQuarter(q)}
-                  disabled={isEditing}
-                >
-                  <Text style={quarter === q ? styles.quarterTextSelected : styles.quarterText}>{q}</Text>
-                </TouchableOpacity>
-              ))}
+              {quarters.map(q => {
+                const disabled = isQuarterDisabled(q);
+                return (
+                  <TouchableOpacity
+                    key={q}
+                    style={[
+                      styles.quarterButton, 
+                      quarter === q && styles.quarterSelected,
+                      disabled && styles.quarterDisabled,
+                      { marginRight: 6, marginBottom: 6 }
+                    ]}
+                    onPress={() => !disabled && setQuarter(q)}
+                    disabled={disabled}
+                  >
+                    <Text style={[
+                      quarter === q ? styles.quarterTextSelected : styles.quarterText,
+                      disabled && styles.quarterTextDisabled
+                    ]}>
+                      {q}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         </View>
@@ -192,7 +375,7 @@ const AddCommunityProgress = ({ navigation, route }) => {
           value={description} 
           onChangeText={setDescription} 
           multiline
-          placeholder="Describe the progress"
+          placeholder="Describe the community goal"
           placeholderTextColor="#888"
         />
 
@@ -249,6 +432,51 @@ const AddCommunityProgress = ({ navigation, route }) => {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Year Dropdown Modal */}
+      <Modal
+        visible={showYearDropdown}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowYearDropdown(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowYearDropdown(false)}
+        >
+          <View style={[styles.dropdownContainer, { 
+            position: 'absolute',
+            top: dropdownPosition.y,
+            left: dropdownPosition.x,
+            width: dropdownPosition.width || 100
+          }]}>
+            <ScrollView 
+              style={styles.dropdownScroll}
+              nestedScrollEnabled={true}
+              showsVerticalScrollIndicator={true}
+            >
+              {years.map(y => (
+                <TouchableOpacity
+                  key={y}
+                  style={[
+                    styles.option,
+                    year === y && styles.optionSelected
+                  ]}
+                  onPress={() => handleYearSelect(y)}
+                >
+                  <Text style={[
+                    styles.optionText,
+                    year === y && styles.optionTextSelected
+                  ]}>
+                    {y}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -276,10 +504,69 @@ const styles = StyleSheet.create({
   label: { color: '#CCCCCC', marginTop: 12, marginBottom: 6, fontWeight: '600' },
   input: { backgroundColor: '#1E1E1E', color: '#fff', borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 10 },
 
+  // Year Dropdown Styles - UPDATED TO MATCH CHART COMPONENT
+  dropdownButton: {
+    backgroundColor: '#2A2A2A',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  dropdownButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  // Modal Styles - UPDATED TO MATCH CHART COMPONENT
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  dropdownContainer: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    maxHeight: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  dropdownScroll: {
+    maxHeight: 200,
+  },
+  option: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomColor: '#333',
+    borderBottomWidth: 1,
+  },
+  optionSelected: {
+    backgroundColor: '#709775',
+  },
+  optionText: {
+    color: '#ccc',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  optionTextSelected: {
+    color: '#fff',
+  },
+
+  // Quarter Styles
   quarterButton: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: '#CCCCCC' },
   quarterSelected: { backgroundColor: '#415D43' },
+  quarterDisabled: { 
+    backgroundColor: '#2A2A2A', 
+    borderColor: '#666666',
+    opacity: 0.6,
+  },
   quarterText: { color: '#CCCCCC', fontWeight: '600' },
   quarterTextSelected: { color: '#fff', fontWeight: '700' },
+  quarterTextDisabled: { color: '#666666' },
 
   sectionHeader: { fontSize: 18, fontWeight: 'bold', color: '#CCCCCC', marginBottom: 12, marginTop: 20 },
 
