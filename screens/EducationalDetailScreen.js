@@ -4,18 +4,20 @@ import { useAuth } from '../context/AuthContext';
 import { getUserTerraCoins } from '../repositories/userRepository';
 import { incrementUserStat } from '../repositories/userStatsRepository';
 import firestore from '@react-native-firebase/firestore';
-import HeaderRow from '../components/HeaderRow'; // ✅ Import HeaderRow
+import HeaderRow from '../components/HeaderRow';
 
 const EducationalDetailScreen = ({ route, navigation }) => {
   const { content } = route.params; // content should have an "id"
   const { user } = useAuth();
   const [terraCoins, setTerraCoins] = useState(0);
   const [isRead, setIsRead] = useState(false);
+  const [hasTakenQuiz, setHasTakenQuiz] = useState(false); // ✅ new state
 
   useEffect(() => {
     if (user) {
       fetchTerraCoins();
-      checkIfRead(); // ✅ check read status from Firestore
+      checkIfRead();
+      checkIfQuizTaken(); // ✅ check if quiz has been answered
     }
   }, [user]);
 
@@ -30,11 +32,10 @@ const EducationalDetailScreen = ({ route, navigation }) => {
     }
   };
 
-  // ✅ Check Firestore if this content is already read
+  // ✅ Check if material already read
   const checkIfRead = async () => {
     try {
       if (!user?.uid || !content?.id) return;
-
       const docRef = firestore()
         .collection('users')
         .doc(user.uid)
@@ -42,7 +43,6 @@ const EducationalDetailScreen = ({ route, navigation }) => {
         .doc(content.id);
 
       const doc = await docRef.get();
-
       if (doc.exists) {
         const data = doc.data();
         setIsRead(!!data.read);
@@ -50,8 +50,30 @@ const EducationalDetailScreen = ({ route, navigation }) => {
         setIsRead(false);
       }
     } catch (error) {
-      console.log("⚠️ No existing read record (not an error):", error?.message);
+      console.log('⚠️ No existing read record (not an error):', error?.message);
       setIsRead(false);
+    }
+  };
+
+  // ✅ Check Firestore if quiz already answered
+  const checkIfQuizTaken = async () => {
+    try {
+      if (!user?.uid || !content?.id) return;
+
+      const quizAttemptsRef = firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('quiz_attempts');
+
+      const snapshot = await quizAttemptsRef
+        .where('contentId', '==', content.id)
+        .limit(1)
+        .get();
+
+      setHasTakenQuiz(!snapshot.empty);
+    } catch (error) {
+      console.error('Error checking quiz attempts:', error);
+      setHasTakenQuiz(false);
     }
   };
 
@@ -59,7 +81,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
     try {
       if (!user?.uid) return;
 
-      await incrementUserStat(user.uid, "educationalMaterialsRead");
+      await incrementUserStat(user.uid, 'educationalMaterialsRead');
 
       await firestore()
         .collection('users')
@@ -72,9 +94,9 @@ const EducationalDetailScreen = ({ route, navigation }) => {
         });
 
       setIsRead(true);
-      Alert.alert("Progress Saved", "Marked as read! 📘");
+      Alert.alert('Progress Saved', 'Marked as read! 📘');
     } catch (error) {
-      console.error("Error incrementing educationalMaterialsRead:", error);
+      console.error('Error incrementing educationalMaterialsRead:', error);
     }
   };
 
@@ -91,7 +113,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      {/* ✅ HeaderRow BELOW top bar, aligned with same padding as content */}
+      {/* ✅ HeaderRow BELOW top bar */}
       <View style={styles.headerContainer}>
         <HeaderRow
           title="Educational Material"
@@ -114,24 +136,32 @@ const EducationalDetailScreen = ({ route, navigation }) => {
             <TouchableOpacity
               style={[
                 styles.readButton,
-                isRead && { backgroundColor: '#888' }
+                isRead && { backgroundColor: '#888' },
               ]}
               onPress={handleMaterialRead}
               disabled={isRead}
             >
               <Text style={styles.quizButtonText}>
-                {isRead ? "Already Read" : "Mark as Read"}
+                {isRead ? 'Already Read' : 'Mark as Read'}
               </Text>
             </TouchableOpacity>
 
-            {/* ✅ Quiz button */}
+            {/* ✅ Quiz button (disabled if quiz taken) */}
             <TouchableOpacity
-              style={styles.quizButton}
+              style={[
+                styles.quizButton,
+                hasTakenQuiz && { backgroundColor: '#888' },
+              ]}
               onPress={() => {
-                navigation.navigate('EducationalQuizScreen', { content });
+                if (!hasTakenQuiz) {
+                  navigation.navigate('EducationalQuizScreen', { content });
+                }
               }}
+              disabled={hasTakenQuiz}
             >
-              <Text style={styles.quizButtonText}>Take the Quiz</Text>
+              <Text style={styles.quizButtonText}>
+                {hasTakenQuiz ? 'Quiz Completed' : 'Take the Quiz'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -139,7 +169,6 @@ const EducationalDetailScreen = ({ route, navigation }) => {
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -156,13 +185,13 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   headerContainer: {
-    paddingHorizontal: 16, // ✅ same as content
+    paddingHorizontal: 16,
     marginTop: 10,
     marginBottom: 10,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16, // ✅ consistent alignment
+    paddingHorizontal: 16,
   },
   coinBox: {
     flexDirection: 'row',
