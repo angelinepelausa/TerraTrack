@@ -5,7 +5,9 @@ import auth from '@react-native-firebase/auth';
 import { addUserRewards } from '../repositories/userRepository';
 import { hasAttemptedQuiz, saveQuizAttempt } from '../repositories/quizAttemptsRepository';
 import QuizResult from '../components/QuizResult';
-import HeaderRow from '../components/HeaderRow'; // <-- Imported HeaderRow
+import HeaderRow from '../components/HeaderRow';
+import { incrementWeeklyQuizFinished } from '../repositories/userStatsRepository';
+
 
 // ✅ Get Monday of current week (YYYY-MM-DD)
 const getMondayDate = () => {
@@ -89,6 +91,12 @@ const WeeklyQuizScreen = ({ navigation }) => {
         timeTaken: 0,
         type: "weekly"
       });
+
+      const userId = auth().currentUser?.uid;
+      if (userId) {
+        await incrementWeeklyQuizFinished(userId);
+      }
+      
     } catch (error) {
       console.error("Failed to save weekly quiz attempt:", error);
     }

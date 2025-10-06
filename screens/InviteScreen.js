@@ -7,7 +7,9 @@ import { referralRepository } from '../repositories/referralRepository';
 import { scale, vScale } from '../utils/scaling';
 import Toast from '../components/Toast';
 import HeaderRow from '../components/HeaderRow';
-import Ionicons from 'react-native-vector-icons/Ionicons'; // ✅ added import
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { getUserTotals } from '../repositories/userStatsRepository';
+
 
 const InviteScreen = ({ navigation }) => {
   const [referralCode, setReferralCode] = useState('');
@@ -47,18 +49,25 @@ const InviteScreen = ({ navigation }) => {
           .get();
 
         const invitesData = await Promise.all(invitesSnap.docs.map(async doc => {
-          const data = doc.data();
-          const userDoc = await firestore().collection('users').doc(doc.id).get();
-          const username = userDoc.exists ? userDoc.data().username : 'Unknown';
-          return {
-            id: doc.id,
-            username,
-            taskFinished: data.taskFinished || 0,
-            educationalQuizFinished: data.educationalQuizFinished || 0,
-            weeklyQuizFinished: data.weeklyQuizFinished || 0,
-            rewardsClaimed: data.rewardsClaimed || false
-          };
-        }));
+        const userId = doc.id; // referred user
+        const data = doc.data();
+
+        const userDoc = await firestore().collection('users').doc(userId).get();
+        const username = userDoc.exists ? userDoc.data().username : 'Unknown';
+
+        // ✅ Fetch actual totals from referee’s stats
+        const totals = await getUserTotals(userId);
+
+        return {
+          id: userId,
+          username,
+          taskFinished: totals.taskFinished,
+          educationalQuizFinished: totals.educationalQuizFinished,
+          weeklyQuizFinished: totals.weeklyQuizFinished,
+          rewardsClaimed: data.rewardsClaimed || false,
+        };
+      }));
+
 
         setInvites(invitesData);
       } catch (err) {
