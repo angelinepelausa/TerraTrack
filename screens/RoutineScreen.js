@@ -387,6 +387,10 @@ const RoutineScreen = () => {
       }
 
       const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const quarter = `Q${Math.floor(now.getMonth() / 3) + 1}`;
+      const year = now.getFullYear();
+      const docId = `${year}-${quarter}`;
 
       const tasksFinishedRef = firestore()
         .collection('users')
@@ -438,21 +442,31 @@ const RoutineScreen = () => {
           },
           { merge: true }
         );
+
+        // 🔥 ADD THIS: Save activity to community_activity subcollection
+        const activityId = `${user.uid}_${task.id}_${Date.now()}`;
+        const activityRef = firestore()
+          .collection('community_progress')
+          .doc(docId)
+          .collection('community_activity')
+          .doc(activityId);
+
+        batch.set(activityRef, {
+          id: activityId,
+          userId: user.uid,
+          username: user.displayName || 'Anonymous User', // Make sure you have user's display name
+          taskId: task.id,
+          taskTitle: task.title,
+          timestamp: firestore.FieldValue.serverTimestamp(),
+          pointsEarned: 10,
+          type: 'task_completed'
+        });
       }
 
-      await batch.commit();
-
-      await addUserRewards(user.uid, selectedTasks.length, selectedTasks.length * 10);
-      setTerraCoins((prev) => prev + selectedTasks.length);
-
-      const now = new Date();
-      const quarter = `Q${Math.floor(now.getMonth() / 3) + 1}`;
-      const year = now.getFullYear();
-      const docId = `${year}-${quarter}`;
-
+      // Update community progress (existing code)
       const communityRef = firestore().collection('community_progress').doc(docId);
-
-      await communityRef.set(
+      batch.set(
+        communityRef,
         {
           contributors: {
             [user.uid]: firestore.FieldValue.increment(selectedTasks.length),
@@ -461,6 +475,11 @@ const RoutineScreen = () => {
         },
         { merge: true }
       );
+
+      await batch.commit();
+
+      await addUserRewards(user.uid, selectedTasks.length, selectedTasks.length * 10);
+      setTerraCoins((prev) => prev + selectedTasks.length);
 
       await incrementTaskFinished(user.uid, selectedTasks.length);
 

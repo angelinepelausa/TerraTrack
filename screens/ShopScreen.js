@@ -14,6 +14,7 @@ import { avatarsRepository } from '../repositories/avatarsRepository';
 import { purchasesRepository } from '../repositories/purchasesRepository';
 import BuyAvatar from '../components/BuyAvatar';
 import HeaderRow from '../components/HeaderRow';
+import { useNavigation } from '@react-navigation/native'; // ADD THIS IMPORT
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = (width - 64) / 3;
@@ -21,6 +22,7 @@ const ITEM_MARGIN = 16;
 
 const ShopScreen = () => {
   const { user } = useAuth();
+  const navigation = useNavigation(); // ADD THIS HOOK
   const [terraCoins, setTerraCoins] = useState(0);
   const [allAvatars, setAllAvatars] = useState([]);
   const [purchasedIds, setPurchasedIds] = useState([]);
@@ -87,9 +89,6 @@ const ShopScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header Row with consistent horizontal padding */}
-      <HeaderRow title="Shop" />
-
       <View style={styles.topBar}>
         <View style={styles.coinBox}>
           <Image
@@ -100,9 +99,15 @@ const ShopScreen = () => {
         </View>
       </View>
 
-      <View style={styles.content}>
-        <Text style={styles.header}>Terra Shop</Text>
+      {/* Header Row BELOW the top bar - ADD onBackPress PROP */}
+      <View style={styles.headerContainer}>
+        <HeaderRow 
+          title="Terra Shop" 
+          onBackPress={() => navigation.goBack()} // ADD THIS
+        />
+      </View>
 
+      <View style={styles.content}>
         <View style={styles.avatarsHeader}>
           <Text style={styles.avatarsTitle}>Avatars</Text>
           <View style={styles.dropdownWrapper}>
@@ -216,7 +221,6 @@ const ShopScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
-  content: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
   topBar: {
     height: 90,
     backgroundColor: '#415D43',
@@ -226,6 +230,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     padding: 10,
   },
+  headerContainer: {
+    paddingHorizontal: 16,
+  },
+  content: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
   coinBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -241,13 +249,6 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   coinText: { color: '#131313', fontWeight: 'bold', fontSize: 12 },
-  header: {
-    color: '#CCCCCC',
-    fontSize: 20,
-    fontFamily: 'DMSans-Bold',
-    marginBottom: 12,
-    textAlign: 'left',
-  },
   avatarsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
