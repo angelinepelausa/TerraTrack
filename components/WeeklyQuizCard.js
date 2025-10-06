@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons'; // ✅ import Ionicons
 
 const CARD_HEIGHT = 120;
 const IMAGE_SIZE = 100;
@@ -26,8 +27,8 @@ const WeeklyQuizCard = ({ item, onDelete, onPress }) => {
         </View>
 
         {onDelete && (
-          <TouchableOpacity onPress={onDelete}>
-            <Text style={styles.deleteText}>Delete</Text>
+          <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
+            <Ionicons name="trash-outline" size={18} color="#ff4d4d" />
           </TouchableOpacity>
         )}
       </View>
@@ -66,7 +67,10 @@ const styles = StyleSheet.create({
   textContainer: { flex: 1, justifyContent: 'center' },
   title: { fontSize: 16, fontWeight: '700', color: '#fff', marginBottom: 4 },
   date: { fontSize: 14, color: '#aaa' },
-  deleteText: { color: '#ff4d4d', fontSize: 12, marginLeft: 8, fontWeight: '700' },
+  deleteButton: {
+    padding: 6,
+    marginLeft: 8,
+  },
 });
 
 export default WeeklyQuizCard;

@@ -15,14 +15,7 @@ export const validateSignUp = (formData) => {
     errors.username = 'Username must be at least 3 characters';
   }
 
-  // Philippine phone validation
-  if (!formData.phoneNumber) {
-    errors.phoneNumber = 'Phone number is required';
-  } else if (!/^(\+63|0)9\d{9}$/.test(formData.phoneNumber)) {
-    errors.phoneNumber = 'Invalid Philippine phone number';
-  }
-
-  // Password validation (merged requirement message)
+  // Password validation
   if (!formData.password) {
     errors.password = 'Password is required';
   } else if (
@@ -45,12 +38,12 @@ export const validateSignUp = (formData) => {
 };
 
 export const authErrorMessages = {
-  'auth/email-already-in-use': 'Email already registered',
-  'email-already-in-use': 'Email already registered',
-  'username-already-in-use': 'Username is already taken',
-  'auth/username-already-in-use': 'Username is already taken',
-  'auth/invalid-email': 'Invalid email address',
-  'auth/weak-password': 'Password must be stronger',
-  'auth/operation-not-allowed': 'Operation not allowed',
-  'permission-denied': 'Permission denied. Update your app',
+  'auth/email-already-in-use': 'This email is already registered.',
+  'auth/invalid-email': 'Invalid email address.',
+  'auth/operation-not-allowed': 'Email/password accounts are not enabled.',
+  'auth/weak-password': 'Password is too weak.',
+  'auth/user-not-found': 'No account found with this email.',
+  'auth/wrong-password': 'Incorrect password.',
+  'auth/too-many-requests': 'Too many attempts. Please try again later.',
+  'permission-denied': 'Permission denied. Please contact support.'
 };

@@ -124,7 +124,7 @@ const ProfileTab = ({
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Admin Actions</Text>
             <View style={styles.adminActions}>
-                {userDetails?.status === 'active' ? (
+                {userDetails?.status?.toLowerCase() === 'active' ? (
                     <>
                         <TouchableOpacity style={[styles.adminActionBtn, styles.suspendBtn]} onPress={onSuspendUser}>
                             <Text style={styles.adminActionBtnText}>Suspend User</Text>
@@ -683,10 +683,10 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
     suspendBtn: {
-        backgroundColor: "#F59E0B",
+        backgroundColor: "#db8e08ff",
     },
     banBtn: {
-        backgroundColor: "#DC2626",
+        backgroundColor: "#b41f1fff",
     },
     activateBtn: {
         backgroundColor: "#709775",
