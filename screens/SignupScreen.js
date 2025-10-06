@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons'; // 👁️ Import icons
+import Icon from 'react-native-vector-icons/Ionicons';
 import { scale, vScale } from '../utils/scaling';
 import { validateSignUp, authErrorMessages } from '../services/validationService';
 import { signUpWithEmail } from '../services/authService';
-import { createUserDocument } from '../repositories/userRepository';
 
 const SignUpScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -17,12 +16,16 @@ const SignUpScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // 👁️ States for toggling password visibility
+  // States for toggling password visibility
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleInputChange = (name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    if (errorMessages[name]) {
+      setErrorMessages(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleSignUp = async () => {
@@ -31,28 +34,33 @@ const SignUpScreen = ({ navigation }) => {
     if (!isValid) return;
 
     setLoading(true);
-    const { email, password, ...userData } = formData;
+    
+    // Extract only the data we need
+    const { email, password, username } = formData;
 
     try {
-      // 1️⃣ Create account in Firebase Auth
-      const { success: authSuccess, error: authError, code } = await signUpWithEmail(email, password, userData);
-      if (!authSuccess) {
+      // Create account in Firebase Auth and Firestore
+      const authResult = await signUpWithEmail(email, password, { username });
+      
+      if (!authResult.success) {
         let newErrors = {};
-        if (authErrorMessages[code]) {
-          if (code.includes('username')) newErrors.username = authErrorMessages[code];
-          else if (code.includes('email')) newErrors.email = authErrorMessages[code];
-          else newErrors.general = authErrorMessages[code];
-        } else newErrors.general = authError || 'Something went wrong';
-        setErrorMessages(prev => ({ ...prev, ...newErrors }));
+        if (authErrorMessages[authResult.code]) {
+          if (authResult.code.includes('email')) {
+            newErrors.email = authErrorMessages[authResult.code];
+          } else {
+            newErrors.general = authErrorMessages[authResult.code];
+          }
+        } else {
+          newErrors.general = authResult.error || 'Something went wrong';
+        }
+        setErrorMessages(newErrors);
         setLoading(false);
         return;
       }
 
-      // 2️⃣ Add user document in Firestore
-      const userId = authSuccess.user.uid;
-      const userDocResult = await createUserDocument({ ...userData, userId });
-      if (!userDocResult.success) {
-        setErrorMessages(prev => ({ ...prev, general: 'Failed to create user profile.' }));
+      // Verify that we have a user object with uid
+      if (!authResult.user || !authResult.user.uid) {
+        setErrorMessages({ general: 'Failed to create user account. Please try again.' });
         setLoading(false);
         return;
       }
@@ -60,7 +68,7 @@ const SignUpScreen = ({ navigation }) => {
       setShowSuccess(true);
     } catch (err) {
       console.error('Sign up error:', err);
-      setErrorMessages(prev => ({ ...prev, general: 'Something went wrong' }));
+      setErrorMessages({ general: 'Something went wrong during sign up.' });
     } finally {
       setLoading(false);
     }

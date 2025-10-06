@@ -42,30 +42,32 @@ const generateReferralCode = () => {
 // Create a new user document
 export const createUserDocument = async (userData) => {
   try {
+    // Validate required fields
+    if (!userData.userId || !userData.email || !userData.username) {
+      console.error('Missing required fields in createUserDocument:', userData);
+      return { success: false, error: 'Missing required user data' };
+    }
+
     const referralCode = generateReferralCode();
     const defaultAvatarId = "ZPbPGHol6O29uGaqxaum"; 
 
     await firestore()
       .collection("users")
       .doc(userData.userId)
-      .set(
-        {
-          email: userData.email,
-          phoneNumber: userData.phoneNumber,
-          username: userData.username,
-          terraCoins: 0,
-          terraPoints: 0,
-          referralCode: referralCode,
-          createdAt: firestore.FieldValue.serverTimestamp(),
-          status: "Active",
-          avatar: defaultAvatarId, 
-        },
-        { merge: true }
-      );
+      .set({
+        email: userData.email,
+        username: userData.username,
+        terraCoins: 0,
+        terraPoints: 0,
+        referralCode: referralCode,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        status: "Active",
+        avatar: defaultAvatarId, 
+      });
 
     return { success: true, referralCode };
   } catch (error) {
-    console.error("Firestore error:", error);
+    console.error("Firestore error in createUserDocument:", error);
     return { success: false, error: error.message, code: error.code };
   }
 };
