@@ -7,42 +7,60 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { getUserTerraCoins } from '../repositories/userRepository';
 import { avatarsRepository } from '../repositories/avatarsRepository';
 import { purchasesRepository } from '../repositories/purchasesRepository';
+import { voucherRepository } from '../repositories/voucherRepository';
 import BuyAvatar from '../components/BuyAvatar';
+import BuyVoucher from '../components/BuyVoucher';
 import HeaderRow from '../components/HeaderRow';
-import { useNavigation } from '@react-navigation/native'; // ADD THIS IMPORT
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = (width - 64) / 3;
 const ITEM_MARGIN = 16;
+const VOUCHER_WIDTH = (width - 48) / 2;
 
 const ShopScreen = () => {
   const { user } = useAuth();
-  const navigation = useNavigation(); // ADD THIS HOOK
+  const navigation = useNavigation();
   const [terraCoins, setTerraCoins] = useState(0);
   const [allAvatars, setAllAvatars] = useState([]);
   const [purchasedIds, setPurchasedIds] = useState([]);
   const [avatars, setAvatars] = useState([]);
-  const [filter, setFilter] = useState('available');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [allVouchers, setAllVouchers] = useState([]); 
+  const [filteredVouchers, setFilteredVouchers] = useState([]); 
+  const [userVouchers, setUserVouchers] = useState([]);
+  const [avatarFilter, setAvatarFilter] = useState('available');
+  const [voucherFilter, setVoucherFilter] = useState('available');
+  const [avatarDropdownOpen, setAvatarDropdownOpen] = useState(false);
+  const [voucherDropdownOpen, setVoucherDropdownOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [selectedAvatar, setSelectedAvatar] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
+  const [voucherModalVisible, setVoucherModalVisible] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchTerraCoins();
       fetchAvatarsAndPurchases();
+      fetchVouchers();
+      fetchUserVouchers();
     }
   }, [user]);
 
   useEffect(() => {
-    applyFilter();
-  }, [filter, allAvatars, purchasedIds]);
+    applyAvatarFilter();
+  }, [avatarFilter, allAvatars, purchasedIds]);
+
+  useEffect(() => {
+    applyVoucherFilter();
+  }, [voucherFilter, allVouchers, userVouchers]); // CHANGED: Use allVouchers instead of vouchers
 
   const fetchTerraCoins = async () => {
     try {
@@ -68,13 +86,58 @@ const ShopScreen = () => {
     }
   };
 
-  const applyFilter = () => {
-    if (filter === 'available') {
+  const fetchUserVouchers = async () => {
+    try {
+      const result = await purchasesRepository.getUserVouchers(user.uid);
+      const userVoucherList = result.list || [];
+      setUserVouchers(userVoucherList);
+    } catch (err) {
+      console.error('Error fetching user vouchers:', err);
+      setUserVouchers([]); 
+    }
+  };
+
+  const fetchVouchers = async () => {
+    try {
+      setLoading(true);
+      const voucherData = await voucherRepository.getAllVouchers();
+      
+      const vouchersWithLogos = await Promise.all(
+        voucherData.map(async (voucher) => {
+          try {
+            const partnerSnapshot = await voucherRepository.getAllPartners();
+            const partner = partnerSnapshot.find(p => p.id === voucher.partnerId);
+            return {
+              ...voucher,
+              partnerLogo: partner?.logoUrl || null
+            };
+          } catch (error) {
+            return voucher;
+          }
+        })
+      );
+      
+      const activeVouchers = vouchersWithLogos.filter(
+        voucher => voucher.status === 'active' && 
+        (voucher.availableQuantity > 0 || voucher.totalQuantity > 0)
+      );
+      
+      setAllVouchers(activeVouchers); // CHANGED: Set allVouchers instead of vouchers
+    } catch (err) {
+      console.error("Error fetching vouchers:", err);
+      Alert.alert("Error", "Failed to load vouchers");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyAvatarFilter = () => {
+    if (avatarFilter === 'available') {
       const available = allAvatars.filter(
         (a) => a.terracoin > 0 && !purchasedIds.includes(a.id)
       );
       setAvatars(available);
-    } else if (filter === 'owned') {
+    } else if (avatarFilter === 'owned') {
       const owned = allAvatars.filter(
         (a) => purchasedIds.includes(a.id) || a.terracoin === 0
       );
@@ -82,9 +145,120 @@ const ShopScreen = () => {
     }
   };
 
+  const applyVoucherFilter = () => {
+    if (voucherFilter === 'available') {
+      const userVoucherIds = userVouchers.map(v => v.id);
+      const available = allVouchers.filter(voucher => !userVoucherIds.includes(voucher.id));
+      setFilteredVouchers(available); // CHANGED: Set filteredVouchers instead of vouchers
+    } else if (voucherFilter === 'owned') {
+      setFilteredVouchers(userVouchers); // CHANGED: Set filteredVouchers instead of vouchers
+    }
+  };
+
   const handleAvatarPress = (avatar) => {
     setSelectedAvatar(avatar);
-    setModalVisible(true);
+    setAvatarModalVisible(true);
+  };
+
+  const handleVoucherPress = (voucher) => {
+    setSelectedVoucher(voucher);
+    setVoucherModalVisible(true);
+  };
+
+  const isVoucherClaimed = (voucherId) => {
+    const userVoucher = userVouchers.find(v => v.id === voucherId);
+    return userVoucher?.status === 'claimed';
+  };
+
+  const isVoucherPurchased = (voucherId) => {
+    return userVouchers.some(v => v.id === voucherId);
+  };
+
+  const renderAvatarItem = ({ item, index }) => (
+    <TouchableOpacity
+      style={[
+        styles.avatarBox,
+        {
+          width: ITEM_SIZE,
+          height: ITEM_SIZE + 80,
+          marginLeft: index === 0 ? 0 : 12,
+        },
+      ]}
+      onPress={() => handleAvatarPress(item)}
+      disabled={avatarFilter === 'owned'}
+    >
+      <Image
+        source={{ uri: item.imageurl }}
+        style={styles.avatarImage}
+      />
+      <Text style={styles.avatarName}>{item.name}</Text>
+      {avatarFilter === 'available' && (
+        <View style={styles.priceBox}>
+          <Image
+            source={require('../assets/images/TerraCoin.png')}
+            style={styles.priceCoin}
+          />
+          <Text style={styles.priceText}>{item.terracoin}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+
+  const renderVoucherItem = ({ item, index }) => {
+    const isClaimed = isVoucherClaimed(item.id);
+    const isPurchased = isVoucherPurchased(item.id);
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.voucherItem,
+          {
+            width: VOUCHER_WIDTH,
+            marginLeft: index === 0 ? 0 : 12,
+          },
+        ]}
+        onPress={() => handleVoucherPress(item)}
+        disabled={voucherFilter === 'owned' && isClaimed}
+      >
+        <View style={styles.voucherLogoContainer}>
+          {item.partnerLogo ? (
+            <Image source={{ uri: item.partnerLogo }} style={styles.voucherStoreLogo} />
+          ) : (
+            <View style={[styles.voucherStoreLogo, styles.voucherLogoPlaceholder]}>
+              <Text style={styles.storeIcon}>🏪</Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={styles.voucherStoreName} numberOfLines={1}>
+          {item.partnerName}
+        </Text>
+
+        <Text style={styles.voucherTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+
+        <View style={styles.voucherPriceBox}>
+          <Image
+            source={require('../assets/images/TerraCoin.png')}
+            style={styles.voucherPriceCoin}
+          />
+          <Text style={styles.voucherPriceText}>{item.terraCoinCost}</Text>
+        </View>
+
+        {isClaimed && (
+          <View style={styles.claimedOverlay}>
+            <Text style={styles.claimedText}>CLAIMED</Text>
+          </View>
+        )}
+
+        {isPurchased && !isClaimed && voucherFilter === 'owned' && (
+          <View style={styles.unclaimedBadge}>
+            <Text style={styles.unclaimedText}>UNCLAIMED</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -99,122 +273,166 @@ const ShopScreen = () => {
         </View>
       </View>
 
-      {/* Header Row BELOW the top bar - ADD onBackPress PROP */}
       <View style={styles.headerContainer}>
         <HeaderRow 
           title="Terra Shop" 
-          onBackPress={() => navigation.goBack()} // ADD THIS
+          onBackPress={() => navigation.goBack()}
         />
       </View>
 
       <View style={styles.content}>
-        <View style={styles.avatarsHeader}>
-          <Text style={styles.avatarsTitle}>Avatars</Text>
-          <View style={styles.dropdownWrapper}>
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => setDropdownOpen(!dropdownOpen)}
-            >
-              <Text style={styles.dropdownButtonText}>
-                {filter === 'available' ? 'Available' : 'Owned'}
-              </Text>
-            </TouchableOpacity>
-            {dropdownOpen && (
-              <View style={styles.dropdownOverlay}>
-                {['available', 'owned'].map((option) => (
-                  <TouchableOpacity
-                    key={option}
-                    style={[
-                      styles.option,
-                      {
-                        backgroundColor:
-                          filter === option ? '#709775' : 'transparent',
-                      },
-                    ]}
-                    onPress={() => {
-                      setFilter(option);
-                      setDropdownOpen(false);
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: filter === option ? '#fff' : '#ccc',
-                        fontSize: 13,
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Avatars</Text>
+            <View style={styles.dropdownWrapper}>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setAvatarDropdownOpen(!avatarDropdownOpen)}
+              >
+                <Text style={styles.dropdownButtonText}>
+                  {avatarFilter === 'available' ? 'Available' : 'Owned'}
+                </Text>
+              </TouchableOpacity>
+              {avatarDropdownOpen && (
+                <View style={styles.dropdownOverlay}>
+                  {['available', 'owned'].map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={[
+                        styles.option,
+                        {
+                          backgroundColor:
+                            avatarFilter === option ? '#709775' : 'transparent',
+                        },
+                      ]}
+                      onPress={() => {
+                        setAvatarFilter(option);
+                        setAvatarDropdownOpen(false);
                       }}
                     >
-                      {option === 'available' ? 'Available' : 'Owned'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+                      <Text
+                        style={{
+                          color: avatarFilter === option ? '#fff' : '#ccc',
+                          fontSize: 13,
+                        }}
+                      >
+                        {option === 'available' ? 'Available' : 'Owned'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
+
+          {avatars.length === 0 ? (
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyText}>
+                {avatarFilter === 'available'
+                  ? 'No avatars available'
+                  : 'No owned avatars yet'}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={avatars}
+              keyExtractor={(item) => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalListContent}
+              renderItem={renderAvatarItem}
+            />
+          )}
         </View>
 
-        {avatars.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyText}>
-              {filter === 'available'
-                ? 'No avatars available'
-                : 'No owned avatars yet'}
-            </Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Vouchers</Text>
+            <View style={styles.dropdownWrapper}>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setVoucherDropdownOpen(!voucherDropdownOpen)}
+              >
+                <Text style={styles.dropdownButtonText}>
+                  {voucherFilter === 'available' ? 'Available' : 'Owned'}
+                </Text>
+              </TouchableOpacity>
+              {voucherDropdownOpen && (
+                <View style={styles.dropdownOverlay}>
+                  {['available', 'owned'].map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={[
+                        styles.option,
+                        {
+                          backgroundColor:
+                            voucherFilter === option ? '#709775' : 'transparent',
+                        },
+                      ]}
+                      onPress={() => {
+                        setVoucherFilter(option);
+                        setVoucherDropdownOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: voucherFilter === option ? '#fff' : '#ccc',
+                          fontSize: 13,
+                        }}
+                      >
+                        {option === 'available' ? 'Available' : 'Owned'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
-        ) : (
-          <FlatList
-            data={avatars}
-            keyExtractor={(item) => item.id}
-            numColumns={3}
-            columnWrapperStyle={{
-              justifyContent:
-                avatars.length <= 2 ? 'flex-start' : 'space-between',
-              marginBottom: 24,
-            }}
-            contentContainerStyle={{ paddingBottom: 40 }}
-            renderItem={({ item, index }) => {
-              const isLastInRow = (index + 1) % 3 === 0;
-              return (
-                <TouchableOpacity
-                  style={[
-                    styles.avatarBox,
-                    {
-                      width: ITEM_SIZE,
-                      height: ITEM_SIZE + 80,
-                      marginRight: isLastInRow ? 0 : ITEM_MARGIN,
-                    },
-                  ]}
-                  onPress={() => handleAvatarPress(item)}
-                  disabled={filter === 'owned'}
-                >
-                  <Image
-                    source={{ uri: item.imageurl }}
-                    style={styles.avatarImage}
-                  />
-                  <Text style={styles.avatarName}>{item.name}</Text>
-                  {filter === 'available' && (
-                    <View style={styles.priceBox}>
-                      <Image
-                        source={require('../assets/images/TerraCoin.png')}
-                        style={styles.priceCoin}
-                      />
-                      <Text style={styles.priceText}>{item.terracoin}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            }}
-          />
-        )}
+          
+          {loading ? (
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyText}>Loading vouchers...</Text>
+            </View>
+          ) : filteredVouchers.length === 0 ? ( // CHANGED: Use filteredVouchers
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyText}>
+                {voucherFilter === 'available' ? 'No vouchers available' : 'No purchased vouchers yet'}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredVouchers} // CHANGED: Use filteredVouchers
+              keyExtractor={(item) => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalListContent}
+              renderItem={renderVoucherItem}
+            />
+          )}
+        </View>
       </View>
 
       <BuyAvatar
-        visible={modalVisible}
+        visible={avatarModalVisible}
         avatar={selectedAvatar}
-        onClose={() => setModalVisible(false)}
+        onClose={() => setAvatarModalVisible(false)}
         onPurchaseSuccess={() => {
           fetchTerraCoins();
           fetchAvatarsAndPurchases();
         }}
       />
+
+    <BuyVoucher
+      visible={voucherModalVisible}
+      voucher={selectedVoucher}
+      isPurchased={isVoucherPurchased(selectedVoucher?.id)}
+      onClose={() => setVoucherModalVisible(false)}
+      onPurchaseSuccess={() => {
+        fetchTerraCoins();
+        fetchVouchers();
+        fetchUserVouchers();
+      }}
+    />
     </View>
   );
 };
@@ -249,17 +467,26 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   coinText: { color: '#131313', fontWeight: 'bold', fontSize: 12 },
-  avatarsHeader: {
+  
+  section: {
+    marginBottom: 30,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  avatarsTitle: {
+  sectionTitle: {
     color: '#CCCCCC',
     fontSize: 18,
     fontFamily: 'DMSans-Bold',
   },
+  horizontalListContent: {
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+  },
+
   dropdownWrapper: {
     position: 'relative',
   },
@@ -295,6 +522,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#333',
     borderBottomWidth: 1,
   },
+
   avatarBox: {
     backgroundColor: '#CCCCCC',
     borderRadius: 14,
@@ -334,6 +562,105 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#131313',
   },
+
+  voucherItem: {
+    backgroundColor: '#CCCCCC',
+    borderRadius: 12,
+    overflow: "hidden",
+    alignItems: "center",
+    paddingBottom: 12,
+    position: "relative",
+    height: 200,
+  },
+  voucherLogoContainer: {
+    width: '100%',
+    height: 90,
+    marginBottom: 8,
+  },
+  voucherStoreLogo: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  voucherLogoPlaceholder: {
+    backgroundColor: "#DDDDDD",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  storeIcon: {
+    fontSize: 24,
+  },
+  voucherStoreName: {
+    color: "#709775",
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 4,
+    textAlign: "center",
+    width: "100%",
+    paddingHorizontal: 8,
+  },
+  voucherTitle: {
+    color: "#131313",
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 8,
+    width: "100%",
+    paddingHorizontal: 8,
+  },
+  voucherPriceBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#DDDDDD",
+    borderRadius: 30,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  voucherPriceCoin: {
+    width: 16,
+    height: 16,
+    marginRight: 5,
+    resizeMode: "contain",
+  },
+  voucherPriceText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#131313",
+  },
+
+  claimedOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  claimedText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'DMSans-Bold',
+  },
+  unclaimedBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FFA500',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  unclaimedText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+    fontFamily: 'DMSans-Bold',
+  },
+
   emptyBox: {
     alignItems: 'center',
     justifyContent: 'center',

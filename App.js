@@ -41,6 +41,8 @@ import AdminTaskLibrary from './screens/AdminTaskLibrary';
 import AddTask from './screens/AddTask';
 import AdminLeaderboard from './screens/AdminLeaderboard';
 import AdminBadgeAvatar from './screens/AdminBadgeAvatar';
+import AdminPartnersVoucher from './screens/AdminPartnersVoucher';
+import AddPartnersVoucher from './screens/AddPartnersVoucher';
 import AddAvatar from './screens/AddAvatar';
 import AdminCommunityProgress from './screens/AdminCommunityProgress';
 import SettingsScreen from './screens/SettingsScreen';
@@ -51,6 +53,8 @@ import AdminSupport from './screens/AdminSupport';
 import AdminPostDetailScreen from './screens/AdminPostDetailScreen';
 import AdminReferral from './screens/AdminReferral';
 import AddCommunityProgress from './screens/AddCommunityProgress';
+import PartnerDashboard from './screens/PartnerDashboard';
+import PartnerProfileSetup from './screens/PartnerProfileSetup';
 
 const Stack = createNativeStackNavigator();
 
@@ -168,6 +172,16 @@ const App = () => {
             component={AdminDashboard}
           />
           <Stack.Screen 
+            name="PartnerDashboard"
+            component={PartnerDashboard}
+            options={{ gestureEnabled: false }}
+          />
+          <Stack.Screen 
+            name="PartnerProfileSetup"
+            component={PartnerProfileSetup}
+            options={{ gestureEnabled: false }}
+          />
+          <Stack.Screen 
             name="AdminUserManagement"
             options={{ gestureEnabled: false }}
           >
@@ -216,6 +230,14 @@ const App = () => {
           <Stack.Screen 
             name="AdminBadgeAvatar"
             component={AdminBadgeAvatar}
+          />
+          <Stack.Screen 
+            name="AdminPartnersVoucher"
+            component={AdminPartnersVoucher}
+          />
+          <Stack.Screen 
+            name="AddPartnersVoucher"
+            component={AddPartnersVoucher}
           />
           <Stack.Screen
             name="AdminSettings"

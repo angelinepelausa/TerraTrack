@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { checkOnboardingStatus } from '../repositories/onboardingRepository';
 import { checkIfUserIsAdmin } from '../repositories/adminRepository';
+import { checkIfUserIsPartner, checkPartnerProfileComplete } from '../repositories/partnerRepository';
 import { scale, vScale } from '../utils/scaling';
 
 const LoginScreen = ({ navigation }) => {
@@ -15,19 +16,41 @@ const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    // Check if user was remembered
     const checkRememberedUser = async () => {
       const rememberedUid = await AsyncStorage.getItem('rememberedUser');
       const currentUser = auth().currentUser;
 
       if (rememberedUid && currentUser && currentUser.uid === rememberedUid) {
-        const isAdmin = await checkIfUserIsAdmin(currentUser.uid);
-        if (isAdmin) navigation.replace('AdminDashboard');
-        else navigation.replace('HomeScreen');
+        await handleUserRoleNavigation(currentUser.uid);
       }
     };
     checkRememberedUser();
   }, []);
+
+  const handleUserRoleNavigation = async (userId) => {
+    const [isAdmin, isPartner] = await Promise.all([
+      checkIfUserIsAdmin(userId),
+      checkIfUserIsPartner(userId)
+    ]);
+
+    if (isAdmin) {
+      navigation.replace('AdminDashboard');
+    } else if (isPartner) {
+      const isProfileComplete = await checkPartnerProfileComplete(userId);
+      if (isProfileComplete) {
+        navigation.replace('PartnerDashboard');
+      } else {
+        navigation.replace('PartnerProfileSetup');
+      }
+    } else {
+      const hasOnboarding = await checkOnboardingStatus(userId);
+      if (hasOnboarding) {
+        navigation.replace('HomeScreen');
+      } else {
+        navigation.replace('Onboarding');
+      }
+    }
+  };
 
   const handleRememberMe = (value) => {
     setRememberMe(value);
@@ -49,18 +72,7 @@ const LoginScreen = ({ navigation }) => {
         await AsyncStorage.removeItem('rememberedUser');
       }
 
-      const isAdmin = await checkIfUserIsAdmin(user.uid);
-
-      if (isAdmin) {
-        navigation.replace('AdminDashboard');
-      } else {
-        const hasOnboarding = await checkOnboardingStatus(user.uid);
-        if (hasOnboarding) {
-          navigation.replace('HomeScreen');
-        } else {
-          navigation.replace('Onboarding');
-        }
-      }
+      await handleUserRoleNavigation(user.uid);
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Something went wrong');
     } finally {
@@ -97,7 +109,6 @@ const LoginScreen = ({ navigation }) => {
           keyboardType="email-address"
         />
 
-        {/* Password with Eye Icon */}
         <View style={styles.passwordContainer}>
           <TextInput
             style={[styles.input, { flex: 1, marginBottom: 0 }]}
@@ -112,7 +123,6 @@ const LoginScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Remember Me */}
         <View style={styles.rememberMeContainer}>
           <Text style={styles.rememberMeText}>Remember Me</Text>
           <Switch

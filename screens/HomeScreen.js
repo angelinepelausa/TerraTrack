@@ -69,13 +69,11 @@ const HomeScreen = ({ navigation }) => {
     fetchData();
   }, [user]);
 
-    useEffect(() => {
-    if (!user?.uid) return;
-
-    if (!user.isAdmin) {
+  useEffect(() => {
+    if (user?.uid) {
       fetchTerraCoins();
       checkMonthlyFootprint();
-      checkSuspensionStatus();
+      checkSuspensionStatus(); // NEW FUNCTION CALL
     }
   }, [user?.uid]);
 
@@ -174,15 +172,16 @@ const HomeScreen = ({ navigation }) => {
       return;
     }
 
-    if (item.title === 'Read') {
-      navigation.navigate('EducationalScreen');
-    } else if (item.title === 'Weekly Quiz') {
-      navigation.navigate('WeeklyQuizScreen');
-    } else if (item.title === 'Invite') {
-      navigation.navigate('InviteScreen');
-    } else if (item.title === 'Achievements') {
-      navigation.navigate('AchievementsScreen');
-    }
+if (item.title === 'Read') {
+  navigation.getParent()?.navigate('EducationalScreen');
+} else if (item.title === 'Weekly Quiz') {
+  navigation.getParent()?.navigate('WeeklyQuizScreen');
+} else if (item.title === 'Invite') {
+  navigation.getParent()?.navigate('InviteScreen');
+} else if (item.title === 'Achievements') {
+  navigation.getParent()?.navigate('AchievementsScreen');
+}
+
   };
 
   const features = [

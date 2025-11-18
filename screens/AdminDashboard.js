@@ -1,8 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-
-const { width } = Dimensions.get("window");
+import { scale, vScale } from '../utils/scaling';
 
 const gridItems = [
   "User Management",
@@ -13,8 +12,9 @@ const gridItems = [
   "Badge and Avatar",
   "Leaderboard",
   "Referral",
-  "Settings",
   "Support",
+  "Partners",
+  "Settings",
 ];
 
 const AdminDashboard = () => {
@@ -52,6 +52,9 @@ const AdminDashboard = () => {
       case "Support":
         navigation.navigate("AdminSupport");
         break;
+      case "Partners":
+        navigation.navigate("AdminPartnersVoucher");
+        break;
       default:
         break;
     }
@@ -64,7 +67,10 @@ const AdminDashboard = () => {
         {gridItems.map((item, index) => (
           <TouchableOpacity
             key={index}
-            style={styles.gridItem}
+            style={[
+              styles.gridItem,
+              item === "Settings" && styles.fullWidthItem
+            ]}
             onPress={() => handlePress(item)}
           >
             <Text style={styles.gridText}>{item}</Text>
@@ -79,14 +85,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#131313", 
-    padding: 20,
-    paddingTop: 50,
+    padding: scale(20),
+    paddingTop: vScale(50),
   },
   header: {
-    fontSize: 22,
+    fontSize: scale(22),
     fontWeight: "bold",
     color: "#709775", 
-    marginBottom: 20,
+    marginBottom: vScale(20),
   },
   gridContainer: {
     flexDirection: "row",
@@ -94,17 +100,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   gridItem: {
-    width: (width - 60) / 2, 
-    height: 120,
+    width: scale(165), 
+    height: vScale(100),
     backgroundColor: "#1f1f1f", 
-    borderRadius: 25,
+    borderRadius: scale(25),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
+    marginBottom: vScale(15),
+  },
+  fullWidthItem: {
+    width: scale(350),
   },
   gridText: {
     color: "#ffffff", 
-    fontSize: 14,
+    fontSize: scale(14),
     fontWeight: "600",
     textAlign: "center",
   },
