@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 20,
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#131313',
     paddingBottom: 30,
     minHeight: 400,
   },
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   restContainer: {
-    backgroundColor: '#111D13',
+    backgroundColor: '#1F1F1F',
     borderRadius: 15,
     paddingHorizontal: 20,
     marginTop: 10,

@@ -11,6 +11,7 @@ const AchievementDetailScreen = ({ route, navigation }) => {
   const [nextBadge, setNextBadge] = useState(null);
   const [stats, setStats] = useState(null);
   const [allCategoryBadges, setAllCategoryBadges] = useState([]);
+  const [unlockedBadges, setUnlockedBadges] = useState({});
 
   useEffect(() => {
     fetchStatsAndNextBadge();
@@ -34,6 +35,10 @@ const AchievementDetailScreen = ({ route, navigation }) => {
             taskFinished: 0,
           };
       setStats(statsData);
+
+      // Get unlocked badges
+      const unlocked = await badgesRepository.getUnlockedBadgesForUser(user.uid);
+      setUnlockedBadges(unlocked);
 
       // Get all badges in the current badge's category, sorted by targetNumber
       const categoryBadges = await badgesRepository.getBadgesByCategorySorted(currentBadge.category);
@@ -69,12 +74,35 @@ const AchievementDetailScreen = ({ route, navigation }) => {
       : currentBadge.category.toLowerCase() === 'educational materials'
       ? stats.educationalMaterialsRead
       : 0;
-      
 
-  const progress = Math.min(userValue / currentBadge.targetNumber, 1);
-  const progressText = `${userValue}/${currentBadge.targetNumber}`;
+  const isCurrentBadgeClaimed = unlockedBadges[currentBadge.id];
+  
+  // FIX: Don't show surplus - cap at targetNumber for claimed badges
+  const displayValue = isCurrentBadgeClaimed ? currentBadge.targetNumber : Math.min(userValue, currentBadge.targetNumber);
+  const progress = Math.min(displayValue / currentBadge.targetNumber, 1);
+  const progressText = `${displayValue}/${currentBadge.targetNumber}`;
   const progressPercentage = Math.round(progress * 100);
-  const remainingForNext = nextBadge ? nextBadge.targetNumber - userValue : 0;
+
+  // FIX: Calculate remaining for next badge properly
+  let remainingForNext = 0;
+  let nextBadgeDisplayValue = userValue;
+  
+  if (nextBadge) {
+    const isNextBadgeClaimed = unlockedBadges[nextBadge.id];
+    
+    if (isNextBadgeClaimed) {
+      // If next badge is already claimed, show it as completed
+      nextBadgeDisplayValue = nextBadge.targetNumber;
+      remainingForNext = 0;
+    } else {
+      // If next badge is not claimed, calculate remaining properly
+      nextBadgeDisplayValue = Math.min(userValue, nextBadge.targetNumber);
+      remainingForNext = Math.max(nextBadge.targetNumber - userValue, 0);
+    }
+  }
+
+  const nextProgress = nextBadge ? Math.min(nextBadgeDisplayValue / nextBadge.targetNumber, 1) : 0;
+  const nextProgressText = nextBadge ? `${nextBadgeDisplayValue}/${nextBadge.targetNumber}` : '';
 
   return (
     <View style={styles.container}>
@@ -118,16 +146,21 @@ const AchievementDetailScreen = ({ route, navigation }) => {
                 </View>
               </View>
               
-              <View style={styles.targetContainer}>
-                <Text style={styles.targetLabel}>Goal to reach next tier:</Text>
-                <View style={styles.targetRow}>
-                  <Text style={styles.targetNumber}>{nextBadge.targetNumber}</Text>
-                  <Text style={styles.targetText}>{currentBadge.category}</Text>
+              <View style={styles.progressContainer}>
+                <View style={styles.progressHeader}>
+                  <Text style={styles.progressLabel}>Progress to Next Tier</Text>
+                  <Text style={styles.progressPercentage}>{Math.round(nextProgress * 100)}%</Text>
                 </View>
+                <View style={styles.progressBarContainer}>
+                  <View style={[styles.progressBar, { width: `${nextProgress * 100}%` }]} />
+                </View>
+                <Text style={styles.progressText}>{nextProgressText}</Text>
               </View>
               
               <Text style={styles.motivationText}>
-                {remainingForNext} more to go. You're making great progress toward your next achievement.
+                {remainingForNext > 0 
+                  ? `${remainingForNext} more to go. You're making great progress toward your next achievement.`
+                  : 'You have completed this tier! Claim your badge to continue.'}
               </Text>
             </View>
           </View>
@@ -162,7 +195,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
 
-  // Current Achievement Card
   currentCard: {
     backgroundColor: '#1E1E1E',
     borderRadius: 16,
@@ -238,7 +270,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Next Achievement Section
+
   nextSection: {
     marginBottom: 24,
   },
@@ -281,43 +313,16 @@ const styles = StyleSheet.create({
     color: '#709775',
     fontWeight: '600',
   },
-  targetContainer: {
-    backgroundColor: '#2C2C2C',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  targetLabel: {
-    fontSize: 14,
-    color: '#AAAAAA',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  targetRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-  },
-  targetNumber: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#709775',
-    marginRight: 6,
-  },
-  targetText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
   motivationText: {
     fontSize: 14,
     color: '#BBBBBB',
     textAlign: 'center',
     lineHeight: 20,
     fontStyle: 'italic',
+    marginTop: 12,
   },
 
-  // Max Tier Section
+
   maxTierSection: {
     backgroundColor: '#2A2A2A',
     borderRadius: 16,

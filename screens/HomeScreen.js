@@ -7,7 +7,7 @@ import ProgressBar from '../components/ProgressBar';
 import { scale, vScale } from '../utils/scaling';
 import { useAuth } from '../context/AuthContext';
 import firestore from '@react-native-firebase/firestore';
-import SuspensionPopup from '../components/SuspensionPopup'; // NEW IMPORT
+import SuspensionPopup from '../components/SuspensionPopup';
 
 const { width } = Dimensions.get('window');
 const PADDING = scale(20);
@@ -38,6 +38,7 @@ const HomeScreen = ({ navigation }) => {
   // NEW STATES FOR SUSPENSION POPUP
   const [showSuspensionPopup, setShowSuspensionPopup] = useState(false);
   const [userStatus, setUserStatus] = useState(null);
+  const [userData, setUserData] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -73,7 +74,7 @@ const HomeScreen = ({ navigation }) => {
     if (user?.uid) {
       fetchTerraCoins();
       checkMonthlyFootprint();
-      checkSuspensionStatus(); // NEW FUNCTION CALL
+      checkSuspensionStatus();
     }
   }, [user?.uid]);
 
@@ -94,10 +95,14 @@ const HomeScreen = ({ navigation }) => {
       const doc = await firestore().collection('users').doc(user.uid).get();
       if (doc.exists) {
         const userData = doc.data();
+        setUserData(userData);
         setUserStatus(userData.status);
         
-        // Show suspension popup if user is suspended, banned, or has a warning
-        if (userData.status === 'suspended' || userData.status === 'banned' || userData.suspendedCount === 1) {
+        // Show suspension popup if user is suspended or banned
+        if (userData.status === 'suspended' || userData.status === 'banned') {
+          setShowSuspensionPopup(true);
+        } else if (userData.suspendedCount === 1 && userData.status === 'active') {
+          // Show warning if status is active but has 1 suspension count
           setShowSuspensionPopup(true);
         }
       }
@@ -158,11 +163,6 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleCardPress = (item) => {
-    // NEW: Block app interaction if user is suspended or banned
-    if (userStatus === 'suspended' || userStatus === 'banned') {
-      return;
-    }
-
     if (item.attempted) {
       Alert.alert(
         'Quiz Completed',
@@ -172,16 +172,15 @@ const HomeScreen = ({ navigation }) => {
       return;
     }
 
-if (item.title === 'Read') {
-  navigation.getParent()?.navigate('EducationalScreen');
-} else if (item.title === 'Weekly Quiz') {
-  navigation.getParent()?.navigate('WeeklyQuizScreen');
-} else if (item.title === 'Invite') {
-  navigation.getParent()?.navigate('InviteScreen');
-} else if (item.title === 'Achievements') {
-  navigation.getParent()?.navigate('AchievementsScreen');
-}
-
+    if (item.title === 'Read') {
+      navigation.navigate('EducationalScreen');
+    } else if (item.title === 'Weekly Quiz') {
+      navigation.navigate('WeeklyQuizScreen');
+    } else if (item.title === 'Invite') {
+      navigation.navigate('InviteScreen');
+    } else if (item.title === 'Achievements') {
+      navigation.navigate('AchievementsScreen');
+    }
   };
 
   const features = [
@@ -223,122 +222,136 @@ if (item.title === 'Read') {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
-        <View style={styles.coinBox}>
-          <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
-          <Text style={styles.coinText}>{terraCoins}</Text>
-        </View>
-      </View>
-
-      <View style={styles.content}>
-        {error && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        <View style={styles.grid}>
-          {features.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.card, item.attempted && { backgroundColor: '#a7a7a7' }]}
-              onPress={() => handleCardPress(item)}
-            >
-              <View style={styles.cardTextArea}>
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
-              </View>
-              <Image source={item.image} style={styles.cardImage} />
-              <TouchableOpacity style={styles.earnButton}>
-                <Text style={styles.earnText}>Earn</Text>
-                <Image source={require('../assets/images/TerraCoin.png')} style={styles.earnCoin} />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <TouchableOpacity style={styles.shopBox} onPress={() => navigation.navigate('ShopScreen')}>
-          <Text style={styles.shopText}>
-            Buy exclusive avatars and rewards from our partners from the Terra Shop!
-          </Text>
-          <Image source={require('../assets/images/TerraShop.png')} style={styles.shopImage} />
-        </TouchableOpacity>
-
-        {communityProgress && (
-          <TouchableOpacity
-            style={styles.communityBox}
-            onPress={() => navigation.navigate('CommunityProgressScreen')}
-          >
-            <Text style={styles.communityHeader}>Community Progress</Text>
-            <Text style={styles.communityTitle}>Finish {communityProgress.goal} tasks</Text>
-            <View style={{ marginTop: vScale(8), width: '90%' }}>
-              <ProgressBar
-                progress={
-                  communityProgress.goal > 0
-                    ? (communityProgress.current / communityProgress.goal) * 100
-                    : 0
-                }
-              />
-            </View>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* 🔥 Monthly Carbon Footprint Popup */}
-      <Modal visible={showPopup} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>It's a New Month!</Text>
-            <Text style={styles.modalSubtitle}>
-              {lastMonthResult
-                ? 'See how your footprint compares to last month.'
-                : "Let's calculate your footprint to see where you stand."}
-            </Text>
-
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => {
-                setShowPopup(false);
-
-                // Normalize last month result
-                const normalizedLastMonth = lastMonthResult
-                  ? {
-                      totalAnnual: lastMonthResult.totalAnnual || 0,
-                      transportEmissionAnnual: lastMonthResult.transportEmissionAnnual || 0,
-                      electricityEmissionAnnual: lastMonthResult.electricityEmissionAnnual || 0,
-                      dietEmissionAnnual: lastMonthResult.dietEmissionAnnual || 0,
-                    }
-                  : null;
-
-                navigation.navigate('Calculator', {
-                  ...(normalizedLastMonth ? { compareWithLastMonth: normalizedLastMonth } : {}),
-                });
-              }}
-            >
-              <Text style={styles.modalButtonText}>Calculate Carbon Footprint</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* NEW: Suspension Popup */}
+      {/* SUSPENSION POPUP - BLOCKING MODAL */}
       <SuspensionPopup
         userId={user?.uid}
+        userData={userData}
         visible={showSuspensionPopup}
-        onClose={() => setShowSuspensionPopup(false)}
+        onClose={() => {
+          // Only allow closing for warnings, not for suspensions/bans
+          if (userStatus === 'active' && userData?.suspendedCount === 1) {
+            setShowSuspensionPopup(false);
+          }
+        }}
       />
+
+      {/* HOMESCREEN CONTENT - DISABLED WHEN SUSPENDED/BANNED */}
+      <View style={[
+        styles.contentContainer,
+        (userStatus === 'suspended' || userStatus === 'banned') && styles.disabledContent
+      ]}>
+        <View style={styles.topBar}>
+          <View style={styles.coinBox}>
+            <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
+            <Text style={styles.coinText}>{terraCoins}</Text>
+          </View>
+        </View>
+
+        <View style={styles.content}>
+          {error && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          <View style={styles.grid}>
+            {features.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[styles.card, item.attempted && { backgroundColor: '#a7a7a7' }]}
+                onPress={() => handleCardPress(item)}
+              >
+                <View style={styles.cardTextArea}>
+                  <Text style={styles.cardTitle}>{item.title}</Text>
+                  <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
+                </View>
+                <Image source={item.image} style={styles.cardImage} />
+                <TouchableOpacity style={styles.earnButton}>
+                  <Text style={styles.earnText}>Earn</Text>
+                  <Image source={require('../assets/images/TerraCoin.png')} style={styles.earnCoin} />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity style={styles.shopBox} onPress={() => navigation.navigate('ShopScreen')}>
+            <Text style={styles.shopText}>
+              Buy exclusive avatars and rewards from our partners from the Terra Shop!
+            </Text>
+            <Image source={require('../assets/images/TerraShop.png')} style={styles.shopImage} />
+          </TouchableOpacity>
+
+          {communityProgress && (
+            <TouchableOpacity
+              style={styles.communityBox}
+              onPress={() => navigation.navigate('CommunityProgressScreen')}
+            >
+              <Text style={styles.communityHeader}>Community Progress</Text>
+              <Text style={styles.communityTitle}>Finish {communityProgress.goal} tasks</Text>
+              <View style={{ marginTop: vScale(8), width: '90%' }}>
+                <ProgressBar
+                  progress={
+                    communityProgress.goal > 0
+                      ? (communityProgress.current / communityProgress.goal) * 100
+                      : 0
+                  }
+                />
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* 🔥 Monthly Carbon Footprint Popup */}
+        <Modal visible={showPopup} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>It's a New Month!</Text>
+              <Text style={styles.modalSubtitle}>
+                {lastMonthResult
+                  ? 'See how your footprint compares to last month.'
+                  : "Let's calculate your footprint to see where you stand."}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => {
+                  setShowPopup(false);
+
+                  // Normalize last month result
+                  const normalizedLastMonth = lastMonthResult
+                    ? {
+                        totalAnnual: lastMonthResult.totalAnnual || 0,
+                        transportEmissionAnnual: lastMonthResult.transportEmissionAnnual || 0,
+                        electricityEmissionAnnual: lastMonthResult.electricityEmissionAnnual || 0,
+                        dietEmissionAnnual: lastMonthResult.dietEmissionAnnual || 0,
+                      }
+                    : null;
+
+                  navigation.navigate('Calculator', {
+                    ...(normalizedLastMonth ? { compareWithLastMonth: normalizedLastMonth } : {}),
+                  });
+                }}
+              >
+                <Text style={styles.modalButtonText}>Calculate Carbon Footprint</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
+  contentContainer: { flex: 1 },
+  disabledContent: { opacity: 0.3 }, // Dim the content when suspended/banned
   loadingContainer: { justifyContent: 'center', alignItems: 'center' },
   errorBanner: { backgroundColor: 'red', padding: 10, borderRadius: 5, marginBottom: 10 },
   errorText: { color: '#fff', textAlign: 'center' },
 
   topBar: {
-    height: vScale(110),
+    height: vScale(90),
     backgroundColor: '#415D43',
     borderBottomLeftRadius: scale(20),
     borderBottomRightRadius: scale(20),

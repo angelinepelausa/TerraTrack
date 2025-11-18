@@ -157,10 +157,13 @@ const AchievementsScreen = ({ navigation }) => {
       userValue = 0;
     }
 
-    const progress = Math.min(userValue / item.targetNumber, 1);
-    const progressText = `${userValue}/${item.targetNumber}`;
-    const reachedGoal = userValue >= item.targetNumber;
     const isClaimed = unlockedBadges[item.id];
+    
+    // FIX: Don't show surplus - cap at targetNumber for claimed badges
+    const displayValue = isClaimed ? item.targetNumber : Math.min(userValue, item.targetNumber);
+    const progress = Math.min(displayValue / item.targetNumber, 1);
+    const progressText = `${displayValue}/${item.targetNumber}`;
+    const reachedGoal = userValue >= item.targetNumber;
 
     return (
       <TouchableOpacity

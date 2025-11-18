@@ -3,15 +3,8 @@ import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
 import firestore from '@react-native-firebase/firestore';
 
-const SuspensionPopup = ({ userId, visible, onClose }) => {
-  const [userData, setUserData] = useState(null);
+const SuspensionPopup = ({ userId, userData, visible, onClose }) => {
   const [timeRemaining, setTimeRemaining] = useState('');
-
-  useEffect(() => {
-    if (userId && visible) {
-      fetchUserData();
-    }
-  }, [userId, visible]);
 
   useEffect(() => {
     let interval;
@@ -20,17 +13,6 @@ const SuspensionPopup = ({ userId, visible, onClose }) => {
     }
     return () => clearInterval(interval);
   }, [userData]);
-
-  const fetchUserData = async () => {
-    try {
-      const doc = await firestore().collection('users').doc(userId).get();
-      if (doc.exists) {
-        setUserData(doc.data());
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    }
-  };
 
   const calculateTimeRemaining = () => {
     if (!userData?.suspensionEnd) return;
@@ -56,13 +38,12 @@ const SuspensionPopup = ({ userId, visible, onClose }) => {
 
   const { status, suspendedCount, suspensionReason } = userData;
 
-  // Warning Popup (suspendCount = 1)
   if (status === 'active' && suspendedCount === 1) {
     return (
       <Modal visible={visible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.warningTitle}>⚠️ Warning</Text>
+            <Text style={styles.warningTitle}>Warning</Text>
             <Text style={styles.modalText}>
               You have received a warning for violating our community guidelines.
             </Text>
@@ -79,21 +60,14 @@ const SuspensionPopup = ({ userId, visible, onClose }) => {
     );
   }
 
-  // Suspension Popup (suspendCount = 2-4)
-  if (status === 'suspended' && suspendedCount >= 2 && suspendedCount <= 4) {
-    const suspensionDurations = {
-      2: '1 day',
-      3: '7 days', 
-      4: '30 days'
-    };
-
+  if (status === 'suspended') {
     return (
       <Modal visible={visible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.suspendedTitle}>🚫 Account Suspended</Text>
+            <Text style={styles.suspendedTitle}>Account Suspended</Text>
             <Text style={styles.modalText}>
-              Your account has been suspended for {suspensionDurations[suspendedCount]}.
+              Your account has been suspended.
             </Text>
             <Text style={styles.reasonText}>Reason: {suspensionReason || 'Community Guidelines Violation'}</Text>
             <Text style={styles.timeRemainingText}>Time remaining: {timeRemaining}</Text>
@@ -106,13 +80,13 @@ const SuspensionPopup = ({ userId, visible, onClose }) => {
     );
   }
 
-  // Banned Popup (suspendCount >= 5)
-  if (status === 'banned' && suspendedCount >= 5) {
+  // Banned Popup (status = banned)
+  if (status === 'banned') {
     return (
       <Modal visible={visible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.bannedTitle}>🔴 Account Banned</Text>
+            <Text style={styles.bannedTitle}>Account Banned</Text>
             <Text style={styles.modalText}>
               Your account has been permanently banned from TerraTrack.
             </Text>
