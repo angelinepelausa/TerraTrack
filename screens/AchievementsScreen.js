@@ -51,13 +51,13 @@ const AchievementsScreen = ({ navigation }) => {
         .doc('stats')
         .get();
 
-      const statsData = statsDoc.exists
-        ? statsDoc.data()
-        : {
-            educationalMaterialsRead: 0,
-            weeklyQuizFinished: 0,
-            taskFinished: 0,
-          };
+      // 🌟 FIX: Always guarantee ALL fields exist
+      const statsData = {
+        educationalMaterialsRead: statsDoc.data()?.educationalMaterialsRead ?? 0,
+        weeklyQuizFinished: statsDoc.data()?.weeklyQuizFinished ?? 0,
+        taskFinished: statsDoc.data()?.taskFinished ?? 0,
+      };
+
       setStats(statsData);
 
       const badgesData = await badgesRepository.getAllBadges();
@@ -78,16 +78,15 @@ const AchievementsScreen = ({ navigation }) => {
       const claimedBadges = [];
 
       Object.keys(categories).forEach((cat) => {
-        // CORRECTED CATEGORY MAPPING
-        let userValue;
+        // 🌟 FIX: Safe lookup with fallback
+        let userValue = 0;
+
         if (cat === 'tasks') {
-          userValue = statsData.taskFinished;
+          userValue = statsData.taskFinished ?? 0;
         } else if (cat === 'weekly quiz') {
-          userValue = statsData.weeklyQuizFinished;
+          userValue = statsData.weeklyQuizFinished ?? 0;
         } else if (cat === 'educational materials') {
-          userValue = statsData.educationalMaterialsRead;
-        } else {
-          userValue = 0; // fallback
+          userValue = statsData.educationalMaterialsRead ?? 0;
         }
 
         const categoryBadges = categories[cat];
@@ -102,7 +101,6 @@ const AchievementsScreen = ({ navigation }) => {
         if (currentBadge) currentTierBadges.push({ ...currentBadge, category: cat });
       });
 
-      // Show current tier badges first, claimed badges at bottom
       setBadges([...currentTierBadges, ...claimedBadges]);
     } catch (error) {
       console.error('Error loading achievements:', error);
@@ -135,7 +133,6 @@ const AchievementsScreen = ({ navigation }) => {
         }),
       ]).start();
 
-      // Refresh badges after claiming
       await loadAchievements();
     } catch (err) {
       console.error('Error claiming badge:', err);
@@ -145,21 +142,18 @@ const AchievementsScreen = ({ navigation }) => {
   const renderAchievement = ({ item }) => {
     if (!stats) return null;
 
-    // CORRECTED CATEGORY MAPPING (same as above)
-    let userValue;
+    // 🌟 FIXED: Guaranteed safe category mapping
+    let userValue = 0;
     if (item.category === 'tasks') {
-      userValue = stats.taskFinished;
+      userValue = stats.taskFinished ?? 0;
     } else if (item.category === 'weekly quiz') {
-      userValue = stats.weeklyQuizFinished;
+      userValue = stats.weeklyQuizFinished ?? 0;
     } else if (item.category === 'educational materials') {
-      userValue = stats.educationalMaterialsRead;
-    } else {
-      userValue = 0;
+      userValue = stats.educationalMaterialsRead ?? 0;
     }
 
     const isClaimed = unlockedBadges[item.id];
-    
-    // FIX: Don't show surplus - cap at targetNumber for claimed badges
+
     const displayValue = isClaimed ? item.targetNumber : Math.min(userValue, item.targetNumber);
     const progress = Math.min(displayValue / item.targetNumber, 1);
     const progressText = `${displayValue}/${item.targetNumber}`;
@@ -179,6 +173,7 @@ const AchievementsScreen = ({ navigation }) => {
             <View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
             <Text style={styles.progressText}>{progressText}</Text>
           </View>
+
           {reachedGoal && !isClaimed && (
             <TouchableOpacity
               style={styles.claimButton}
@@ -190,6 +185,7 @@ const AchievementsScreen = ({ navigation }) => {
               <Text style={styles.claimButtonText}>Claim Badge</Text>
             </TouchableOpacity>
           )}
+
           {isClaimed && (
             <View style={styles.claimedContainer}>
               <Ionicons name="checkmark-circle" size={20} color="#415D43" />
@@ -222,7 +218,6 @@ const AchievementsScreen = ({ navigation }) => {
         contentContainerStyle={styles.listContainer}
       />
 
-      {/* Premium Congrats Modal */}
       {showCongratsModal && claimedBadge && (
         <Modal transparent animationType="fade" visible={showCongratsModal}>
           <View style={styles.modalOverlay}>
@@ -233,9 +228,11 @@ const AchievementsScreen = ({ navigation }) => {
               ]}
             >
               <Image source={{ uri: claimedBadge.imageurl }} style={styles.modalBadgeImage} />
+
               <Text style={styles.modalTitle}>Congratulations!</Text>
               <Text style={styles.modalBadgeName}>{claimedBadge.name}</Text>
               <Text style={styles.modalMessage}>You have unlocked a new badge.</Text>
+
               <TouchableOpacity
                 style={styles.modalButton}
                 onPress={() => setShowCongratsModal(false)}
@@ -274,7 +271,6 @@ const styles = StyleSheet.create({
   claimedContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   claimedText: { marginLeft: 6, color: '#415D43', fontWeight: 'bold' },
 
-  // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContainer: { width: '80%', backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 },
   modalBadgeImage: { width: 100, height: 100, marginBottom: 16, resizeMode: 'contain' },

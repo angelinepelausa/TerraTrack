@@ -6,13 +6,20 @@ export const checkIfUserIsPartner = async (userId) => {
       .collection('partners')
       .doc(userId)
       .get();
-    
-    return partnerDoc.exists && partnerDoc.data().status === 'active';
+
+    if (!partnerDoc.exists) {
+      return false; // Not a partner (admin or normal user)
+    }
+
+    const data = partnerDoc.data() || {};
+
+    return data.status === 'active';
   } catch (error) {
     console.error('Error checking partner status:', error);
     return false;
   }
 };
+
 
 export const getPartnerData = async (partnerId) => {
   try {

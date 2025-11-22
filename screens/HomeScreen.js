@@ -288,7 +288,7 @@ const HomeScreen = ({ navigation }) => {
             >
               <Text style={styles.communityHeader}>Community Progress</Text>
               <Text style={styles.communityTitle}>Finish {communityProgress.goal} tasks</Text>
-              <View style={{ marginTop: vScale(8), width: '90%' }}>
+              <View style={{ marginTop: vScale(8), alignItems: 'center', width: '100%' }}>
                 <ProgressBar
                   progress={
                     communityProgress.goal > 0

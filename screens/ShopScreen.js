@@ -18,6 +18,7 @@ import BuyAvatar from '../components/BuyAvatar';
 import BuyVoucher from '../components/BuyVoucher';
 import HeaderRow from '../components/HeaderRow';
 import { useNavigation } from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = (width - 64) / 3;
@@ -60,7 +61,7 @@ const ShopScreen = () => {
 
   useEffect(() => {
     applyVoucherFilter();
-  }, [voucherFilter, allVouchers, userVouchers]); // CHANGED: Use allVouchers instead of vouchers
+  }, [voucherFilter, allVouchers, userVouchers]);
 
   const fetchTerraCoins = async () => {
     try {
@@ -122,7 +123,7 @@ const ShopScreen = () => {
         (voucher.availableQuantity > 0 || voucher.totalQuantity > 0)
       );
       
-      setAllVouchers(activeVouchers); // CHANGED: Set allVouchers instead of vouchers
+      setAllVouchers(activeVouchers);
     } catch (err) {
       console.error("Error fetching vouchers:", err);
       Alert.alert("Error", "Failed to load vouchers");
@@ -149,9 +150,9 @@ const ShopScreen = () => {
     if (voucherFilter === 'available') {
       const userVoucherIds = userVouchers.map(v => v.id);
       const available = allVouchers.filter(voucher => !userVoucherIds.includes(voucher.id));
-      setFilteredVouchers(available); // CHANGED: Set filteredVouchers instead of vouchers
+      setFilteredVouchers(available);
     } else if (voucherFilter === 'owned') {
-      setFilteredVouchers(userVouchers); // CHANGED: Set filteredVouchers instead of vouchers
+      setFilteredVouchers(userVouchers);
     }
   };
 
@@ -289,9 +290,17 @@ const ShopScreen = () => {
                 style={styles.dropdownButton}
                 onPress={() => setAvatarDropdownOpen(!avatarDropdownOpen)}
               >
-                <Text style={styles.dropdownButtonText}>
-                  {avatarFilter === 'available' ? 'Available' : 'Owned'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.dropdownButtonText}>
+                    {avatarFilter === 'available' ? 'Available' : 'Owned'}
+                  </Text>
+                  <Ionicons
+                    name={avatarDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color="#fff"
+                    style={{ marginLeft: 6 }}
+                  />
+                </View>
               </TouchableOpacity>
               {avatarDropdownOpen && (
                 <View style={styles.dropdownOverlay}>
@@ -353,9 +362,17 @@ const ShopScreen = () => {
                 style={styles.dropdownButton}
                 onPress={() => setVoucherDropdownOpen(!voucherDropdownOpen)}
               >
-                <Text style={styles.dropdownButtonText}>
-                  {voucherFilter === 'available' ? 'Available' : 'Owned'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.dropdownButtonText}>
+                    {voucherFilter === 'available' ? 'Available' : 'Owned'}
+                  </Text>
+                  <Ionicons
+                    name={voucherDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color="#fff"
+                    style={{ marginLeft: 6 }}
+                  />
+                </View>
               </TouchableOpacity>
               {voucherDropdownOpen && (
                 <View style={styles.dropdownOverlay}>
@@ -388,12 +405,12 @@ const ShopScreen = () => {
               )}
             </View>
           </View>
-          
+
           {loading ? (
             <View style={styles.emptyBox}>
               <Text style={styles.emptyText}>Loading vouchers...</Text>
             </View>
-          ) : filteredVouchers.length === 0 ? ( // CHANGED: Use filteredVouchers
+          ) : filteredVouchers.length === 0 ? (
             <View style={styles.emptyBox}>
               <Text style={styles.emptyText}>
                 {voucherFilter === 'available' ? 'No vouchers available' : 'No purchased vouchers yet'}
@@ -401,7 +418,7 @@ const ShopScreen = () => {
             </View>
           ) : (
             <FlatList
-              data={filteredVouchers} // CHANGED: Use filteredVouchers
+              data={filteredVouchers}
               keyExtractor={(item) => item.id}
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -422,21 +439,22 @@ const ShopScreen = () => {
         }}
       />
 
-    <BuyVoucher
-      visible={voucherModalVisible}
-      voucher={selectedVoucher}
-      isPurchased={isVoucherPurchased(selectedVoucher?.id)}
-      onClose={() => setVoucherModalVisible(false)}
-      onPurchaseSuccess={() => {
-        fetchTerraCoins();
-        fetchVouchers();
-        fetchUserVouchers();
-      }}
-    />
+      <BuyVoucher
+        visible={voucherModalVisible}
+        voucher={selectedVoucher}
+        isPurchased={isVoucherPurchased(selectedVoucher?.id)}
+        onClose={() => setVoucherModalVisible(false)}
+        onPurchaseSuccess={() => {
+          fetchTerraCoins();
+          fetchVouchers();
+          fetchUserVouchers();
+        }}
+      />
     </View>
   );
 };
 
+// --- Styles remain unchanged ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
   topBar: {
@@ -448,9 +466,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     padding: 10,
   },
-  headerContainer: {
-    paddingHorizontal: 16,
-  },
+  headerContainer: { paddingHorizontal: 16 },
   content: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
   coinBox: {
     flexDirection: 'row',
@@ -460,47 +476,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
   },
-  coinImage: {
-    width: 20,
-    height: 20,
-    marginRight: 6,
-    resizeMode: 'contain',
-  },
+  coinImage: { width: 20, height: 20, marginRight: 6, resizeMode: 'contain' },
   coinText: { color: '#131313', fontWeight: 'bold', fontSize: 12 },
-  
-  section: {
-    marginBottom: 30,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: '#CCCCCC',
-    fontSize: 18,
-    fontFamily: 'DMSans-Bold',
-  },
-  horizontalListContent: {
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-  },
-
-  dropdownWrapper: {
-    position: 'relative',
-  },
-  dropdownButton: {
-    backgroundColor: '#2A2A2A',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  dropdownButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '500',
-  },
+  section: { marginBottom: 30 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  sectionTitle: { color: '#CCCCCC', fontSize: 18, fontFamily: 'DMSans-Bold' },
+  horizontalListContent: { paddingHorizontal: 4, paddingVertical: 8 },
+  dropdownWrapper: { position: 'relative' },
+  dropdownButton: { backgroundColor: '#2A2A2A', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 },
+  dropdownButtonText: { color: '#fff', fontSize: 13, fontWeight: '500' },
   dropdownOverlay: {
     position: 'absolute',
     top: 35,
@@ -516,161 +500,29 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-  option: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomColor: '#333',
-    borderBottomWidth: 1,
-  },
-
-  avatarBox: {
-    backgroundColor: '#CCCCCC',
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
-  },
-  avatarImage: {
-    width: '80%',
-    height: '60%',
-    resizeMode: 'contain',
-    marginBottom: 8,
-  },
-  avatarName: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#131313',
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  priceBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#DDDDDD',
-    borderRadius: 30,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  priceCoin: {
-    width: 16,
-    height: 16,
-    marginRight: 5,
-    resizeMode: 'contain',
-  },
-  priceText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#131313',
-  },
-
-  voucherItem: {
-    backgroundColor: '#CCCCCC',
-    borderRadius: 12,
-    overflow: "hidden",
-    alignItems: "center",
-    paddingBottom: 12,
-    position: "relative",
-    height: 200,
-  },
-  voucherLogoContainer: {
-    width: '100%',
-    height: 90,
-    marginBottom: 8,
-  },
-  voucherStoreLogo: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  voucherLogoPlaceholder: {
-    backgroundColor: "#DDDDDD",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  storeIcon: {
-    fontSize: 24,
-  },
-  voucherStoreName: {
-    color: "#709775",
-    fontSize: 12,
-    fontWeight: "600",
-    marginBottom: 4,
-    textAlign: "center",
-    width: "100%",
-    paddingHorizontal: 8,
-  },
-  voucherTitle: {
-    color: "#131313",
-    fontSize: 14,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 8,
-    width: "100%",
-    paddingHorizontal: 8,
-  },
-  voucherPriceBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#DDDDDD",
-    borderRadius: 30,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  voucherPriceCoin: {
-    width: 16,
-    height: 16,
-    marginRight: 5,
-    resizeMode: "contain",
-  },
-  voucherPriceText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#131313",
-  },
-
-  claimedOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 12,
-  },
-  claimedText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'DMSans-Bold',
-  },
-  unclaimedBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#FFA500',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  unclaimedText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-    fontFamily: 'DMSans-Bold',
-  },
-
-  emptyBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    color: '#999999',
-    fontSize: 16,
-    fontFamily: 'DMSans-Regular',
-  },
+  option: { paddingVertical: 10, paddingHorizontal: 12, borderBottomColor: '#333', borderBottomWidth: 1 },
+  avatarBox: { backgroundColor: '#CCCCCC', borderRadius: 14, alignItems: 'center', justifyContent: 'center', padding: 10 },
+  avatarImage: { width: '80%', height: '60%', resizeMode: 'contain', marginBottom: 8 },
+  avatarName: { fontSize: 13, fontWeight: 'bold', color: '#131313', marginBottom: 6, textAlign: 'center' },
+  priceBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#DDDDDD', borderRadius: 30, paddingHorizontal: 10, paddingVertical: 3 },
+  priceCoin: { width: 16, height: 16, marginRight: 5, resizeMode: 'contain' },
+  priceText: { fontSize: 12, fontWeight: 'bold', color: '#131313' },
+  voucherItem: { backgroundColor: '#CCCCCC', borderRadius: 12, overflow: "hidden", alignItems: "center", paddingBottom: 12, position: "relative", height: 200 },
+  voucherLogoContainer: { width: '100%', height: 90, marginBottom: 8 },
+  voucherStoreLogo: { width: "100%", height: "100%", resizeMode: "cover" },
+  voucherLogoPlaceholder: { backgroundColor: "#DDDDDD", justifyContent: "center", alignItems: "center" },
+  storeIcon: { fontSize: 24 },
+  voucherStoreName: { color: "#709775", fontSize: 12, fontWeight: "600", marginBottom: 4, textAlign: "center", width: "100%", paddingHorizontal: 8 },
+  voucherTitle: { color: "#131313", fontSize: 14, fontWeight: "bold", textAlign: "center", marginBottom: 8, width: "100%", paddingHorizontal: 8 },
+  voucherPriceBox: { flexDirection: "row", alignItems: "center", backgroundColor: "#DDDDDD", borderRadius: 30, paddingHorizontal: 10, paddingVertical: 3 },
+  voucherPriceCoin: { width: 16, height: 16, marginRight: 5, resizeMode: "contain" },
+  voucherPriceText: { fontSize: 12, fontWeight: "bold", color: "#131313" },
+  claimedOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center', borderRadius: 12 },
+  claimedText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', fontFamily: 'DMSans-Bold' },
+  unclaimedBadge: { position: 'absolute', top: 8, right: 8, backgroundColor: '#FFA500', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  unclaimedText: { color: '#FFFFFF', fontSize: 10, fontWeight: 'bold', fontFamily: 'DMSans-Bold' },
+  emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
+  emptyText: { color: '#999999', fontSize: 16, fontFamily: 'DMSans-Regular' },
 });
 
 export default ShopScreen;
