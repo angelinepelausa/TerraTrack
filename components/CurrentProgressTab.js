@@ -16,6 +16,12 @@ const CurrentProgressTab = ({ progressData, userContribution, recentActivity, ge
 
   const { title, description, current, goal, image } = progressData;
   const progressPercentage = goal > 0 ? (current / goal) * 100 : 0;
+  
+  // Helper function for proper pluralization
+  const pluralize = (count, singular, plural) => {
+    return count === 1 ? singular : plural;
+  };
+
   return (
     <View style={styles.section}>
       <View style={styles.rowHeader}>
@@ -27,7 +33,7 @@ const CurrentProgressTab = ({ progressData, userContribution, recentActivity, ge
 
       <View style={styles.infoCard}>
         <Text style={styles.progressTitle}>
-          Finish {current} / {goal} tasks
+          Finish {current} / {goal} {pluralize(goal, "task", "tasks")}
         </Text>
         <View style={{ marginTop: vScale(8), width: "90%", alignSelf: "center" }}>
           <ProgressBar
@@ -42,7 +48,7 @@ const CurrentProgressTab = ({ progressData, userContribution, recentActivity, ge
         </View>
         <View style={{ marginTop: vScale(12) }}>
           <Text style={{ fontWeight: "bold", color: "#415D43", alignSelf: "center" }}>
-            Your Contribution: {userContribution} task(s)
+            Your Contribution: {userContribution} {pluralize(userContribution, "task", "tasks")}
           </Text>
         </View>
       </View>

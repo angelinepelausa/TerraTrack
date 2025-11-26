@@ -1,25 +1,56 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { getUserTerraCoins } from '../repositories/userRepository';
 import { incrementUserStat } from '../repositories/userStatsRepository';
 import firestore from '@react-native-firebase/firestore';
 import HeaderRow from '../components/HeaderRow';
+import ConfirmationPopup from '../components/ConfirmationPopup';
 
 const EducationalDetailScreen = ({ route, navigation }) => {
   const { content } = route.params; // content should have an "id"
   const { user } = useAuth();
   const [terraCoins, setTerraCoins] = useState(0);
   const [isRead, setIsRead] = useState(false);
-  const [hasTakenQuiz, setHasTakenQuiz] = useState(false); // new state
+  const [hasTakenQuiz, setHasTakenQuiz] = useState(false);
+
+  // 🆕 SEPARATE POPUP STATES FOR DIFFERENT MESSAGES
+  const [showInfoPopup, setShowInfoPopup] = useState(false);
+  const [showQuizConfirmation, setShowQuizConfirmation] = useState(false);
+  const [popupConfig, setPopupConfig] = useState({
+    title: '',
+    message: '',
+    type: 'success'
+  });
 
   useEffect(() => {
     if (user) {
       fetchTerraCoins();
       checkIfRead();
-      checkIfQuizTaken(); // check if quiz has been answered
+      checkIfQuizTaken();
     }
   }, [user]);
+
+  // 🆕 SINGLE POPUP FUNCTION FOR INFO MESSAGES
+  const showMessage = (title, message, type = 'success') => {
+    setPopupConfig({
+      title,
+      message,
+      type
+    });
+    setShowInfoPopup(true);
+  };
+
+  // 🆕 FUNCTION TO SHOW QUIZ CONFIRMATION
+  const showQuizConfirmationPopup = () => {
+    setShowQuizConfirmation(true);
+  };
+
+  // 🆕 FUNCTION TO NAVIGATE TO QUIZ
+  const navigateToQuiz = () => {
+    setShowQuizConfirmation(false);
+    navigation.navigate('EducationalQuizScreen', { content });
+  };
 
   const fetchTerraCoins = async () => {
     try {
@@ -29,6 +60,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error('Error fetching TerraCoins:', error);
+      showMessage('Error', 'Failed to load your Terra Coins balance.', 'error');
     }
   };
 
@@ -94,10 +126,36 @@ const EducationalDetailScreen = ({ route, navigation }) => {
         });
 
       setIsRead(true);
-      Alert.alert('Progress Saved', 'Marked as read!');
+      // 🆕 USE CUSTOM POPUP INSTEAD OF ALERT
+      showMessage('Progress Saved', 'Material marked as read! You can now take the quiz.');
     } catch (error) {
       console.error('Error incrementing educationalMaterialsRead:', error);
+      showMessage('Error', 'Failed to mark as read. Please try again.', 'error');
     }
+  };
+
+  // 🆕 UPDATED HANDLE QUIZ PRESS WITH CONFIRMATION
+  const handleQuizPress = () => {
+    if (!isRead) {
+      showMessage(
+        'Read First', 
+        'Please mark the material as read before taking the quiz.',
+        'error'
+      );
+      return;
+    }
+
+    if (hasTakenQuiz) {
+      showMessage(
+        'Quiz Completed', 
+        'You have already completed this quiz. Great job!',
+        'success'
+      );
+      return;
+    }
+
+    // Show confirmation popup before proceeding to quiz
+    showQuizConfirmationPopup();
   };
 
   return (
@@ -152,11 +210,7 @@ const EducationalDetailScreen = ({ route, navigation }) => {
                 styles.quizButton,
                 hasTakenQuiz && { backgroundColor: '#888' },
               ]}
-              onPress={() => {
-                if (!hasTakenQuiz) {
-                  navigation.navigate('EducationalQuizScreen', { content });
-                }
-              }}
+              onPress={handleQuizPress}
               disabled={hasTakenQuiz}
             >
               <Text style={styles.quizButtonText}>
@@ -166,6 +220,29 @@ const EducationalDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
       </View>
+
+      {/* 🆕 INFO MESSAGES POPUP */}
+      <ConfirmationPopup
+        visible={showInfoPopup}
+        title={popupConfig.title}
+        message={popupConfig.message}
+        confirmText="OK"
+        type={popupConfig.type}
+        onConfirm={() => setShowInfoPopup(false)}
+      />
+
+      {/* 🆕 QUIZ CONFIRMATION POPUP */}
+      <ConfirmationPopup
+        visible={showQuizConfirmation}
+        title="Ready for the Quiz?"
+        message="Once you start the quiz, you won't be able to go back to this material until you complete it. Make sure you're ready!"
+        confirmText="Start Quiz"
+        cancelText="Not Yet"
+        type="success"
+        showCancel={true}
+        onConfirm={navigateToQuiz}
+        onCancel={() => setShowQuizConfirmation(false)}
+      />
     </View>
   );
 };

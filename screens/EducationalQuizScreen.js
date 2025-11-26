@@ -78,9 +78,7 @@ const EducationalQuizScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-        <Text style={styles.backText}>{'<'}</Text>
-      </TouchableOpacity>
+      {/* 🚫 BACK BUTTON COMPLETELY REMOVED */}
 
       <View style={styles.quizContainer}>
         <Text style={styles.quizTitle}>{content.title}</Text>
@@ -164,20 +162,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backBtn: { 
-    marginBottom: 16,
-    alignSelf: 'flex-start'
-  },
-  backText: { 
-    color: '#CCCCCC', 
-    fontSize: 20, 
-    fontWeight: 'bold' 
-  },
+  // 🚫 REMOVED backBtn and backText styles
   quizContainer: {
     flex: 1,
     justifyContent: 'flex-start', 
     alignItems: 'center',
-    paddingTop: 120, 
+    paddingTop: 120, // Adjusted since no back button
   },
   quizTitle: {
     color: '#709775',

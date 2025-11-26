@@ -7,7 +7,6 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
-  Alert,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { getUserTerraCoins } from '../repositories/userRepository';
@@ -17,6 +16,7 @@ import { voucherRepository } from '../repositories/voucherRepository';
 import BuyAvatar from '../components/BuyAvatar';
 import BuyVoucher from '../components/BuyVoucher';
 import HeaderRow from '../components/HeaderRow';
+import ConfirmationPopup from '../components/ConfirmationPopup';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -46,6 +46,14 @@ const ShopScreen = () => {
   const [avatarModalVisible, setAvatarModalVisible] = useState(false);
   const [voucherModalVisible, setVoucherModalVisible] = useState(false);
 
+  // 🆕 SIMPLIFIED CONFIRMATION POPUP STATE
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupConfig, setPopupConfig] = useState({
+    title: '',
+    message: '',
+    type: 'success'
+  });
+
   useEffect(() => {
     if (user) {
       fetchTerraCoins();
@@ -63,6 +71,16 @@ const ShopScreen = () => {
     applyVoucherFilter();
   }, [voucherFilter, allVouchers, userVouchers]);
 
+  // 🆕 SINGLE POPUP FUNCTION
+  const showMessage = (title, message, type = 'success') => {
+    setPopupConfig({
+      title,
+      message,
+      type
+    });
+    setShowPopup(true);
+  };
+
   const fetchTerraCoins = async () => {
     try {
       const result = await getUserTerraCoins(user.uid);
@@ -71,6 +89,7 @@ const ShopScreen = () => {
       }
     } catch (error) {
       console.error('Error fetching TerraCoins:', error);
+      showMessage('Error', 'Failed to load your Terra Coins balance.', 'error');
     }
   };
 
@@ -84,6 +103,7 @@ const ShopScreen = () => {
       setPurchasedIds(ids);
     } catch (err) {
       console.error('Error fetching avatars/purchases:', err);
+      showMessage('Error', 'Failed to load avatars. Please try again.', 'error');
     }
   };
 
@@ -94,7 +114,8 @@ const ShopScreen = () => {
       setUserVouchers(userVoucherList);
     } catch (err) {
       console.error('Error fetching user vouchers:', err);
-      setUserVouchers([]); 
+      setUserVouchers([]);
+      showMessage('Error', 'Failed to load your vouchers.', 'error');
     }
   };
 
@@ -126,7 +147,7 @@ const ShopScreen = () => {
       setAllVouchers(activeVouchers);
     } catch (err) {
       console.error("Error fetching vouchers:", err);
-      Alert.alert("Error", "Failed to load vouchers");
+      showMessage("Error", "Failed to load vouchers. Please check your connection.", 'error');
     } finally {
       setLoading(false);
     }
@@ -157,11 +178,55 @@ const ShopScreen = () => {
   };
 
   const handleAvatarPress = (avatar) => {
+    // 🆕 CHECK IF USER ALREADY OWNS THIS AVATAR
+    if (purchasedIds.includes(avatar.id)) {
+      showMessage('Avatar Owned', `You already own the "${avatar.name}" avatar!`, 'success');
+      return;
+    }
+    
+    // 🆕 CHECK IF USER HAS ENOUGH COINS
+    if (avatar.terracoin > terraCoins) {
+      showMessage(
+        'Insufficient Coins', 
+        `You need ${avatar.terracoin} Terra Coins to buy this avatar. Complete more tasks to earn coins!`,
+        'error'
+      );
+      return;
+    }
+
     setSelectedAvatar(avatar);
     setAvatarModalVisible(true);
   };
 
   const handleVoucherPress = (voucher) => {
+    const isPurchased = isVoucherPurchased(voucher.id);
+    const isClaimed = isVoucherClaimed(voucher.id);
+
+    // 🆕 SHOW DIFFERENT MESSAGES BASED ON STATUS
+    if (isClaimed) {
+      showMessage('Voucher Claimed', 'This voucher has already been claimed and used.', 'success');
+      return;
+    }
+
+    if (isPurchased && !isClaimed) {
+      showMessage(
+        'Voucher Purchased', 
+        'You already own this voucher! Go to "Owned" tab to claim it.',
+        'success'
+      );
+      return;
+    }
+
+    // 🆕 CHECK IF USER HAS ENOUGH COINS FOR NEW PURCHASE
+    if (voucher.terraCoinCost > terraCoins) {
+      showMessage(
+        'Insufficient Coins', 
+        `You need ${voucher.terraCoinCost} Terra Coins to buy this voucher. Complete more tasks to earn coins!`,
+        'error'
+      );
+      return;
+    }
+
     setSelectedVoucher(voucher);
     setVoucherModalVisible(true);
   };
@@ -175,6 +240,20 @@ const ShopScreen = () => {
     return userVouchers.some(v => v.id === voucherId);
   };
 
+  // 🆕 HANDLE PURCHASE SUCCESS
+  const handlePurchaseSuccess = (itemName, itemType) => {
+    fetchTerraCoins();
+    fetchAvatarsAndPurchases();
+    fetchVouchers();
+    fetchUserVouchers();
+    
+    showMessage(
+      'Purchase Successful!', 
+      `You've successfully purchased the ${itemName} ${itemType}!`,
+      'success'
+    );
+  };
+
   const renderAvatarItem = ({ item, index }) => (
     <TouchableOpacity
       style={[
@@ -186,7 +265,6 @@ const ShopScreen = () => {
         },
       ]}
       onPress={() => handleAvatarPress(item)}
-      disabled={avatarFilter === 'owned'}
     >
       <Image
         source={{ uri: item.imageurl }}
@@ -200,6 +278,11 @@ const ShopScreen = () => {
             style={styles.priceCoin}
           />
           <Text style={styles.priceText}>{item.terracoin}</Text>
+        </View>
+      )}
+      {avatarFilter === 'owned' && purchasedIds.includes(item.id) && (
+        <View style={styles.ownedBadge}>
+          <Text style={styles.ownedText}>OWNED</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -219,7 +302,6 @@ const ShopScreen = () => {
           },
         ]}
         onPress={() => handleVoucherPress(item)}
-        disabled={voucherFilter === 'owned' && isClaimed}
       >
         <View style={styles.voucherLogoContainer}>
           {item.partnerLogo ? (
@@ -429,13 +511,15 @@ const ShopScreen = () => {
         </View>
       </View>
 
+      {/* 🆕 BUY MODALS */}
       <BuyAvatar
         visible={avatarModalVisible}
         avatar={selectedAvatar}
         onClose={() => setAvatarModalVisible(false)}
         onPurchaseSuccess={() => {
-          fetchTerraCoins();
-          fetchAvatarsAndPurchases();
+          if (selectedAvatar) {
+            handlePurchaseSuccess(selectedAvatar.name, 'avatar');
+          }
         }}
       />
 
@@ -445,16 +529,26 @@ const ShopScreen = () => {
         isPurchased={isVoucherPurchased(selectedVoucher?.id)}
         onClose={() => setVoucherModalVisible(false)}
         onPurchaseSuccess={() => {
-          fetchTerraCoins();
-          fetchVouchers();
-          fetchUserVouchers();
+          if (selectedVoucher) {
+            handlePurchaseSuccess(selectedVoucher.title, 'voucher');
+          }
         }}
+      />
+
+      {/* 🆕 SINGLE CONFIRMATION POPUP */}
+      <ConfirmationPopup
+        visible={showPopup}
+        title={popupConfig.title}
+        message={popupConfig.message}
+        confirmText="OK"
+        type={popupConfig.type}
+        onConfirm={() => setShowPopup(false)}
       />
     </View>
   );
 };
 
-// --- Styles remain unchanged ---
+// 🆕 ADD OWNED BADGE STYLES
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
   topBar: {
@@ -501,12 +595,14 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   option: { paddingVertical: 10, paddingHorizontal: 12, borderBottomColor: '#333', borderBottomWidth: 1 },
-  avatarBox: { backgroundColor: '#CCCCCC', borderRadius: 14, alignItems: 'center', justifyContent: 'center', padding: 10 },
+  avatarBox: { backgroundColor: '#CCCCCC', borderRadius: 14, alignItems: 'center', justifyContent: 'center', padding: 10, position: 'relative' },
   avatarImage: { width: '80%', height: '60%', resizeMode: 'contain', marginBottom: 8 },
   avatarName: { fontSize: 13, fontWeight: 'bold', color: '#131313', marginBottom: 6, textAlign: 'center' },
   priceBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#DDDDDD', borderRadius: 30, paddingHorizontal: 10, paddingVertical: 3 },
   priceCoin: { width: 16, height: 16, marginRight: 5, resizeMode: 'contain' },
   priceText: { fontSize: 12, fontWeight: 'bold', color: '#131313' },
+  ownedBadge: { position: 'absolute', top: 8, right: 8, backgroundColor: '#709775', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  ownedText: { color: '#FFFFFF', fontSize: 10, fontWeight: 'bold', fontFamily: 'DMSans-Bold' },
   voucherItem: { backgroundColor: '#CCCCCC', borderRadius: 12, overflow: "hidden", alignItems: "center", paddingBottom: 12, position: "relative", height: 200 },
   voucherLogoContainer: { width: '100%', height: 90, marginBottom: 8 },
   voucherStoreLogo: { width: "100%", height: "100%", resizeMode: "cover" },

@@ -78,9 +78,9 @@ const BuyAvatar = ({ visible, avatar, onClose, onPurchaseSuccess }) => {
         transaction.set(userPurchasesRef, { list }, { merge: true });
       });
 
+      // 🚫 REMOVED THE SUCCESS ALERT HERE
       if (onPurchaseSuccess) onPurchaseSuccess();
       setShowConfirmation(false);
-      Alert.alert("Success", `You purchased "${avatar.name}"!`);
     } catch (err) {
       console.error("Error purchasing avatar:", err);
       Alert.alert("Error", err.message || "Failed to purchase avatar. Try again.");
@@ -197,7 +197,6 @@ const BuyAvatar = ({ visible, avatar, onClose, onPurchaseSuccess }) => {
 };
 
 const styles = StyleSheet.create({
-  // Original styles remain the same
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.75)',

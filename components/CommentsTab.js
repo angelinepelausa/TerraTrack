@@ -9,9 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   FlatList,
+  RefreshControl,
 } from "react-native";
 import { scale } from "../utils/scaling";
 import CommentItem from "./CommentItem";
+import ConfirmationPopup from "./ConfirmationPopup";
 
 // ✅ Extracted input into its own component
 const CommentInput = ({
@@ -59,9 +61,31 @@ const CommentsTab = ({
   onDeleteComment,
   onDeleteReply,
   currentUserId,
+  refreshData, // ✅ Add refreshData prop
 }) => {
   const [commentText, setCommentText] = useState("");
   const [postingComment, setPostingComment] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [refreshing, setRefreshing] = useState(false); // ✅ Add refreshing state
+  const [confirmationConfig, setConfirmationConfig] = useState({
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
+
+  // ✅ Handle pull-to-refresh
+  const handleRefresh = async () => {
+    if (!refreshData) return;
+    
+    setRefreshing(true);
+    try {
+      await refreshData();
+    } catch (error) {
+      console.error("Failed to refresh comments:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handlePostComment = async () => {
     if (!commentText.trim()) return;
@@ -76,11 +100,38 @@ const CommentsTab = ({
     }
   };
 
+  const showDeleteConfirmation = (commentId, isReply = false, replyId = null) => {
+    setConfirmationConfig({
+      title: "Delete Comment",
+      message: "Are you sure you want to delete this comment? This action cannot be undone.",
+      onConfirm: () => {
+        if (isReply && replyId) {
+          onDeleteReply(commentId, replyId);
+        } else {
+          onDeleteComment(commentId);
+        }
+        setShowConfirmation(false);
+      },
+    });
+    setShowConfirmation(true);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: "#000", padding: scale(16) }}>
       <FlatList
         data={comments}
         keyExtractor={(item) => item.id}
+        // ✅ Add RefreshControl for pull-to-refresh
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={["#709775"]} // Android
+            tintColor="#709775" // iOS
+            title="Refreshing comments..."
+            titleColor="#CCCCCC"
+          />
+        }
         ListHeaderComponent={
           <CommentInput
             commentText={commentText}
@@ -95,25 +146,58 @@ const CommentsTab = ({
             onLike={onLikeComment}
             onReply={onReplyToComment}
             onLikeReply={onLikeReply}
-            onDeleteComment={onDeleteComment}
-            onDeleteReply={onDeleteReply}
+            onDeleteComment={(commentId) => showDeleteConfirmation(commentId)}
+            onDeleteReply={(commentId, replyId) => showDeleteConfirmation(commentId, true, replyId)}
+            currentUserId={currentUserId}
           />
         )}
         ListEmptyComponent={() => (
-          <Text style={styles.emptyText}>
-            No comments yet. Be the first to start the conversation!
-          </Text>
+          <View style={styles.emptyContainer}>
+            {refreshing ? (
+              <ActivityIndicator size="large" color="#709775" />
+            ) : (
+              <Text style={styles.emptyText}>
+                No comments yet. Be the first to start the conversation!
+              </Text>
+            )}
+          </View>
         )}
+        // ✅ Show loading indicator at the bottom when refreshing
+        ListFooterComponent={
+          refreshing ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator size="small" color="#709775" />
+              <Text style={styles.refreshingText}>Refreshing...</Text>
+            </View>
+          ) : null
+        }
+      />
+
+      {/* ✅ Use ConfirmationPopup component */}
+      <ConfirmationPopup
+        visible={showConfirmation}
+        title={confirmationConfig.title}
+        message={confirmationConfig.message}
+        onConfirm={confirmationConfig.onConfirm}
+        onCancel={() => setShowConfirmation(false)}
+        confirmText="Delete"
+        cancelText="Cancel"
+        showCancel={true}
+        type="warning"
       />
     </View>
   );
 };
 
 const styles = {
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: scale(40),
+  },
   emptyText: {
     color: "#888",
     textAlign: "center",
-    marginTop: scale(20),
     fontStyle: "italic",
     fontSize: scale(14),
   },
@@ -146,6 +230,18 @@ const styles = {
     color: "#fff",
     fontWeight: "bold",
     fontSize: scale(14),
+  },
+  footerLoader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: scale(16),
+    gap: scale(8),
+  },
+  refreshingText: {
+    color: "#709775",
+    fontSize: scale(12),
+    fontWeight: "500",
   },
 };
 

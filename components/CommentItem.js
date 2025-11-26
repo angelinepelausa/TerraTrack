@@ -16,6 +16,7 @@ import firestore from "@react-native-firebase/firestore";
 import ReportModal from "./ReportModal";
 import { reportService } from "../services/reportService";
 import { reportRepository } from "../repositories/reportRepository";
+import ConfirmationPopup from "./ConfirmationPopup";
 
 // 🔥 Utility to compute year-quarter string
 const getYearQuarter = () => {
@@ -37,6 +38,7 @@ const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId 
   const [replyIsLiked, setReplyIsLiked] = useState(false);
   const [showReplyReportModal, setShowReplyReportModal] = useState(false);
   const [isHiddenForUser, setIsHiddenForUser] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   useEffect(() => {
     // Check if this reply is hidden for this user
@@ -105,6 +107,15 @@ const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId 
     }
   };
 
+  const handleDeleteReply = () => {
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDeleteReply = () => {
+    onDeleteReply(commentId, reply.id);
+    setShowDeleteConfirmation(false);
+  };
+
   return (
     <View style={styles.replyItem}>
       <View style={styles.replyHeader}>
@@ -119,26 +130,18 @@ const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId 
 
         {reply.userId && currentUserId && reply.userId === currentUserId ? (
           <TouchableOpacity
-            onPress={() => {
-              Alert.alert("Delete Reply", "Are you sure you want to delete this reply?", [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Delete",
-                  style: "destructive",
-                  onPress: () => onDeleteReply(commentId, reply.id),
-                },
-              ]);
-            }}
+            onPress={handleDeleteReply}
             style={{ marginLeft: "auto" }}
           >
-            <Text style={{ color: "#FF6B6B", fontWeight: "600" }}>Delete</Text>
+            {/* ✅ Changed to trash icon and made smaller */}
+            <Ionicons name="trash-outline" size={scale(14)} color="#FF6B6B" />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             onPress={() => setShowReplyReportModal(true)}
             style={{ marginLeft: "auto", marginRight: scale(4) }}
           >
-            <Ionicons name="ellipsis-vertical-outline" size={scale(16)} color="#CCCCCC" />
+            <Ionicons name="ellipsis-vertical-outline" size={scale(14)} color="#CCCCCC" />
           </TouchableOpacity>
         )}
       </View>
@@ -148,7 +151,7 @@ const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId 
         <TouchableOpacity style={styles.actionButton} onPress={handleReplyLike}>
           <Ionicons
             name={replyIsLiked ? "heart" : "heart-outline"}
-            size={scale(16)}
+            size={scale(14)}
             color={replyIsLiked ? "#FF6B6B" : "#CCCCCC"}
             style={{ marginRight: scale(4) }}
           />
@@ -162,6 +165,19 @@ const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId 
         visible={showReplyReportModal}
         onClose={() => setShowReplyReportModal(false)}
         onSelectCategory={handleReportReply}
+      />
+
+      {/* ✅ Confirmation Popup for Reply Delete */}
+      <ConfirmationPopup
+        visible={showDeleteConfirmation}
+        title="Delete Comment"
+        message="Are you sure you want to delete this comment? This action cannot be undone."
+        onConfirm={confirmDeleteReply}
+        onCancel={() => setShowDeleteConfirmation(false)}
+        confirmText="Delete"
+        cancelText="Cancel"
+        showCancel={true}
+        type="warning"
       />
     </View>
   );
@@ -179,6 +195,7 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isHiddenForUser, setIsHiddenForUser] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   const currentUserId = auth().currentUser?.uid;
   const username = comment.username || "Anonymous";
@@ -191,18 +208,17 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
     .collection("community_comments")
     .doc(comment.id);
 
-  // In CommentItem component - FIXED useEffect
   useEffect(() => {
     let mounted = true;
     const checkHiddenStatus = async () => {
       if (currentUserId) {
         try {
           const reported = await reportRepository.checkIfUserReported(comment.id, currentUserId);
-          console.log(`Comment ${comment.id} hidden status:`, reported); // Debug log
+          console.log(`Comment ${comment.id} hidden status:`, reported);
           if (mounted) setIsHiddenForUser(reported);
         } catch (error) {
           console.error("Error checking comment report status:", error);
-          if (mounted) setIsHiddenForUser(false); // Show content if there's an error
+          if (mounted) setIsHiddenForUser(false);
         }
       }
     };
@@ -273,6 +289,15 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
     }
   };
 
+  const handleDeleteComment = () => {
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDeleteComment = () => {
+    onDeleteComment(comment.id);
+    setShowDeleteConfirmation(false);
+  };
+
   return (
     <View style={styles.commentContainer}>
       <View style={styles.commentHeader}>
@@ -287,26 +312,18 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
 
         {comment.userId && currentUserId && comment.userId === currentUserId ? (
           <TouchableOpacity
-            onPress={() => {
-              Alert.alert("Delete Comment", "Are you sure you want to delete this comment?", [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Delete",
-                  style: "destructive",
-                  onPress: () => onDeleteComment(comment.id),
-                },
-              ]);
-            }}
+            onPress={handleDeleteComment}
             style={{ marginLeft: "auto" }}
           >
-            <Ionicons name="trash-outline" size={scale(18)} color="#FF6B6B" />
+            {/* ✅ Changed to trash icon and made smaller */}
+            <Ionicons name="trash-outline" size={scale(16)} color="#FF6B6B" />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             onPress={() => setShowReportModal(true)}
             style={{ marginLeft: "auto", marginRight: scale(4) }}
           >
-            <Ionicons name="ellipsis-vertical-outline" size={scale(18)} color="#CCCCCC" />
+            <Ionicons name="ellipsis-vertical-outline" size={scale(16)} color="#CCCCCC" />
           </TouchableOpacity>
         )}
       </View>
@@ -317,7 +334,7 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
         <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
           <Ionicons
             name={isLiked ? "heart" : "heart-outline"}
-            size={scale(16)}
+            size={scale(14)}
             color={isLiked ? "#FF6B6B" : "#CCCCCC"}
             style={{ marginRight: scale(4) }}
           />
@@ -330,7 +347,7 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
         >
           <Ionicons
             name="chatbubble-outline"
-            size={scale(16)}
+            size={scale(14)}
             color="#CCCCCC"
             style={{ marginRight: scale(4) }}
           />
@@ -402,6 +419,19 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
         visible={showReportModal}
         onClose={() => setShowReportModal(false)}
         onSelectCategory={handleReportComment}
+      />
+
+      {/* ✅ Confirmation Popup for Comment Delete */}
+      <ConfirmationPopup
+        visible={showDeleteConfirmation}
+        title="Delete Post"
+        message="Are you sure you want to delete this post? This action cannot be undone."
+        onConfirm={confirmDeleteComment}
+        onCancel={() => setShowDeleteConfirmation(false)}
+        confirmText="Delete"
+        cancelText="Cancel"
+        showCancel={true}
+        type="warning"
       />
     </View>
   );

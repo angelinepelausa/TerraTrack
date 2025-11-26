@@ -22,6 +22,7 @@ import firestore from '@react-native-firebase/firestore';
 import { launchCamera } from 'react-native-image-picker';
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
+import ConfirmationPopup from '../components/ConfirmationPopup'; // Import the component
 
 const { width } = Dimensions.get('window');
 
@@ -233,6 +234,11 @@ const RoutineScreen = () => {
   const [terraCoins, setTerraCoins] = useState(0);
   const [verificationTasks, setVerificationTasks] = useState([]);
   const dateRef = useRef(new Date().toISOString().split('T')[0]);
+  
+  // NEW STATES FOR CONFIRMATION POPUPS
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
+  const [popupTitle, setPopupTitle] = useState('');
 
   const fetchAllTasks = async () => {
     if (!user) return;
@@ -356,14 +362,22 @@ const RoutineScreen = () => {
     }
   };
 
+  const showSuccessMessage = (title, message) => {
+    setPopupTitle(title);
+    setPopupMessage(message);
+    setShowSuccessPopup(true);
+  };
+
   const handleVerifyAction = async () => {
     if (selectedTasks.length === 0) {
       Alert.alert('No Task Selected', 'Please select at least one task to verify.');
       return;
     }
 
-    const requiresPhoto = selectedTasks.some((t) => verificationTasks.includes(t.id));
-    if (requiresPhoto) {
+    const requiresPhotoTasks = selectedTasks.filter((t) => verificationTasks.includes(t.id));
+    const noPhotoTasks = selectedTasks.filter((t) => !verificationTasks.includes(t.id));
+
+    if (requiresPhotoTasks.length > 0) {
       const hasPermission = await requestCameraPermission();
       if (!hasPermission) {
         Alert.alert('Permission Denied', 'Camera permission is required to verify tasks.');
@@ -374,16 +388,15 @@ const RoutineScreen = () => {
     try {
       const photoUris = {};
 
-      for (const task of selectedTasks) {
-        if (verificationTasks.includes(task.id)) {
-          const uri = await new Promise((resolve) => {
-            launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
-              if (response.didCancel || response.errorCode) resolve(null);
-              else resolve(response.assets?.[0]?.uri || null);
-            });
+      // Take photos only for tasks that require verification
+      for (const task of requiresPhotoTasks) {
+        const uri = await new Promise((resolve) => {
+          launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
+            if (response.didCancel || response.errorCode) resolve(null);
+            else resolve(response.assets?.[0]?.uri || null);
           });
-          if (uri) photoUris[task.id] = uri;
-        }
+        });
+        if (uri) photoUris[task.id] = uri;
       }
 
       const today = new Date().toISOString().split('T')[0];
@@ -406,10 +419,11 @@ const RoutineScreen = () => {
 
       const batch = firestore().batch();
 
-      for (const task of selectedTasks) {
+      // Process tasks that require photo verification
+      for (const task of requiresPhotoTasks) {
         let photoUrl = null;
 
-        if (verificationTasks.includes(task.id) && photoUris[task.id]) {
+        if (photoUris[task.id]) {
           photoUrl = await uploadImageToCloudinary(photoUris[task.id]);
           console.log('Uploaded to Cloudinary:', photoUrl);
 
@@ -443,7 +457,7 @@ const RoutineScreen = () => {
           { merge: true }
         );
 
-        // 🔥 ADD THIS: Save activity to community_activity subcollection
+        // Save activity to community_activity subcollection
         const activityId = `${user.uid}_${task.id}_${Date.now()}`;
         const activityRef = firestore()
           .collection('community_progress')
@@ -454,7 +468,7 @@ const RoutineScreen = () => {
         batch.set(activityRef, {
           id: activityId,
           userId: user.uid,
-          username: user.displayName || 'Anonymous User', // Make sure you have user's display name
+          username: user.displayName || 'Anonymous User',
           taskId: task.id,
           taskTitle: task.title,
           timestamp: firestore.FieldValue.serverTimestamp(),
@@ -463,7 +477,42 @@ const RoutineScreen = () => {
         });
       }
 
-      // Update community progress (existing code)
+      // Process tasks that don't require photo verification
+      for (const task of noPhotoTasks) {
+        batch.set(
+          tasksFinishedRef,
+          {
+            [task.id]: {
+              pointsEarned: 10,
+              coinsEarned: 1,
+              finishedAt: firestore.FieldValue.serverTimestamp(),
+              photoUrl: null,
+            },
+          },
+          { merge: true }
+        );
+
+        // Save activity to community_activity subcollection
+        const activityId = `${user.uid}_${task.id}_${Date.now()}`;
+        const activityRef = firestore()
+          .collection('community_progress')
+          .doc(docId)
+          .collection('community_activity')
+          .doc(activityId);
+
+        batch.set(activityRef, {
+          id: activityId,
+          userId: user.uid,
+          username: user.displayName || 'Anonymous User',
+          taskId: task.id,
+          taskTitle: task.title,
+          timestamp: firestore.FieldValue.serverTimestamp(),
+          pointsEarned: 10,
+          type: 'task_completed'
+        });
+      }
+
+      // Update community progress
       const communityRef = firestore().collection('community_progress').doc(docId);
       batch.set(
         communityRef,
@@ -486,8 +535,25 @@ const RoutineScreen = () => {
       setEasyTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
       setHardTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
 
+      // SHOW APPROPRIATE SUCCESS MESSAGE
+      if (requiresPhotoTasks.length > 0 && noPhotoTasks.length > 0) {
+        showSuccessMessage(
+          'Tasks Submitted!',
+          'Tasks submitted for verification. You\'ll receive rewards after approval.'
+        );
+      } else if (requiresPhotoTasks.length > 0) {
+        showSuccessMessage(
+          'Submitted for Verification',
+          'Task submitted for verification. You\'ll receive rewards after approval.'
+        );
+      } else {
+        showSuccessMessage(
+          'Tasks Verified!',
+          'Task verified successfully! Rewards have been added to your account.'
+        );
+      }
+
       setSelectedTasks([]);
-      Alert.alert('Success', 'Tasks verified and rewards added!');
     } catch (error) {
       console.error('Error verifying tasks:', error);
       Alert.alert('Error', 'Something went wrong verifying tasks.');
@@ -535,6 +601,16 @@ const RoutineScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* SUCCESS POPUP USING ConfirmationPopup COMPONENT */}
+      <ConfirmationPopup
+        visible={showSuccessPopup}
+        onConfirm={() => setShowSuccessPopup(false)}
+        title={popupTitle}
+        message={popupMessage}
+        confirmText="OK"
+        type="success"
+      />
+
       <View style={styles.topBar}>
         <View style={styles.coinBox}>
           <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
@@ -553,22 +629,21 @@ const RoutineScreen = () => {
         </TouchableOpacity>
 
         {/* 🔧 Manual trigger button for testing */}
-            <TouchableOpacity
-              style={[styles.taskVerifyBtn, { backgroundColor: '#709775' }]}
-              onPress={async () => {
-                console.log("🚀 Distribute button pressed");
-                try {
-                  await distributeTasksForVerification();
-                  Alert.alert("Success", "Distribution completed!");
-                } catch (err) {
-                  console.error("❌ Distribution failed:", err);
-                  Alert.alert("Error", "Distribution failed, check console logs.");
-                }
-              }}
-            >
-              <Text style={[styles.taskVerifyText, { color: '#fff' }]}>Distribute Now (Test)</Text>
-            </TouchableOpacity>
-
+        <TouchableOpacity
+          style={[styles.taskVerifyBtn, { backgroundColor: '#709775' }]}
+          onPress={async () => {
+            console.log("🚀 Distribute button pressed");
+            try {
+              await distributeTasksForVerification();
+              Alert.alert("Success", "Distribution completed!");
+            } catch (err) {
+              console.error("❌ Distribution failed:", err);
+              Alert.alert("Error", "Distribution failed, check console logs.");
+            }
+          }}
+        >
+          <Text style={[styles.taskVerifyText, { color: '#fff' }]}>Distribute Now (Test)</Text>
+        </TouchableOpacity>
 
         <View style={styles.tabContainer}>
           {['easy', 'hard'].map((tab) => (
@@ -665,7 +740,7 @@ const styles = StyleSheet.create({
     width: '85%',
     alignItems: 'center',
   },
-    detailImage: {
+  detailImage: {
     width: '85%',
     height: 200,
     borderRadius: 10,
@@ -695,7 +770,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   taskVerifyText: { color: '#131313', fontWeight: 'bold', fontSize: 16 },
-
 });
 
 export default RoutineScreen;

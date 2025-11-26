@@ -124,12 +124,9 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
         throw new Error(result.error || "Failed to purchase voucher");
       }
 
+      // 🚫 REMOVED THE SUCCESS ALERT HERE
       if (onPurchaseSuccess) onPurchaseSuccess();
       setShowConfirmation(false);
-      Alert.alert(
-        "Success", 
-        `You purchased "${voucher.title}"!\n\nVoucher Code: ${voucher.voucherCode}\n\nShow this code to ${voucher.partnerName} to redeem your voucher.`
-      );
     } catch (err) {
       console.error("Error purchasing voucher:", err);
       Alert.alert("Error", err.message || "Failed to purchase voucher. Try again.");

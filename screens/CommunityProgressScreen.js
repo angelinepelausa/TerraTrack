@@ -17,6 +17,12 @@ const CommunityProgressScreen = () => {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState("current");
   const [showRewards, setShowRewards] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationConfig, setConfirmationConfig] = useState({
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
 
   const {
     confettiRef,
@@ -36,7 +42,21 @@ const CommunityProgressScreen = () => {
     handleDeleteReply,
   } = useCommunityProgress();
 
-  
+  const showDeleteConfirmation = (commentId, isReply = false, replyId = null) => {
+    setConfirmationConfig({
+      title: "Delete Comment",
+      message: "Are you sure you want to delete this comment? This action cannot be undone.",
+      onConfirm: () => {
+        if (isReply && replyId) {
+          handleDeleteReply(commentId, replyId);
+        } else {
+          handleDeleteComment(commentId);
+        }
+        setShowConfirmation(false);
+      },
+    });
+    setShowConfirmation(true);
+  };
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -59,8 +79,8 @@ const CommunityProgressScreen = () => {
             onLikeComment={handleLikeComment}
             onLikeReply={handleLikeReply}
             onReplyToComment={handleReplyToComment}
-            onDeleteComment={handleDeleteComment}
-            onDeleteReply={handleDeleteReply}
+            onDeleteComment={(commentId) => showDeleteConfirmation(commentId)}
+            onDeleteReply={(commentId, replyId) => showDeleteConfirmation(commentId, true, replyId)}
             currentUserId={currentUserId}
             style={{ flex: 1 }}
           />
@@ -113,6 +133,15 @@ const CommunityProgressScreen = () => {
       </View>
 
       <RewardsModal visible={showRewards} onClose={() => setShowRewards(false)} rewards={progressData?.rewards} />
+      
+      {/* Confirmation Popup */}
+      <ConfirmationModal
+        visible={showConfirmation}
+        title={confirmationConfig.title}
+        message={confirmationConfig.message}
+        onConfirm={confirmationConfig.onConfirm}
+        onCancel={() => setShowConfirmation(false)}
+      />
     </View>
   );
 };
@@ -147,6 +176,25 @@ const RewardsModal = ({ visible, onClose, rewards }) => (
           ))}
       </View>
     </TouchableOpacity>
+  </Modal>
+);
+
+const ConfirmationModal = ({ visible, title, message, onConfirm, onCancel }) => (
+  <Modal visible={visible} transparent animationType="fade">
+    <View style={styles.confirmationOverlay}>
+      <View style={styles.confirmationCard}>
+        <Text style={styles.confirmationTitle}>{title}</Text>
+        <Text style={styles.confirmationMessage}>{message}</Text>
+        <View style={styles.confirmationButtons}>
+          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.confirmButton} onPress={onConfirm}>
+            <Text style={styles.confirmButtonText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
   </Modal>
 );
 
@@ -186,6 +234,66 @@ const styles = {
   rewardIcon: { width: 20, height: 20, marginHorizontal: 4 },
   rewardText: { color: "#CCCCCC", fontSize: 14, fontWeight: "bold" },
   rewardDivider: { height: 1, backgroundColor: "#1E1E1E", marginVertical: 6, opacity: 0.4 },
+  // Confirmation Modal Styles
+  confirmationOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: scale(16),
+  },
+  confirmationCard: {
+    width: "80%",
+    backgroundColor: "#1B2B20",
+    borderRadius: scale(16),
+    padding: scale(20),
+    alignItems: "center",
+  },
+  confirmationTitle: {
+    fontSize: scale(18),
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: scale(8),
+    textAlign: "center",
+  },
+  confirmationMessage: {
+    fontSize: scale(14),
+    color: "#CCCCCC",
+    textAlign: "center",
+    marginBottom: scale(20),
+    lineHeight: scale(20),
+  },
+  confirmationButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#1E1E1E",
+    padding: scale(12),
+    borderRadius: scale(8),
+    marginRight: scale(8),
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    color: "#CCCCCC",
+    fontWeight: "600",
+    fontSize: scale(14),
+  },
+  confirmButton: {
+    flex: 1,
+    backgroundColor: "#E57373",
+    padding: scale(12),
+    borderRadius: scale(8),
+    marginLeft: scale(8),
+    alignItems: "center",
+  },
+  confirmButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: scale(14),
+  },
 };
 
 export default CommunityProgressScreen;

@@ -5,18 +5,15 @@ import firestore from '@react-native-firebase/firestore';
 import { getUserReferralCode, addUserRewards } from '../repositories/userRepository';
 import { referralRepository } from '../repositories/referralRepository';
 import { scale, vScale } from '../utils/scaling';
-import Toast from '../components/Toast';
 import HeaderRow from '../components/HeaderRow';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { getUserTotals } from '../repositories/userStatsRepository';
-
 
 const InviteScreen = ({ navigation }) => {
   const [referralCode, setReferralCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [invites, setInvites] = useState([]);
   const [error, setError] = useState(null);
-  const [toastVisible, setToastVisible] = useState(false);
   const [settings, setSettings] = useState({
     referrer: { terraCoins: 0, terraPoints: 0 },
     goalTasks: 0,
@@ -49,25 +46,23 @@ const InviteScreen = ({ navigation }) => {
           .get();
 
         const invitesData = await Promise.all(invitesSnap.docs.map(async doc => {
-        const userId = doc.id; // referred user
-        const data = doc.data();
+          const userId = doc.id;
+          const data = doc.data();
 
-        const userDoc = await firestore().collection('users').doc(userId).get();
-        const username = userDoc.exists ? userDoc.data().username : 'Unknown';
+          const userDoc = await firestore().collection('users').doc(userId).get();
+          const username = userDoc.exists ? userDoc.data().username : 'Unknown';
 
-        // ✅ Fetch actual totals from referee’s stats
-        const totals = await getUserTotals(userId);
+          const totals = await getUserTotals(userId);
 
-        return {
-          id: userId,
-          username,
-          taskFinished: totals.taskFinished,
-          educationalQuizFinished: totals.educationalQuizFinished,
-          weeklyQuizFinished: totals.weeklyQuizFinished,
-          rewardsClaimed: data.rewardsClaimed || false,
-        };
-      }));
-
+          return {
+            id: userId,
+            username,
+            taskFinished: totals.taskFinished,
+            educationalQuizFinished: totals.educationalQuizFinished,
+            weeklyQuizFinished: totals.weeklyQuizFinished,
+            rewardsClaimed: data.rewardsClaimed || false,
+          };
+        }));
 
         setInvites(invitesData);
       } catch (err) {
@@ -82,7 +77,6 @@ const InviteScreen = ({ navigation }) => {
   }, []);
 
   const copyToClipboard = () => {
-    // Clipboard API
     Alert.alert('Copied!', 'Referral code copied to clipboard');
   };
 
@@ -105,7 +99,7 @@ const InviteScreen = ({ navigation }) => {
         .update({ rewardsClaimed: true });
 
       setInvites(prev => prev.map(inv => inv.id === inviteId ? { ...inv, rewardsClaimed: true } : inv));
-      setToastVisible(true);
+      Alert.alert('Success', 'Rewards claimed successfully!');
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Failed to claim prize');
@@ -144,7 +138,6 @@ const InviteScreen = ({ navigation }) => {
             <View style={styles.referralCodeContainer}>
               <Text style={styles.referralCode}>{referralCode}</Text>
               <TouchableOpacity onPress={copyToClipboard} style={styles.copyButton}>
-                {/* ✅ Ionicons instead of image */}
                 <Ionicons name="copy-outline" size={20} color="#415D43" />
               </TouchableOpacity>
             </View>
@@ -220,12 +213,6 @@ const InviteScreen = ({ navigation }) => {
 
         {error && <Text style={styles.errorText}>{error}</Text>}
       </ScrollView>
-
-      <Toast
-        message="Rewards Claimed"
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
     </View>
   );
 };

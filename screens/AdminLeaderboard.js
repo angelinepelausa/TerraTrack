@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Modal,
   TouchableWithoutFeedback,
+  Alert,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import {
@@ -23,7 +24,6 @@ import {
   applyPendingConfigIfNeeded,
   getLeaderboard,
 } from "../repositories/leaderboardRepository";
-import Toast from "../components/Toast";
 import { useNavigation } from "@react-navigation/native";
 import { computeWeeklyCycle, computeNextWeeklyCycle } from "../utils/leaderboardUtils";
 import Leaderboard from "../components/Leaderboard";
@@ -48,8 +48,6 @@ const AdminLeaderboard = () => {
     pendingConfig: null,
   });
 
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
   const [cycle, setCycle] = useState({ start: null, end: null, timeLeft: "" });
   const [pendingExpanded, setPendingExpanded] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState([]);
@@ -71,8 +69,7 @@ const AdminLeaderboard = () => {
         setLeaderboardData(data || []);
       } catch (error) {
         console.error("Error initializing admin leaderboard:", error);
-        setToastMessage("Error loading data");
-        setToastVisible(true);
+        Alert.alert("Error", "Error loading data");
       } finally {
         setLoadingLeaderboard(false);
       }
@@ -114,12 +111,10 @@ const AdminLeaderboard = () => {
       const cfg = await getLeaderboardConfig();
       setConfig((prev) => ({ ...prev, ...cfg }));
       setPendingExpanded(false);
-      setToastMessage("Pending configuration saved!");
-      setToastVisible(true);
+      Alert.alert("Success", "Pending configuration saved!");
     } catch (err) {
       console.error(err);
-      setToastMessage("Error saving pending configuration.");
-      setToastVisible(true);
+      Alert.alert("Error", "Error saving pending configuration.");
     }
   };
 
@@ -130,12 +125,10 @@ const AdminLeaderboard = () => {
       await deletePendingConfig();
       setConfig((prev) => ({ ...prev, pendingConfig: null }));
       setPendingExpanded(false);
-      setToastMessage("Pending configuration deleted!");
-      setToastVisible(true);
+      Alert.alert("Success", "Pending configuration deleted!");
     } catch (err) {
       console.error(err);
-      setToastMessage("Error deleting pending configuration.");
-      setToastVisible(true);
+      Alert.alert("Error", "Error deleting pending configuration.");
     }
   };
 
@@ -320,8 +313,6 @@ const AdminLeaderboard = () => {
         {/* Tab Content */}
         {activeTab === "current" && renderCurrentTab()}
         {activeTab === "upcoming" && renderUpcomingTab()}
-
-        <Toast message={toastMessage} visible={toastVisible} onHide={() => setToastVisible(false)} />
       </ScrollView>
 
       {/* Rewards Modal */}

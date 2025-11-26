@@ -16,6 +16,11 @@ import {
   getCurrentYearQuarter,
 } from "../repositories/communityProgressRepository";
 
+// Helper function for proper pluralization
+const pluralize = (count, singular, plural) => {
+  return count === 1 ? singular : plural;
+};
+
 export const useCommunityProgress = () => {
   const confettiRef = useRef(null);
   const [progressData, setProgressData] = useState(null);
@@ -70,9 +75,11 @@ export const useCommunityProgress = () => {
       : 0;
     const progressPercent = goal > 0 ? current / goal : 0;
 
-    if (progressPercent > 0.75) return `Almost there! Just ${daysLeft} day(s) to go!`;
-    if (progressPercent >= 0.5) return `We're on track! ${daysLeft} day(s) remaining.`;
-    return `We need your help! Let's finish strong in ${daysLeft} day(s)!`;
+    const daysText = `${daysLeft} ${pluralize(daysLeft, "day", "days")}`;
+
+    if (progressPercent > 0.75) return `Almost there! Just ${daysText} to go!`;
+    if (progressPercent >= 0.5) return `We're on track! ${daysText} remaining.`;
+    return `We need your help! Let's finish strong in ${daysText}!`;
   };
 
   const handlePostComment = async (commentText) => {

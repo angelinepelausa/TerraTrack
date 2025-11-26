@@ -5,7 +5,6 @@ import auth from '@react-native-firebase/auth';
 import { addUserRewards } from '../repositories/userRepository';
 import { hasAttemptedQuiz, saveQuizAttempt } from '../repositories/quizAttemptsRepository';
 import QuizResult from '../components/QuizResult';
-import HeaderRow from '../components/HeaderRow';
 import { incrementWeeklyQuizFinished } from '../repositories/userStatsRepository';
 
 
@@ -130,12 +129,7 @@ const WeeklyQuizScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* HeaderRow at top */}
-      <HeaderRow
-        title="Weekly Quiz"
-        showBack={true}
-        onBackPress={() => navigation.goBack()}
-      />
+      {/* HeaderRow has been completely removed */}
 
       <View style={styles.quizContainer}>
         {/* Quiz Title fetched from Firestore */}

@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ActivityIndicator, Alert, Modal } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Image, 
+  Dimensions, 
+  ActivityIndicator, 
+  Alert,
+  Modal // ADD THIS IMPORT
+} from 'react-native';
 import { getCommunityProgress } from '../repositories/communityProgressRepository';
 import { getUserTerraCoins } from '../repositories/userRepository';
 import { hasAttemptedQuiz } from '../repositories/quizAttemptsRepository';
@@ -8,6 +18,7 @@ import { scale, vScale } from '../utils/scaling';
 import { useAuth } from '../context/AuthContext';
 import firestore from '@react-native-firebase/firestore';
 import SuspensionPopup from '../components/SuspensionPopup';
+import ConfirmationPopup from '../components/ConfirmationPopup';
 
 const { width } = Dimensions.get('window');
 const PADDING = scale(20);
@@ -39,6 +50,9 @@ const HomeScreen = ({ navigation }) => {
   const [showSuspensionPopup, setShowSuspensionPopup] = useState(false);
   const [userStatus, setUserStatus] = useState(null);
   const [userData, setUserData] = useState(null);
+
+  // NEW STATE FOR WEEKLY QUIZ CONFIRMATION
+  const [showQuizConfirmation, setShowQuizConfirmation] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,20 +86,68 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (user?.uid) {
-      fetchTerraCoins();
+      setupRealtimeTerraCoins();
       checkMonthlyFootprint();
       checkSuspensionStatus();
     }
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (user?.uid) {
+        const unsubscribe = firestore()
+          .collection('users')
+          .doc(user.uid)
+          .onSnapshot(() => {}); // This will be overridden by the actual unsubscribe
+        unsubscribe();
+      }
+    };
   }, [user?.uid]);
 
-  const fetchTerraCoins = async () => {
+  // REAL-TIME TerraCoins subscription
+  const setupRealtimeTerraCoins = () => {
+    if (!user?.uid) return;
+
+    const unsubscribe = firestore()
+      .collection('users')
+      .doc(user.uid)
+      .onSnapshot(
+        (doc) => {
+          if (doc.exists) {
+            const userData = doc.data();
+            setTerraCoins(userData.terraCoins || 0);
+            
+            // Also update user data for suspension check
+            setUserData(userData);
+            setUserStatus(userData.status);
+            
+            // Show suspension popup if user is suspended or banned
+            if (userData.status === 'suspended' || userData.status === 'banned') {
+              setShowSuspensionPopup(true);
+            } else if (userData.suspendedCount === 1 && userData.status === 'active') {
+              // Show warning if status is active but has 1 suspension count
+              setShowSuspensionPopup(true);
+            }
+          }
+        },
+        (error) => {
+          console.error('Error in real-time TerraCoins subscription:', error);
+          // Fallback to one-time fetch if real-time fails
+          fetchTerraCoinsFallback();
+        }
+      );
+
+    return unsubscribe;
+  };
+
+  // Fallback function if real-time fails
+  const fetchTerraCoinsFallback = async () => {
     try {
       const result = await getUserTerraCoins(user.uid);
       if (result.success) {
         setTerraCoins(result.terraCoins);
       }
     } catch (error) {
-      console.error('Error fetching TerraCoins:', error);
+      console.error('Error fetching TerraCoins fallback:', error);
     }
   };
 
@@ -162,7 +224,33 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  // NEW FUNCTION: Handle Weekly Quiz Press with Confirmation
+  const handleWeeklyQuizPress = () => {
+    if (weeklyQuizAttempted) {
+      Alert.alert(
+        'Quiz Completed',
+        'You have already taken this week\'s quiz. Please check back next week for a new quiz!',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Show confirmation popup before proceeding to quiz
+    setShowQuizConfirmation(true);
+  };
+
+  // NEW FUNCTION: Navigate to Weekly Quiz
+  const navigateToWeeklyQuiz = () => {
+    setShowQuizConfirmation(false);
+    navigation.navigate('WeeklyQuizScreen');
+  };
+
   const handleCardPress = (item) => {
+    if (item.title === 'Weekly Quiz') {
+      handleWeeklyQuizPress();
+      return;
+    }
+
     if (item.attempted) {
       Alert.alert(
         'Quiz Completed',
@@ -174,8 +262,6 @@ const HomeScreen = ({ navigation }) => {
 
     if (item.title === 'Read') {
       navigation.navigate('EducationalScreen');
-    } else if (item.title === 'Weekly Quiz') {
-      navigation.navigate('WeeklyQuizScreen');
     } else if (item.title === 'Invite') {
       navigation.navigate('InviteScreen');
     } else if (item.title === 'Achievements') {
@@ -233,6 +319,19 @@ const HomeScreen = ({ navigation }) => {
             setShowSuspensionPopup(false);
           }
         }}
+      />
+
+      {/* WEEKLY QUIZ CONFIRMATION POPUP */}
+      <ConfirmationPopup
+        visible={showQuizConfirmation}
+        title="Ready for Weekly Quiz?"
+        message="Once you start the weekly quiz, you won't be able to go back until you complete the question. Make sure you're ready!"
+        confirmText="Start Quiz"
+        cancelText="Not Yet"
+        type="success"
+        showCancel={true}
+        onConfirm={navigateToWeeklyQuiz}
+        onCancel={() => setShowQuizConfirmation(false)}
       />
 
       {/* HOMESCREEN CONTENT - DISABLED WHEN SUSPENDED/BANNED */}
