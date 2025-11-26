@@ -22,7 +22,7 @@ import firestore from '@react-native-firebase/firestore';
 import { launchCamera } from 'react-native-image-picker';
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
-import ConfirmationPopup from '../components/ConfirmationPopup'; // Import the component
+import ConfirmationPopup from '../components/ConfirmationPopup';
 
 const { width } = Dimensions.get('window');
 
@@ -49,7 +49,6 @@ const incrementTaskFinished = async (uid, count = 1) => {
   }
 };
 
-// ✅ local distribution (was in Firebase function before)
 // ✅ New distribution logic for subcollection structure
 export const distributeTasksForVerification = async () => {
   try {
@@ -234,6 +233,7 @@ const RoutineScreen = () => {
   const [terraCoins, setTerraCoins] = useState(0);
   const [verificationTasks, setVerificationTasks] = useState([]);
   const dateRef = useRef(new Date().toISOString().split('T')[0]);
+  const distributionRunRef = useRef(false); // Track if distribution has run today
   
   // NEW STATES FOR CONFIRMATION POPUPS
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -312,16 +312,57 @@ const RoutineScreen = () => {
     fetchAllTasks();
   }, [user]);
 
-  // 🔥 Run daily refresh + local distribution
   useEffect(() => {
-    const interval = setInterval(async () => {
-      const today = new Date().toISOString().split('T')[0];
-      if (dateRef.current !== today) {
-        dateRef.current = today;
-        await fetchAllTasks();
-        await distributeTasksForVerification(); // 🔑 added
+    const checkAndRunDistribution = async () => {
+      try {
+        // Get current time in Philippine time (UTC+8)
+        const now = new Date();
+        const phTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+        const today = phTime.toISOString().split('T')[0];
+        
+        // Check if it's 12:30 AM Philippine time
+        const hours = phTime.getUTCHours();
+        const minutes = phTime.getUTCMinutes();
+        
+        console.log(`🕛 Current PH Time: ${hours}:${minutes}, Today: ${today}, DateRef: ${dateRef.current}, DistributionRun: ${distributionRunRef.current}`);
+        
+        // Run exactly at 12:30 AM PH time and only once per day
+        if (hours === 0 && minutes === 30 && dateRef.current !== today && !distributionRunRef.current) {
+          distributionRunRef.current = true;
+          dateRef.current = today;
+          
+          console.log("🕛 Running task distribution for PH 12:30 AM…");
+          
+          try {
+            await distributeTasksForVerification();
+            await fetchAllTasks(); // Refresh tasks after distribution
+            
+            // Reset distribution flag after 2 minutes to prevent multiple runs
+            setTimeout(() => {
+              distributionRunRef.current = false;
+            }, 2 * 60 * 1000);
+          } catch (error) {
+            console.error("❌ Distribution failed:", error);
+            distributionRunRef.current = false; // Reset flag on error
+          }
+        }
+        
+        // Reset distribution flag if date changes but we missed the 12:30 window
+        if (dateRef.current !== today && distributionRunRef.current) {
+          distributionRunRef.current = false;
+        }
+        
+      } catch (error) {
+        console.error("❌ Error in distribution check:", error);
       }
-    }, 60 * 1000);
+    };
+
+    // Check immediately when component mounts
+    checkAndRunDistribution();
+
+    // Set up interval to check every minute
+    const interval = setInterval(checkAndRunDistribution, 60 * 1000);
+
     return () => clearInterval(interval);
   }, []);
 
@@ -565,19 +606,19 @@ const RoutineScreen = () => {
   if (selectedTask) {
     return (
       <View style={styles.detailContainer}>
-        <HeaderRow 
-          title="Task Details" 
-          onBackPress={() => setSelectedTask(null)} 
+        <HeaderRow
+          title="Task Details"
+          onBackPress={() => setSelectedTask(null)}
         />
-        
+       
         <View style={styles.descWrapper}>
           {selectedTask.imageUrl && (
-            <Image 
-              source={{ uri: selectedTask.imageUrl }} 
+            <Image
+              source={{ uri: selectedTask.imageUrl }}
               style={styles.detailImage}
             />
           )}
-          
+         
           <View style={styles.descBox}>
             <Text style={styles.detailTitle}>{selectedTask.title}</Text>
             <Text style={styles.detailDesc}>{selectedTask.description}</Text>
@@ -685,6 +726,8 @@ const RoutineScreen = () => {
     </View>
   );
 };
+
+// ... (keep your existing styles the same)
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
