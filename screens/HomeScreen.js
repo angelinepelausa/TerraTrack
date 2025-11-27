@@ -8,7 +8,7 @@ import {
   Dimensions, 
   ActivityIndicator, 
   Alert,
-  Modal // ADD THIS IMPORT
+  Modal
 } from 'react-native';
 import { getCommunityProgress } from '../repositories/communityProgressRepository';
 import { getUserTerraCoins } from '../repositories/userRepository';
@@ -20,7 +20,7 @@ import firestore from '@react-native-firebase/firestore';
 import SuspensionPopup from '../components/SuspensionPopup';
 import ConfirmationPopup from '../components/ConfirmationPopup';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const PADDING = scale(20);
 const GAP = scale(20);
 const CARD_WIDTH = (width - PADDING * 2 - GAP) / 2;
@@ -34,6 +34,111 @@ const getCurrentQuizWeek = () => {
   return monday.toISOString().split('T')[0]; // Returns YYYY-MM-DD
 };
 
+// Walkthrough Component with precise positioning
+const WalkthroughOverlay = ({ 
+  visible, 
+  currentStep, 
+  onNext, 
+  onSkip, 
+  onComplete, 
+  getStepInfo 
+}) => {
+  if (!visible) return null;
+
+  const stepInfo = getStepInfo(currentStep);
+  if (!stepInfo) return null;
+
+  return (
+    <Modal transparent visible={visible} animationType="fade">
+      <View style={styles.walkthroughContainer}>
+        {/* Light overlay for background */}
+        <View style={styles.lightOverlay} />
+        
+        {/* Highlight mask with cutout */}
+        <View style={styles.maskContainer}>
+          {/* Top overlay */}
+          {stepInfo.highlightStyle.top > 0 && (
+            <View style={[styles.overlaySection, { 
+              height: stepInfo.highlightStyle.top 
+            }]} />
+          )}
+          
+          {/* Middle section with highlight cutout */}
+          <View style={styles.middleSection}>
+            {/* Left overlay */}
+            {stepInfo.highlightStyle.left > 0 && (
+              <View style={[styles.overlaySection, { 
+                width: stepInfo.highlightStyle.left 
+              }]} />
+            )}
+            
+            {/* Highlight area */}
+            <View style={[
+              styles.highlightArea,
+              {
+                width: stepInfo.highlightStyle.width,
+                height: stepInfo.highlightStyle.height,
+              }
+            ]}>
+              <View style={styles.highlightBorder} />
+            </View>
+            
+            {/* Right overlay */}
+            {stepInfo.highlightStyle.right !== undefined && (
+              <View style={[styles.overlaySection, { 
+                flex: 1 
+              }]} />
+            )}
+          </View>
+          
+          {/* Bottom overlay */}
+          {stepInfo.highlightStyle.bottom !== undefined && (
+            <View style={[styles.overlaySection, { 
+              flex: 1 
+            }]} />
+          )}
+        </View>
+
+        {/* Tooltip - Ensure it's always above the overlay */}
+        <View style={[styles.tooltip, stepInfo.tooltipStyle]}>
+          <Text style={styles.tooltipTitle}>{stepInfo.title}</Text>
+          <Text style={styles.tooltipDescription}>{stepInfo.description}</Text>
+          
+          {/* Navigation Buttons - Ensure they're always clickable */}
+          <View style={styles.walkthroughButtons}>
+            {currentStep < 6 ? (
+              <>
+                <TouchableOpacity 
+                  style={styles.skipButton} 
+                  onPress={onSkip}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.skipButtonText}>Skip</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.nextButton} 
+                  onPress={onNext}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.nextButtonText}>Next</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity 
+                style={styles.completeButton} 
+                onPress={onComplete}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.completeButtonText}>Get Started</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 const HomeScreen = ({ navigation }) => {
   const [terraCoins, setTerraCoins] = useState(0);
   const [communityProgress, setCommunityProgress] = useState(null);
@@ -41,6 +146,10 @@ const HomeScreen = ({ navigation }) => {
   const [error, setError] = useState(null);
   const [weeklyQuizAttempted, setWeeklyQuizAttempted] = useState(false);
   const { user } = useAuth();
+
+  // Walkthrough states
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
 
   // new states for monthly footprint popup
   const [showPopup, setShowPopup] = useState(false);
@@ -53,6 +162,35 @@ const HomeScreen = ({ navigation }) => {
 
   // NEW STATE FOR WEEKLY QUIZ CONFIRMATION
   const [showQuizConfirmation, setShowQuizConfirmation] = useState(false);
+
+  // Check if user has seen walkthrough before
+  useEffect(() => {
+    const checkFirstTimeUser = async () => {
+      try {
+        if (user?.uid) {
+          const userDoc = await firestore().collection('users').doc(user.uid).get();
+          const userData = userDoc.data();
+          
+          if (userData && !userData.hasSeenHomeWalkthrough) {
+            // Show walkthrough for first-time users
+            setTimeout(() => {
+              setShowWalkthrough(true);
+              setCurrentStep(0);
+            }, 1000);
+            
+            // Mark as seen
+            await firestore().collection('users').doc(user.uid).update({
+              hasSeenHomeWalkthrough: true
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error checking walkthrough status:', error);
+      }
+    };
+
+    checkFirstTimeUser();
+  }, [user?.uid]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -97,11 +235,160 @@ const HomeScreen = ({ navigation }) => {
         const unsubscribe = firestore()
           .collection('users')
           .doc(user.uid)
-          .onSnapshot(() => {}); // This will be overridden by the actual unsubscribe
+          .onSnapshot(() => {});
         unsubscribe();
       }
     };
   }, [user?.uid]);
+
+  // Calculate precise positions based on your layout
+  const TOP_BAR_HEIGHT = vScale(90);
+  const CONTENT_TOP = TOP_BAR_HEIGHT;
+  const CARD_HEIGHT = vScale(160);
+  
+  // First row of cards starts right after top bar
+  const FIRST_ROW_TOP = CONTENT_TOP + PADDING;
+  // Second row starts after first row + gap
+  const SECOND_ROW_TOP = FIRST_ROW_TOP + CARD_HEIGHT + GAP;
+  // Shop box starts after second row + gap
+  const SHOP_BOX_TOP = SECOND_ROW_TOP + CARD_HEIGHT + GAP;
+  // Community box starts after shop box + gap
+  const COMMUNITY_BOX_TOP = SHOP_BOX_TOP + vScale(90) + GAP;
+
+  // Walkthrough step information with precise positioning
+  const getStepInfo = (step) => {
+    const steps = [
+      {
+        title: 'Weekly Quiz',
+        description: 'Take our weekly quiz to test your environmental knowledge and earn Terra Coins! Complete it every week for new questions and rewards.',
+        highlightStyle: { 
+          top: FIRST_ROW_TOP,
+          left: PADDING, 
+          width: CARD_WIDTH, 
+          height: CARD_HEIGHT 
+        },
+        tooltipStyle: { 
+          top: FIRST_ROW_TOP + CARD_HEIGHT + 20,
+          left: PADDING,
+          right: PADDING
+        }
+      },
+      {
+        title: 'Achievements',
+        description: 'Complete various achievements to earn rewards and track your environmental progress! Unlock badges and special rewards.',
+        highlightStyle: { 
+          top: FIRST_ROW_TOP,
+          left: PADDING + CARD_WIDTH + GAP, 
+          width: CARD_WIDTH, 
+          height: CARD_HEIGHT 
+        },
+        tooltipStyle: { 
+          top: FIRST_ROW_TOP + CARD_HEIGHT + 20,
+          left: PADDING,
+          right: PADDING
+        }
+      },
+      {
+        title: 'Read & Learn',
+        description: 'Access educational content about sustainability and environmental protection. Learn while earning Terra Coins!',
+        highlightStyle: { 
+          top: SECOND_ROW_TOP,
+          left: PADDING, 
+          width: CARD_WIDTH, 
+          height: CARD_HEIGHT 
+        },
+        tooltipStyle: { 
+          top: SECOND_ROW_TOP + CARD_HEIGHT + 20,
+          left: PADDING,
+          right: PADDING
+        }
+      },
+      {
+        title: 'Invite Friends',
+        description: 'Invite friends to join TerraTrack and earn bonus coins! Grow our community and multiply your environmental impact.',
+        highlightStyle: { 
+          top: SECOND_ROW_TOP,
+          left: PADDING + CARD_WIDTH + GAP, 
+          width: CARD_WIDTH, 
+          height: CARD_HEIGHT 
+        },
+        tooltipStyle: { 
+          top: SECOND_ROW_TOP + CARD_HEIGHT + 20,
+          left: PADDING,
+          right: PADDING
+        }
+      },
+      {
+        title: 'Terra Shop',
+        description: 'Spend your Terra Coins on exclusive avatars, rewards, and partner offers! Customize your experience and support eco-friendly brands.',
+        highlightStyle: { 
+          top: SHOP_BOX_TOP,
+          left: PADDING, 
+          right: PADDING,
+          width: width - (PADDING * 2),
+          height: vScale(90)
+        },
+        tooltipStyle: { 
+          top: SHOP_BOX_TOP + vScale(90) + 20,
+          left: PADDING,
+          right: PADDING
+        }
+      },
+      {
+        title: 'Community Progress',
+        description: 'See how our community is working together to achieve environmental goals! Track collective impact and milestones.',
+        highlightStyle: { 
+          top: COMMUNITY_BOX_TOP,
+          left: PADDING, 
+          right: PADDING,
+          width: width - (PADDING * 2),
+          height: vScale(140)
+        },
+        tooltipStyle: { 
+          top: height * 0.4,
+          left: PADDING,
+          right: PADDING
+        }
+      },
+      {
+        title: 'Navigation',
+        description: 'Use the bottom navigation to access all app sections: Home, Routine, Leaderboards, and your Profile.',
+        highlightStyle: { 
+          top: height - 80, // Bottom navigation area
+          left: 0, 
+          right: 0,
+          width: width,
+          height: 80
+        },
+        tooltipStyle: { 
+          bottom: height * 0.4, // Position above the navigation area
+          left: PADDING,
+          right: PADDING
+        }
+      }
+    ];
+    
+    return steps[step];
+  };
+
+  // Walkthrough navigation handlers
+  const handleNextStep = () => {
+    if (currentStep < 6) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleCompleteWalkthrough();
+    }
+  };
+
+  const handleSkipWalkthrough = () => {
+    setShowWalkthrough(false);
+    setCurrentStep(0);
+  };
+
+  const handleCompleteWalkthrough = () => {
+    setShowWalkthrough(false);
+    setCurrentStep(0);
+  };
 
   // REAL-TIME TerraCoins subscription
   const setupRealtimeTerraCoins = () => {
@@ -308,6 +595,16 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* WALKTHROUGH OVERLAY */}
+      <WalkthroughOverlay
+        visible={showWalkthrough}
+        currentStep={currentStep}
+        onNext={handleNextStep}
+        onSkip={handleSkipWalkthrough}
+        onComplete={handleCompleteWalkthrough}
+        getStepInfo={getStepInfo}
+      />
+
       {/* SUSPENSION POPUP - BLOCKING MODAL */}
       <SuspensionPopup
         userId={user?.uid}
@@ -562,6 +859,106 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   modalButtonText: { color: '#fff', fontWeight: 'bold' },
+
+ // Walkthrough Styles - UPDATED
+  walkthroughContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  lightOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Much lighter overlay
+  },
+  maskContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  overlaySection: {
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Lighter overlay sections
+  },
+  middleSection: {
+    flexDirection: 'row',
+  },
+  highlightArea: {
+    backgroundColor: 'transparent',
+    position: 'relative',
+  },
+  highlightBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 3,
+    borderColor: '#415D43',
+    borderRadius: 15,
+    // REMOVED shadow properties to eliminate fade/shadow effect
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  tooltip: {
+    position: 'absolute',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 10,
+    zIndex: 999,
+  },
+  tooltipTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#415D43',
+    marginBottom: 8,
+  },
+  tooltipDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  walkthroughButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  skipButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  skipButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  nextButton: {
+    backgroundColor: '#415D43',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  nextButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  completeButton: {
+    backgroundColor: '#415D43',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 20,
+    alignSelf: 'center',
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  completeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default HomeScreen;
