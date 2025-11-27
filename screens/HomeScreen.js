@@ -139,7 +139,7 @@ const WalkthroughOverlay = ({
   );
 };
 
-const HomeScreen = ({ navigation }) => {
+const HomeScreen = ({ navigation, route }) => {
   const [terraCoins, setTerraCoins] = useState(0);
   const [communityProgress, setCommunityProgress] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -150,6 +150,7 @@ const HomeScreen = ({ navigation }) => {
   // Walkthrough states
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [hasCheckedWalkthrough, setHasCheckedWalkthrough] = useState(false);
 
   // new states for monthly footprint popup
   const [showPopup, setShowPopup] = useState(false);
@@ -163,34 +164,53 @@ const HomeScreen = ({ navigation }) => {
   // NEW STATE FOR WEEKLY QUIZ CONFIRMATION
   const [showQuizConfirmation, setShowQuizConfirmation] = useState(false);
 
-  // Check if user has seen walkthrough before
+  // Check if user has seen walkthrough before - UPDATED LOGIC
   useEffect(() => {
     const checkFirstTimeUser = async () => {
       try {
-        if (user?.uid) {
+        if (user?.uid && !hasCheckedWalkthrough) {
           const userDoc = await firestore().collection('users').doc(user.uid).get();
           const userData = userDoc.data();
           
-          if (userData && !userData.hasSeenHomeWalkthrough) {
-            // Show walkthrough for first-time users
+          // Check if user just completed onboarding (has onboardingCompleted flag)
+          const justCompletedOnboarding = userData?.onboardingCompleted && 
+                                        !userData?.hasSeenHomeWalkthrough;
+
+          // Check if coming from calculator with showWalkthrough flag
+          const fromCalculatorWithWalkthrough = route.params?.showWalkthrough;
+
+          if (justCompletedOnboarding || fromCalculatorWithWalkthrough) {
+            console.log('🔄 Showing home screen walkthrough for new user');
+            // Small delay to ensure home screen is fully rendered
             setTimeout(() => {
               setShowWalkthrough(true);
               setCurrentStep(0);
-            }, 1000);
+            }, 1500);
             
-            // Mark as seen
+            // Mark as seen in database
             await firestore().collection('users').doc(user.uid).update({
               hasSeenHomeWalkthrough: true
             });
           }
+          
+          setHasCheckedWalkthrough(true);
         }
       } catch (error) {
         console.error('Error checking walkthrough status:', error);
+        setHasCheckedWalkthrough(true);
       }
     };
 
     checkFirstTimeUser();
-  }, [user?.uid]);
+  }, [user?.uid, hasCheckedWalkthrough, route.params]);
+
+  // Clear route params after processing to prevent re-triggering
+  useEffect(() => {
+    if (route.params?.showWalkthrough) {
+      // Clear the parameter after use
+      navigation.setParams({ showWalkthrough: undefined });
+    }
+  }, [route.params, navigation]);
 
   useEffect(() => {
     const fetchData = async () => {

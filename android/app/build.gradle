@@ -45,6 +45,20 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
+     // ADD APK NAMING CONFIGURATION HERE
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def project = "TerraTrack"
+            def buildType = variant.buildType.name
+            def version = variant.versionName
+            def date = new Date()
+            def formattedDate = date.format('yyyyMMdd_HHmm')
+            
+            def newApkName = "${project}_${buildType}_v${version}_${formattedDate}.apk"
+            output.outputFileName = newApkName
+        }
+    }
     
     // ADD THIS PACKAGING OPTIONS BLOCK
     packagingOptions {

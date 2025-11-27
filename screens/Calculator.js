@@ -97,18 +97,32 @@ const Calculator = ({ navigation }) => {
     }
   };
 
-const handleSubmit = async () => {
-  setIsSubmitting(true);
-  try {
-    const results = await saveCarbonFootprint(answers);
+    const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const results = await saveCarbonFootprint(answers);
 
-    navigation.navigate('ResultsScreen', { results });
-  } catch (error) {
-    Alert.alert('Error', 'Something went wrong while saving your results.');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+      // Check if coming from onboarding and should show walkthrough
+      const fromOnboarding = navigation.getState().routes.find(
+        route => route.name === 'Calculator'
+      )?.params?.fromOnboarding;
+
+      if (fromOnboarding) {
+        // First time user: Go to ResultsScreen first, then HomeScreen with walkthrough
+        navigation.navigate('ResultsScreen', { 
+          results,
+          showWalkthrough: true // Pass flag to ResultsScreen
+        });
+      } else {
+        // Returning user: Just go to ResultsScreen
+        navigation.navigate('ResultsScreen', { results });
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong while saving your results.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (!currentQuestion) {
     return (

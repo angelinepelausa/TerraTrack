@@ -6,6 +6,7 @@ import OptionButton from '../components/OptionButton';
 import ProgressIndicator from '../components/ProgressIndicator';
 import { onboardingRepository, saveOnboardingPreferences } from '../repositories/onboardingRepository';
 import { useAuth } from '../context/AuthContext';
+import firestore from '@react-native-firebase/firestore';
 
 const OnboardingScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -45,7 +46,7 @@ const OnboardingScreen = ({ navigation }) => {
     referredBy: referralCode || null
   });
 
-  const handleSubmit = async () => {
+    const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
@@ -62,6 +63,12 @@ const OnboardingScreen = ({ navigation }) => {
 
       const preferences = formatAnswersForFirestore();
       await saveOnboardingPreferences(preferences);
+
+      // Mark user as completed onboarding in Firestore
+      await firestore().collection('users').doc(user.uid).update({
+        onboardingCompleted: true,
+        hasSeenHomeWalkthrough: false // Reset this so walkthrough shows after calculator
+      });
 
       setShowCarbonFootprintScreen(true);
     } catch (error) {
@@ -104,7 +111,10 @@ const OnboardingScreen = ({ navigation }) => {
   };
 
   const handleProceed = () => {
-    navigation.replace('Calculator');
+    navigation.replace('Calculator', { 
+      fromOnboarding: true,
+      showWalkthrough: true 
+    });
   };
 
   if (!user) {

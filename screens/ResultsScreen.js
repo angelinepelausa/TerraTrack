@@ -7,7 +7,7 @@ const PH_AVERAGE = 2.9; // tonnes annual average
 const MAX_BAR_HEIGHT = vScale(210); // instead of SCREEN_HEIGHT * 0.25
 
 const ResultsScreen = ({ route, navigation }) => {
-  const { results, compareWithLastMonth } = route.params;
+  const { results, compareWithLastMonth, showWalkthrough } = route.params;
 
   // Convert kilograms → tonnes
   const totalAnnualTonnes = results.totalAnnual / 1000;
@@ -16,16 +16,13 @@ const ResultsScreen = ({ route, navigation }) => {
   const dietTonnes = results.dietEmissionAnnual / 1000;
 
   // Decide comparison value (last month OR PH average)
-// Decide comparison value
-// If compareWithLastMonth exists, use it
-// Otherwise, fallback to PH_AVERAGE
-const comparisonValue = compareWithLastMonth && compareWithLastMonth.totalAnnual
-  ? compareWithLastMonth.totalAnnual / 1000
-  : PH_AVERAGE;
+  const comparisonValue = compareWithLastMonth && compareWithLastMonth.totalAnnual
+    ? compareWithLastMonth.totalAnnual / 1000
+    : PH_AVERAGE;
 
-const comparisonLabel = compareWithLastMonth && compareWithLastMonth.totalAnnual
-  ? 'Last Month'
-  : 'Philippines Average';
+  const comparisonLabel = compareWithLastMonth && compareWithLastMonth.totalAnnual
+    ? 'Last Month'
+    : 'Philippines Average';
 
   // Find largest footprint value for scaling
   const maxValue = Math.max(totalAnnualTonnes, comparisonValue);
@@ -96,13 +93,21 @@ const comparisonLabel = compareWithLastMonth && compareWithLastMonth.totalAnnual
       <Text style={styles.info}>
         {compareWithLastMonth
           ? 'Track your progress month by month with TerraTrack.'
-          : 'Find out how to maximize your environmental impact with TerraTrack’s features.'}
+          : 'Find out how to maximize your environmental impact with TerraTrack\'s features.'}
       </Text>
 
       {/* Continue Button */}
       <TouchableOpacity
         style={styles.continueButton}
-        onPress={() => navigation.navigate('HomeScreen')}
+        onPress={() => {
+          if (showWalkthrough) {
+            // First time user - go to HomeScreen with walkthrough
+            navigation.navigate('HomeScreen', { showWalkthrough: true });
+          } else {
+            // Returning user - just go to HomeScreen
+            navigation.navigate('HomeScreen');
+          }
+        }}
       >
         <Text style={styles.continueText}>Continue</Text>
       </TouchableOpacity>
