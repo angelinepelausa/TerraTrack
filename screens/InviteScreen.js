@@ -8,6 +8,7 @@ import { scale, vScale } from '../utils/scaling';
 import HeaderRow from '../components/HeaderRow';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { getUserTotals } from '../repositories/userStatsRepository';
+import ConfirmationPopup from '../components/ConfirmationPopup';
 
 const InviteScreen = ({ navigation }) => {
   const [referralCode, setReferralCode] = useState('');
@@ -20,6 +21,12 @@ const InviteScreen = ({ navigation }) => {
     goalEducational: 0,
     goalWeeklyQuiz: 0
   });
+
+  // Popup states
+  const [showCopyPopup, setShowCopyPopup] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,6 +75,8 @@ const InviteScreen = ({ navigation }) => {
       } catch (err) {
         console.error(err);
         setError('Error loading data');
+        setPopupMessage('Error loading data. Please try again.');
+        setShowErrorPopup(true);
       } finally {
         setLoading(false);
       }
@@ -77,17 +86,19 @@ const InviteScreen = ({ navigation }) => {
   }, []);
 
   const copyToClipboard = () => {
-    Alert.alert('Copied!', 'Referral code copied to clipboard');
+    setPopupMessage('Referral code copied to clipboard!');
+    setShowCopyPopup(true);
   };
 
-  const handleClaimPrize = async (inviteId) => {
+  const handleClaimPrize = async (invite) => {
     try {
       const user = auth().currentUser;
       if (!user) return;
 
       const rewardResult = await addUserRewards(user.uid, settings.referrer.terraCoins, settings.referrer.terraPoints);
       if (!rewardResult.success) {
-        Alert.alert('Error', 'Failed to claim prize');
+        setPopupMessage('Failed to claim prize. Please try again.');
+        setShowErrorPopup(true);
         return;
       }
 
@@ -95,14 +106,19 @@ const InviteScreen = ({ navigation }) => {
         .collection('users')
         .doc(user.uid)
         .collection('invites')
-        .doc(inviteId)
+        .doc(invite.id)
         .update({ rewardsClaimed: true });
 
-      setInvites(prev => prev.map(inv => inv.id === inviteId ? { ...inv, rewardsClaimed: true } : inv));
-      Alert.alert('Success', 'Rewards claimed successfully!');
+      setInvites(prev => prev.map(inv => 
+        inv.id === invite.id ? { ...inv, rewardsClaimed: true } : inv
+      ));
+      
+      setPopupMessage(`Successfully claimed ${settings.referrer.terraCoins} Terra Coins and ${settings.referrer.terraPoints} Terra Points!`);
+      setShowSuccessPopup(true);
     } catch (err) {
       console.error(err);
-      Alert.alert('Error', 'Failed to claim prize');
+      setPopupMessage('Failed to claim prize. Please try again.');
+      setShowErrorPopup(true);
     }
   };
 
@@ -199,7 +215,7 @@ const InviteScreen = ({ navigation }) => {
                     !canClaim && styles.claimButtonDisabled,
                     inv.rewardsClaimed && styles.claimButtonClaimed
                   ]}
-                  onPress={() => canClaim && handleClaimPrize(inv.id)}
+                  onPress={() => canClaim && handleClaimPrize(inv)}
                   disabled={!canClaim}
                 >
                   <Text style={styles.claimButtonText}>
@@ -213,9 +229,44 @@ const InviteScreen = ({ navigation }) => {
 
         {error && <Text style={styles.errorText}>{error}</Text>}
       </ScrollView>
+
+      {/* Copy Confirmation Popup */}
+      <ConfirmationPopup
+        visible={showCopyPopup}
+        onConfirm={() => setShowCopyPopup(false)}
+        title="Copied!"
+        message={popupMessage}
+        confirmText="OK"
+        showCancel={false}
+        type="success"
+      />
+
+      {/* Success Popup */}
+      <ConfirmationPopup
+        visible={showSuccessPopup}
+        onConfirm={() => setShowSuccessPopup(false)}
+        title="Success!"
+        message={popupMessage}
+        confirmText="OK"
+        showCancel={false}
+        type="success"
+      />
+
+      {/* Error Popup */}
+      <ConfirmationPopup
+        visible={showErrorPopup}
+        onConfirm={() => setShowErrorPopup(false)}
+        title="Error"
+        message={popupMessage}
+        confirmText="OK"
+        showCancel={false}
+        type="error"
+      />
     </View>
   );
 };
+
+// ... (styles remain the same)
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313', paddingTop: vScale(40) },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Switch } from 'react-native';
+import { Text, View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Switch } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -7,6 +7,7 @@ import { checkOnboardingStatus } from '../repositories/onboardingRepository';
 import { checkIfUserIsAdmin } from '../repositories/adminRepository';
 import { checkIfUserIsPartner, checkPartnerProfileComplete } from '../repositories/partnerRepository';
 import { scale, vScale } from '../utils/scaling';
+import ConfirmationPopup from '../components/ConfirmationPopup';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -14,6 +15,8 @@ const LoginScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     const checkRememberedUser = async () => {
@@ -56,9 +59,14 @@ const LoginScreen = ({ navigation }) => {
     setRememberMe(value);
   };
 
+  const showError = (message) => {
+    setErrorMessage(message);
+    setShowErrorPopup(true);
+  };
+
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+      showError('Please enter both email and password');
       return;
     }
 
@@ -74,7 +82,33 @@ const LoginScreen = ({ navigation }) => {
 
       await handleUserRoleNavigation(user.uid);
     } catch (error) {
-      Alert.alert('Login Failed', error.message || 'Something went wrong');
+      let errorMsg = 'Something went wrong';
+      
+      // Handle specific Firebase auth errors
+      switch (error.code) {
+        case 'auth/invalid-email':
+          errorMsg = 'Please enter a valid email address';
+          break;
+        case 'auth/user-not-found':
+          errorMsg = 'No account found with this email';
+          break;
+        case 'auth/wrong-password':
+          errorMsg = 'Incorrect password. Please try again';
+          break;
+        case 'auth/invalid-credential':
+          errorMsg = 'Invalid email or password';
+          break;
+        case 'auth/too-many-requests':
+          errorMsg = 'Too many failed attempts. Please try again later';
+          break;
+        case 'auth/network-request-failed':
+          errorMsg = 'Network error. Please check your connection';
+          break;
+        default:
+          errorMsg = error.message || 'Login failed. Please try again';
+      }
+      
+      showError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -147,6 +181,17 @@ const LoginScreen = ({ navigation }) => {
           </Text>
         </Text>
       </View>
+
+      {/* Error Popup */}
+      <ConfirmationPopup
+        visible={showErrorPopup}
+        onConfirm={() => setShowErrorPopup(false)}
+        title="Login Failed"
+        message={errorMessage}
+        confirmText="OK"
+        showCancel={false}
+        type="error"
+      />
     </View>
   );
 };
