@@ -4,7 +4,7 @@ import { Text, View, StyleSheet, Image, TouchableOpacity, ScrollView } from 'rea
 import { scale, vScale } from '../utils/scaling';
 import { useAuth } from '../context/AuthContext';
 import { getUserTerraCoins } from '../repositories/userRepository';
-import { taskVerificationService } from '../services/taskVerificationService';
+import firestore from '@react-native-firebase/firestore';
 
 const TaskVerifyScreen = ({ navigation }) => {
   const [terraCoins, setTerraCoins] = useState(0);
@@ -29,18 +29,135 @@ const TaskVerifyScreen = ({ navigation }) => {
     }
   };
 
+  // NEW: Function to get the latest distribution run ID
+  const getLatestDistributionRun = async () => {
+    try {
+      const distributionSnap = await firestore()
+        .collection('distribution')
+        .orderBy('completedAt', 'desc')
+        .limit(1)
+        .get();
+
+      if (distributionSnap.empty) {
+        console.log("No distribution runs found");
+        return null;
+      }
+
+      const latestDistribution = distributionSnap.docs[0].data();
+      console.log("Latest distribution:", latestDistribution.runId, "date:", latestDistribution.date);
+      return {
+        runId: latestDistribution.runId,
+        date: latestDistribution.date
+      };
+    } catch (error) {
+      console.error("Error fetching latest distribution:", error);
+      return null;
+    }
+  };
+
+  // MODIFIED: Function to get assigned verification tasks from the latest distribution only
+  const getLatestAssignedVerificationTasks = async (userId) => {
+    try {
+      const latestDistribution = await getLatestDistributionRun();
+      if (!latestDistribution) {
+        return [];
+      }
+
+      const userRef = firestore().collection('users').doc(userId);
+      const assignedVerificationsSnap = await userRef.collection('assigned_verifications').get();
+      
+      if (assignedVerificationsSnap.empty) {
+        return [];
+      }
+
+      const latestTasks = [];
+      const expectedDocId = `${latestDistribution.date}_${latestDistribution.runId}`;
+      
+      console.log("Looking for document:", expectedDocId);
+
+      // Process only the document that matches the latest distribution
+      for (const doc of assignedVerificationsSnap.docs) {
+        if (doc.id === expectedDocId) {
+          const data = doc.data();
+          
+          // Extract tasks from the document (each field is a task)
+          Object.keys(data).forEach(key => {
+            const taskData = data[key];
+            if (taskData && taskData.status === 'pending') {
+              latestTasks.push({
+                id: key, // Use the composite key as id
+                ...taskData,
+                docId: doc.id // Store the document ID for reference
+              });
+            }
+          });
+          break; // Found the latest distribution document, no need to check others
+        }
+      }
+
+      console.log(`Found ${latestTasks.length} tasks from latest distribution`);
+      return latestTasks;
+    } catch (error) {
+      console.error("Error fetching assigned verification tasks:", error);
+      return [];
+    }
+  };
+
+  // MODIFIED: Function to get submitted tasks from the latest distribution period only
+  const getLatestSubmittedTasks = async (userId) => {
+    try {
+      const latestDistribution = await getLatestDistributionRun();
+      if (!latestDistribution) {
+        return [];
+      }
+
+      const userRef = firestore().collection('users').doc(userId);
+      
+      // Only get verifications from the distribution date
+      const verificationsRef = userRef.collection('verifications').doc(latestDistribution.date);
+      const verificationSnap = await verificationsRef.get();
+      
+      if (!verificationSnap.exists) {
+        return [];
+      }
+
+      const data = verificationSnap.data();
+      const latestTasks = [];
+      
+      // Extract tasks from the document
+      Object.keys(data).forEach(taskId => {
+        const taskData = data[taskId];
+        if (taskData && taskData.status === 'pending') {
+          latestTasks.push({
+            id: taskId,
+            ...taskData,
+            submittedDate: latestDistribution.date,
+            taskId: taskId
+          });
+        }
+      });
+
+      console.log(`Found ${latestTasks.length} submitted tasks from latest distribution`);
+      return latestTasks;
+    } catch (error) {
+      console.error("Error fetching submitted tasks:", error);
+      return [];
+    }
+  };
+
   const loadTasks = async () => {
     setLoading(true);
     try {
-      const result = await taskVerificationService.getUserTaskVerificationData(user.uid);
-      if (result.success) {
-        setMySubmittedTasks(result.submittedTasks);
-        setAssignedTasks(result.assignedTasks);
-      } else {
-        console.error("Error fetching tasks:", result.error);
-      }
+      // Use the new functions to get only latest distribution tasks
+      const [submittedTasks, assignedTasks] = await Promise.all([
+        getLatestSubmittedTasks(user.uid),
+        getLatestAssignedVerificationTasks(user.uid)
+      ]);
+
+      setMySubmittedTasks(submittedTasks);
+      setAssignedTasks(assignedTasks);
     } catch (error) {
-      console.error("Error fetching tasks:", error);
+      console.error("Error loading tasks:", error);
     } finally {
       setLoading(false);
     }
@@ -78,16 +195,17 @@ const TaskVerifyScreen = ({ navigation }) => {
         <Text style={styles.taskverText}>Task Verification</Text>
         <View style={styles.tasksContainer}>
           {mySubmittedTasks.length === 0 ? (
-            <Text style={styles.emptyText}>No submitted tasks yet.</Text>
+            <Text style={styles.emptyText}>No submitted tasks pending verification.</Text>
           ) : (
             mySubmittedTasks.map((task) => (
-              <View style={styles.taskCard} key={task.id}>
+              <View style={styles.taskCard} key={`${task.submittedDate}_${task.id}`}>
                 <Image
                   source={task.photoUrl ? { uri: task.photoUrl } : require('../assets/images/bus.png')}
                   style={styles.taskimg}
                 />
                 <View style={styles.taskInfo}>
                   <Text style={styles.taskTitle}>{task.title}</Text>
+                  <Text style={styles.taskDate}>Submitted: {task.submittedDate}</Text>
                 </View>
                 <View
                   style={[
@@ -112,10 +230,15 @@ const TaskVerifyScreen = ({ navigation }) => {
             <Text style={styles.emptyText}>No tasks assigned for verification.</Text>
           ) : (
             assignedTasks.map((task) => (
-              <View style={styles.vertaskCard} key={task.id}>
-                <Image source={{ uri: task.photoUrl }} style={styles.vertaskimg} />
+              <View style={styles.vertaskCard} key={`${task.docId}_${task.id}`}>
+                <Image 
+                  source={{ uri: task.photoUrl }} 
+                  style={styles.vertaskimg} 
+                  defaultSource={require('../assets/images/bus.png')}
+                />
                 <View style={{ flex: 1, marginRight: scale(10) }}>
                   <Text style={styles.vertaskTitle}>{task.title}</Text>
+                  <Text style={styles.taskDate}>Submitted: {task.submittedDate}</Text>
                 </View>
                 <TouchableOpacity
                   style={[styles.taskVerifyBtn, task.status !== 'pending' && { backgroundColor: '#6A6A6A' }]}
@@ -133,7 +256,7 @@ const TaskVerifyScreen = ({ navigation }) => {
   );
 };
 
-// --- Styles remain unchanged ---
+// Styles remain the same
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
   scrollContainer: { paddingBottom: vScale(30) },
@@ -197,6 +320,12 @@ const styles = StyleSheet.create({
     fontSize: scale(13),
     fontWeight: 'bold',
     color: '#131313',
+    marginBottom: scale(4),
+  },
+  taskDate: {
+    fontSize: scale(10),
+    color: '#666',
+    fontStyle: 'italic',
   },
   statusContainer: {
     paddingHorizontal: scale(8),
@@ -234,6 +363,7 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     fontWeight: 'bold',
     color: '#131313',
+    marginBottom: scale(4),
   },
   taskVerifyBtn: {
     backgroundColor: '#415D43',
