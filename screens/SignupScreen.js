@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { scale, vScale } from '../utils/scaling';
 import { validateSignUp, authErrorMessages } from '../services/validationService';
 import { signUpWithEmail } from '../services/authService';
+import { badgesRepository } from '../repositories/badgesRepository';
 
 const SignUpScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -29,50 +30,63 @@ const SignUpScreen = ({ navigation }) => {
   };
 
   const handleSignUp = async () => {
-    const { isValid, errors } = validateSignUp(formData);
-    setErrorMessages(errors);
-    if (!isValid) return;
+  const { isValid, errors } = validateSignUp(formData);
+  setErrorMessages(errors);
+  if (!isValid) return;
 
-    setLoading(true);
+  setLoading(true);
+  
+  // Extract only the data we need
+  const { email, password, username } = formData;
+
+  try {
+    // Create account in Firebase Auth and Firestore
+    const authResult = await signUpWithEmail(email, password, { username });
     
-    // Extract only the data we need
-    const { email, password, username } = formData;
-
-    try {
-      // Create account in Firebase Auth and Firestore
-      const authResult = await signUpWithEmail(email, password, { username });
-      
-      if (!authResult.success) {
-        let newErrors = {};
-        if (authErrorMessages[authResult.code]) {
-          if (authResult.code.includes('email')) {
-            newErrors.email = authErrorMessages[authResult.code];
-          } else {
-            newErrors.general = authErrorMessages[authResult.code];
-          }
+    if (!authResult.success) {
+      let newErrors = {};
+      if (authErrorMessages[authResult.code]) {
+        if (authResult.code.includes('email')) {
+          newErrors.email = authErrorMessages[authResult.code];
         } else {
-          newErrors.general = authResult.error || 'Something went wrong';
+          newErrors.general = authErrorMessages[authResult.code];
         }
-        setErrorMessages(newErrors);
-        setLoading(false);
-        return;
+      } else {
+        newErrors.general = authResult.error || 'Something went wrong';
       }
-
-      // Verify that we have a user object with uid
-      if (!authResult.user || !authResult.user.uid) {
-        setErrorMessages({ general: 'Failed to create user account. Please try again.' });
-        setLoading(false);
-        return;
-      }
-
-      setShowSuccess(true);
-    } catch (err) {
-      console.error('Sign up error:', err);
-      setErrorMessages({ general: 'Something went wrong during sign up.' });
-    } finally {
+      setErrorMessages(newErrors);
       setLoading(false);
+      return;
     }
-  };
+
+    // Verify that we have a user object with uid
+    if (!authResult.user || !authResult.user.uid) {
+      setErrorMessages({ general: 'Failed to create user account. Please try again.' });
+      setLoading(false);
+      return;
+    }
+
+    // Award the welcome badge to the new user
+    try {
+      const badgeId = "8HxNEC8FmZoszwYMRWbM";
+      
+      // Use your existing badgesRepository to unlock the badge
+      await badgesRepository.unlockBadgeForUser(authResult.user.uid, badgeId);
+      
+      console.log('Welcome badge awarded to user:', authResult.user.uid);
+    } catch (badgeError) {
+      console.error('Error awarding badge:', badgeError);
+      // Don't block the signup flow if badge assignment fails
+    }
+
+    setShowSuccess(true);
+  } catch (err) {
+    console.error('Sign up error:', err);
+    setErrorMessages({ general: 'Something went wrong during sign up.' });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const inputWidth = scale(308);
   const inputHeight = vScale(53);

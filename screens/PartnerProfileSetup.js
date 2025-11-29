@@ -64,7 +64,6 @@ const PartnerProfileSetup = ({ navigation }) => {
         setUploading(false);
       }
     } catch (error) {
-      console.error('Image pick error:', error);
       Alert.alert('Error', 'Failed to upload image');
       setUploading(false);
     }
@@ -200,7 +199,6 @@ const PartnerProfileSetup = ({ navigation }) => {
         throw new Error(updateResult.error || 'Failed to update profile');
       }
     } catch (error) {
-      console.error('Profile setup error:', error);
       Alert.alert('Error', error.message || 'Failed to save profile');
     } finally {
       setLoading(false);
@@ -242,41 +240,52 @@ const PartnerProfileSetup = ({ navigation }) => {
           )}
         </TouchableOpacity>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Business Name"
-          placeholderTextColor="#666"
-          value={formData.name}
-          onChangeText={(value) => handleInputChange('name', value)}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Business Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter business name"
+            placeholderTextColor="#999"
+            value={formData.name}
+            onChangeText={(value) => handleInputChange('name', value)}
+          />
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Contact Information"
-          placeholderTextColor="#666"
-          value={formData.contact}
-          onChangeText={(value) => handleInputChange('contact', value)}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Contact Information</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter contact details"
+            placeholderTextColor="#999"
+            value={formData.contact}
+            onChangeText={(value) => handleInputChange('contact', value)}
+          />
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Business Address"
-          placeholderTextColor="#666"
-          value={formData.address}
-          onChangeText={(value) => handleInputChange('address', value)}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Business Address</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter business address"
+            placeholderTextColor="#999"
+            value={formData.address}
+            onChangeText={(value) => handleInputChange('address', value)}
+          />
+        </View>
 
         {/* Business Hours Input */}
-        <TouchableOpacity 
-          style={styles.businessHoursButton}
-          onPress={openBusinessHoursModal}
-        >
-          <Ionicons name="time-outline" size={scale(20)} color="#709775" style={styles.businessHoursIcon} />
-          <Text style={styles.businessHoursText}>
-            {businessHours || 'Set Business Hours'}
-          </Text>
-          <Ionicons name="chevron-forward" size={scale(16)} color="#CCCCCC" />
-        </TouchableOpacity>
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Business Hours</Text>
+          <TouchableOpacity 
+            style={styles.businessHoursButton}
+            onPress={openBusinessHoursModal}
+          >
+            <Text style={[styles.businessHoursText, !businessHours && styles.placeholderText]}>
+              {businessHours || 'Set business hours'}
+            </Text>
+            <Ionicons name="chevron-forward" size={scale(16)} color="#999" />
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity 
           style={styles.submitButton} 
@@ -284,7 +293,7 @@ const PartnerProfileSetup = ({ navigation }) => {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#DDDDDD" />
+            <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <Text style={styles.submitButtonText}>Complete Setup</Text>
           )}
@@ -299,8 +308,10 @@ const PartnerProfileSetup = ({ navigation }) => {
         onRequestClose={() => setBusinessHoursModal(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={[styles.modalContent, styles.businessHoursModal]}>
-            <Text style={styles.modalTitle}>Set Business Hours</Text>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Business Hours</Text>
+            </View>
             
             <View style={styles.timePickerContainer}>
               <TimePickerSection
@@ -324,9 +335,12 @@ const PartnerProfileSetup = ({ navigation }) => {
               />
             </View>
 
-            <Text style={styles.selectedTimePreview}>
-              {`${startHour}:${startMinute} ${startPeriod} - ${endHour}:${endMinute} ${endPeriod}`}
-            </Text>
+            <View style={styles.selectedTimeContainer}>
+              <Text style={styles.selectedTimeLabel}>Selected Hours</Text>
+              <Text style={styles.selectedTimePreview}>
+                {`${startHour}:${startMinute} ${startPeriod} - ${endHour}:${endMinute} ${endPeriod}`}
+              </Text>
+            </View>
             
             <View style={styles.modalButtons}>
               <TouchableOpacity 
@@ -340,7 +354,7 @@ const PartnerProfileSetup = ({ navigation }) => {
                 style={styles.modalSaveButton} 
                 onPress={handleSaveBusinessHours}
               >
-                <Text style={styles.modalSaveText}>Save Hours</Text>
+                <Text style={styles.modalSaveText}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -355,23 +369,26 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#131313',
     paddingHorizontal: scale(20),
-    paddingVertical: vScale(40),
+    paddingVertical: vScale(30),
   },
   header: {
     alignItems: 'center',
     marginBottom: vScale(40),
+    paddingHorizontal: scale(10),
   },
   title: {
-    fontSize: scale(24),
+    fontSize: scale(28),
     color: '#709775',
     fontFamily: 'DMSans-Bold',
-    marginBottom: vScale(10),
+    marginBottom: vScale(8),
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: scale(14),
+    fontSize: scale(16),
     color: '#CCCCCC',
     fontFamily: 'DMSans-Bold',
     textAlign: 'center',
+    lineHeight: scale(20),
   },
   formContainer: {
     width: '100%',
@@ -381,20 +398,22 @@ const styles = StyleSheet.create({
     marginBottom: vScale(30),
   },
   uploadCircle: {
-    width: scale(120),
-    height: scale(120),
-    borderRadius: scale(60),
+    width: scale(100),
+    height: scale(100),
+    borderRadius: scale(50),
     backgroundColor: '#1f1f1f',
     borderWidth: 2,
     borderColor: '#709775',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: vScale(10),
   },
   logoCircle: {
-    width: scale(120),
-    height: scale(120),
-    borderRadius: scale(60),
+    width: scale(100),
+    height: scale(100),
+    borderRadius: scale(50),
+    marginBottom: vScale(10),
   },
   uploadText: {
     color: '#709775',
@@ -402,128 +421,153 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
     marginTop: vScale(5),
   },
-  input: {
-    backgroundColor: '#CBCBCB',
+  inputGroup: {
+    marginBottom: vScale(20),
+  },
+  inputLabel: {
+    color: '#FFFFFF',
     fontFamily: 'DMSans-Bold',
-    borderRadius: scale(30),
+    fontSize: scale(14),
+    marginBottom: vScale(8),
+    marginLeft: scale(5),
+  },
+  input: {
+    backgroundColor: '#1f1f1f',
+    fontFamily: 'DMSans-Bold',
+    borderRadius: scale(12),
     height: vScale(50),
-    marginBottom: vScale(15),
-    fontSize: scale(11),
-    paddingLeft: scale(20),
+    fontSize: scale(16),
+    paddingHorizontal: scale(16),
     width: '100%',
-    color: '#000',
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#333',
   },
   businessHoursButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#CBCBCB',
-    borderRadius: scale(30),
+    justifyContent: 'space-between',
+    backgroundColor: '#1f1f1f',
+    borderRadius: scale(12),
     height: vScale(50),
-    marginBottom: vScale(15),
-    paddingLeft: scale(20),
-    paddingRight: scale(15),
+    paddingHorizontal: scale(16),
     width: '100%',
-  },
-  businessHoursIcon: {
-    marginRight: scale(10),
+    borderWidth: 1,
+    borderColor: '#333',
   },
   businessHoursText: {
-    flex: 1,
-    color: '#000',
+    color: '#FFFFFF',
     fontFamily: 'DMSans-Bold',
-    fontSize: scale(11),
+    fontSize: scale(16),
+  },
+  placeholderText: {
+    color: '#999',
   },
   submitButton: {
     backgroundColor: '#709775',
     fontFamily: 'DMSans-Bold',
-    borderRadius: scale(30),
+    borderRadius: scale(12),
     height: vScale(50),
     marginTop: vScale(10),
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
+    shadowColor: '#709775',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   submitButtonText: {
     fontFamily: 'DMSans-Bold',
-    color: '#DDDDDD',
-    fontSize: scale(12),
+    color: '#FFFFFF',
+    fontSize: scale(16),
+    fontWeight: '600',
   },
   // Modal Styles
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: scale(20),
   },
   modalContent: {
     backgroundColor: '#1f1f1f',
-    borderRadius: scale(20),
-    padding: scale(25),
-    width: '100%',
-    maxWidth: scale(400),
+    borderTopLeftRadius: scale(20),
+    borderTopRightRadius: scale(20),
+    padding: scale(20),
+    minHeight: '60%',
   },
-  businessHoursModal: {
-    maxWidth: scale(350),
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: vScale(20),
+    paddingBottom: vScale(15),
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
   },
   modalTitle: {
-    fontSize: scale(18),
+    fontSize: scale(20),
     color: '#709775',
     fontFamily: 'DMSans-Bold',
-    marginBottom: vScale(20),
-    textAlign: 'center',
+    fontWeight: '600',
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: vScale(10),
   },
   modalCancelButton: {
     flex: 1,
-    backgroundColor: '#415D43',
+    backgroundColor: 'transparent',
     padding: scale(15),
-    borderRadius: scale(10),
+    borderRadius: scale(12),
     alignItems: 'center',
-    marginRight: scale(10),
+    marginRight: scale(8),
+    borderWidth: 1,
+    borderColor: '#333',
   },
   modalCancelText: {
     color: '#FFFFFF',
     fontFamily: 'DMSans-Bold',
-    fontSize: scale(14),
+    fontSize: scale(16),
+    fontWeight: '600',
   },
   modalSaveButton: {
     flex: 1,
     backgroundColor: '#709775',
     padding: scale(15),
-    borderRadius: scale(10),
+    borderRadius: scale(12),
     alignItems: 'center',
-    marginLeft: scale(10),
+    marginLeft: scale(8),
   },
   modalSaveText: {
     color: '#FFFFFF',
     fontFamily: 'DMSans-Bold',
-    fontSize: scale(14),
+    fontSize: scale(16),
+    fontWeight: '600',
   },
   // Time Picker Styles
   timePickerContainer: {
     marginBottom: vScale(20),
   },
   timeSection: {
-    marginBottom: vScale(25),
+    marginBottom: vScale(30),
   },
   timeSectionLabel: {
     color: '#FFFFFF',
     fontFamily: 'DMSans-Bold',
-    fontSize: scale(14),
+    fontSize: scale(16),
     marginBottom: vScale(15),
     textAlign: 'center',
+    fontWeight: '600',
   },
   timePickerCompact: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#2a2a2a',
-    borderRadius: scale(15),
+    borderRadius: scale(16),
     padding: scale(20),
+    marginHorizontal: scale(10),
   },
   timeColumnCompact: {
     alignItems: 'center',
@@ -535,26 +579,37 @@ const styles = StyleSheet.create({
   timeDisplay: {
     color: '#FFFFFF',
     fontFamily: 'DMSans-Bold',
-    fontSize: scale(18),
+    fontSize: scale(20),
     marginVertical: vScale(5),
     minWidth: scale(40),
     textAlign: 'center',
+    fontWeight: '600',
   },
   timeSeparator: {
     color: '#FFFFFF',
     fontFamily: 'DMSans-Bold',
-    fontSize: scale(18),
+    fontSize: scale(20),
     marginHorizontal: scale(5),
+    fontWeight: '600',
+  },
+  selectedTimeContainer: {
+    backgroundColor: '#2a2a2a',
+    padding: scale(16),
+    borderRadius: scale(12),
+    marginBottom: vScale(20),
+    alignItems: 'center',
+  },
+  selectedTimeLabel: {
+    color: '#CCCCCC',
+    fontFamily: 'DMSans-Bold',
+    fontSize: scale(14),
+    marginBottom: vScale(5),
   },
   selectedTimePreview: {
     color: '#709775',
     fontFamily: 'DMSans-Bold',
-    fontSize: scale(16),
-    textAlign: 'center',
-    marginBottom: vScale(20),
-    backgroundColor: '#2a2a2a',
-    padding: scale(12),
-    borderRadius: scale(10),
+    fontSize: scale(18),
+    fontWeight: '600',
   },
 });
 

@@ -19,6 +19,8 @@ import { useAuth } from '../context/AuthContext';
 import firestore from '@react-native-firebase/firestore';
 import SuspensionPopup from '../components/SuspensionPopup';
 import ConfirmationPopup from '../components/ConfirmationPopup';
+import BadgePopup from '../components/BadgePopup';
+import { badgesRepository } from '../repositories/badgesRepository';
 
 const { width, height } = Dimensions.get('window');
 const PADDING = scale(20);
@@ -164,6 +166,11 @@ const HomeScreen = ({ navigation, route }) => {
   // NEW STATE FOR WEEKLY QUIZ CONFIRMATION
   const [showQuizConfirmation, setShowQuizConfirmation] = useState(false);
 
+  // BADGE POPUP STATES
+  const [showBadgePopup, setShowBadgePopup] = useState(false);
+  const [welcomeBadge, setWelcomeBadge] = useState(null);
+  const [hasCheckedBadge, setHasCheckedBadge] = useState(false);
+
   // Check if user has seen walkthrough before - UPDATED LOGIC
   useEffect(() => {
     const checkFirstTimeUser = async () => {
@@ -260,6 +267,48 @@ const HomeScreen = ({ navigation, route }) => {
       }
     };
   }, [user?.uid]);
+
+  // NEW FUNCTION: Check and show welcome badge
+  const checkAndShowWelcomeBadge = async () => {
+    try {
+      console.log('🔍 Checking for welcome badge after walkthrough completion...');
+      
+      // Check if user has the welcome badge unlocked
+      const unlockedBadges = await badgesRepository.getUnlockedBadgesForUser(user.uid);
+      const welcomeBadgeId = "8HxNEC8FmZoszwYMRWbM";
+      
+      if (unlockedBadges[welcomeBadgeId]) {
+        console.log('✅ User has welcome badge, fetching badge details...');
+        // Get badge details from badges collection
+        const badgeDetails = await badgesRepository.getBadgeById(welcomeBadgeId);
+        
+        if (badgeDetails) {
+          // Check if we should show the popup (only show once)
+          const hasSeenBadgePopup = await firestore()
+            .collection('users')
+            .doc(user.uid)
+            .get()
+            .then(doc => doc.data()?.hasSeenWelcomeBadgePopup);
+          
+          if (!hasSeenBadgePopup) {
+            console.log('🎉 Showing welcome badge popup!');
+            // Small delay to ensure walkthrough is completely closed
+            setTimeout(() => {
+              setWelcomeBadge(badgeDetails);
+              setShowBadgePopup(true);
+            }, 500);
+            
+            // Mark as seen in database
+            await firestore().collection('users').doc(user.uid).update({
+              hasSeenWelcomeBadgePopup: true
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking welcome badge:', error);
+    }
+  };
 
   // Calculate precise positions based on your layout
   const TOP_BAR_HEIGHT = vScale(90);
@@ -403,11 +452,15 @@ const HomeScreen = ({ navigation, route }) => {
   const handleSkipWalkthrough = () => {
     setShowWalkthrough(false);
     setCurrentStep(0);
+    // Check for badge after skipping walkthrough
+    checkAndShowWelcomeBadge();
   };
 
   const handleCompleteWalkthrough = () => {
     setShowWalkthrough(false);
     setCurrentStep(0);
+    // Check for badge after completing walkthrough
+    checkAndShowWelcomeBadge();
   };
 
   // REAL-TIME TerraCoins subscription
@@ -615,6 +668,13 @@ const HomeScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
+      {/* BADGE POPUP */}
+      <BadgePopup
+        visible={showBadgePopup}
+        badge={welcomeBadge}
+        onClose={() => setShowBadgePopup(false)}
+      />
+
       {/* WALKTHROUGH OVERLAY */}
       <WalkthroughOverlay
         visible={showWalkthrough}
