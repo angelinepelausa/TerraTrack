@@ -38,7 +38,14 @@ const ProfileScreen = () => {
     toggleBadgeSelection
   } = useBadges(userId);
   
-  const { chartData, chartLoading } = useChartData(userId, selectedYear, selectedCategory, userData);
+  // IMPORTANT: Use the updated useChartData with all returned properties
+  const { 
+    chartData, 
+    chartLoading, 
+    displayType, 
+    meaningfulData 
+  } = useChartData(userId, selectedYear, selectedCategory, userData);
+  
   const {
     historyLoading,
     historyTotalResults,
@@ -123,9 +130,12 @@ const ProfileScreen = () => {
         />
       )}
 
+      {/* Updated ChartSection with all required props */}
       <ChartSection
         chartData={chartData}
         chartLoading={chartLoading}
+        displayType={displayType}
+        meaningfulData={meaningfulData}
         selectedYear={selectedYear}
         selectedCategory={selectedCategory}
         years={years}

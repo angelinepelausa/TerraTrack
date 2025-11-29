@@ -1,12 +1,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
+import { LineChart, BarChart } from 'react-native-chart-kit';
 
 const { width } = Dimensions.get('window');
 
 export const ChartSection = ({
   chartData,
   chartLoading,
+  displayType,
+  meaningfulData,
   selectedYear,
   selectedCategory,
   years,
@@ -16,13 +18,136 @@ export const ChartSection = ({
   setSelectedYear,
   setSelectedCategory
 }) => {
-  // Compute chart width to fit all data
+  // Compute chart width to fit all data (for bar/line charts)
   const barCount = chartData.labels?.length || 0;
-  const minBarWidth = 35;
-  const maxBarWidth = 60;
+  const minBarWidth = 40;
+  const maxBarWidth = 70;
   const availableWidth = width * 0.85;
   const calculatedWidth = Math.max(availableWidth, barCount * minBarWidth);
   const chartWidth = Math.min(calculatedWidth, barCount * maxBarWidth);
+
+  // Chart configuration
+  const chartConfig = {
+    backgroundColor: '#1c1c1c',
+    backgroundGradientFrom: '#1c1c1c',
+    backgroundGradientTo: '#1c1c1c',
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(112, 151, 117, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+    style: { 
+      borderRadius: 16,
+    },
+    propsForLabels: {
+      fontSize: barCount <= 6 ? 12 : 10,
+    },
+    propsForVerticalLabels: {
+      dx: barCount <= 6 ? 0 : -5,
+    },
+    strokeWidth: 3,
+    propsForDots: {
+      r: "5",
+      strokeWidth: "2",
+      stroke: "#709775",
+      fill: "#1c1c1c"
+    },
+    barPercentage: barCount <= 6 ? 0.5 : 0.6,
+  };
+
+  // Render single data point as text card
+  const renderSingleData = () => {
+    const data = meaningfulData[0];
+    return (
+      <View style={styles.singleDataContainer}>
+        <Text style={styles.singleDataTitle}>Your {selectedCategory} Footprint</Text>
+        <Text style={styles.singleDataValue}>{Math.round(data.value)}</Text>
+        <Text style={styles.singleDataUnit}>kg CO₂/year</Text>
+        <Text style={styles.singleDataMonth}>{data.label} {selectedYear}</Text>
+      </View>
+    );
+  };
+
+  // Render two data points as comparison cards
+  const renderDoubleData = () => {
+    return (
+      <View style={styles.doubleDataContainer}>
+        <Text style={styles.doubleDataTitle}>Your {selectedCategory} Footprint</Text>
+        <View style={styles.doubleDataRow}>
+          {meaningfulData.map((data, index) => (
+            <View key={index} style={styles.dataCard}>
+              <Text style={styles.dataCardValue}>{Math.round(data.value)}</Text>
+              <Text style={styles.dataCardUnit}>kg CO₂/year</Text>
+              <Text style={styles.dataCardMonth}>{data.label}</Text>
+            </View>
+          ))}
+        </View>
+        {meaningfulData.length === 2 && (
+          <View style={styles.comparisonContainer}>
+            <Text style={styles.comparisonText}>
+              Difference: {Math.round(Math.abs(meaningfulData[0].value - meaningfulData[1].value))} kg CO₂/year
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Render bar chart
+  const renderBarChart = () => (
+    <BarChart
+      data={chartData}
+      width={chartWidth}
+      height={200}
+      fromZero
+      yAxisSuffix=""
+      chartConfig={chartConfig}
+      style={styles.chartStyle}
+      verticalLabelRotation={barCount > 4 ? -45 : 0}
+      yLabelsOffset={10}
+      withVerticalLabels={true}
+      segments={4}
+      yAxisLabel=""
+      showValuesOnTopOfBars={true}
+    />
+  );
+
+  // Render line chart
+  const renderLineChart = () => (
+    <LineChart
+      data={chartData}
+      width={availableWidth}
+      height={200}
+      fromZero
+      yAxisSuffix=""
+      chartConfig={chartConfig}
+      style={styles.chartStyle}
+      verticalLabelRotation={barCount > 6 ? -45 : 0}
+      yLabelsOffset={10}
+      withVerticalLabels={true}
+      segments={4}
+      yAxisLabel=""
+      bezier
+      withDots={true}
+      withInnerLines={true}
+      withOuterLines={true}
+    />
+  );
+
+  // Main render function
+  const renderContent = () => {
+    switch (displayType) {
+      case 'single-text':
+        return renderSingleData();
+      case 'double-cards':
+        return renderDoubleData();
+      case 'bar-chart':
+        return renderBarChart();
+      case 'line-chart':
+        return renderLineChart();
+      case 'no-data':
+      default:
+        return <Text style={styles.noDataText}>No data available for {selectedYear}</Text>;
+    }
+  };
 
   return (
     <View style={styles.section}>
@@ -48,34 +173,16 @@ export const ChartSection = ({
 
       {chartLoading ? (
         <ActivityIndicator size="small" color="#709775" style={{ marginTop: 20 }} />
-      ) : chartData.labels.length > 0 ? (
-        <View style={styles.chartContainer}>
-          <LineChart
-            data={chartData}
-            width={chartWidth}
-            height={200}
-            fromZero
-            yAxisSuffix=""
-            chartConfig={chartConfig}
-            style={styles.chartStyle}
-            verticalLabelRotation={barCount > 6 ? -45 : 0}
-            yLabelsOffset={10}
-            withVerticalLabels={true}
-            segments={4}
-            yAxisLabel=""
-            bezier
-            withDots={true}
-            withInnerLines={true}
-            withOuterLines={true}
-          />
-        </View>
       ) : (
-        <Text style={styles.noDataText}>No data available</Text>
+        <View style={styles.chartContainer}>
+          {renderContent()}
+        </View>
       )}
     </View>
   );
 };
 
+// Dropdown Components
 const YearDropdown = ({ selectedYear, years, dropdownOpen, setDropdownOpen, setSelectedYear }) => (
   <View style={styles.dropdownWrapper}>
     <TouchableOpacity
@@ -123,31 +230,6 @@ const CategoryDropdown = ({ selectedCategory, categories, dropdownOpen, setDropd
     )}
   </View>
 );
-
-const chartConfig = {
-  backgroundColor: '#1c1c1c',
-  backgroundGradientFrom: '#1c1c1c',
-  backgroundGradientTo: '#1c1c1c',
-  decimalPlaces: 0,
-  color: (opacity = 1) => `rgba(112, 151, 117, ${opacity})`,
-  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-  style: { 
-    borderRadius: 16,
-  },
-  propsForLabels: {
-    fontSize: 10,
-  },
-  propsForVerticalLabels: {
-    dx: -5,
-  },
-  strokeWidth: 3,
-  propsForDots: {
-    r: "5",
-    strokeWidth: "2",
-    stroke: "#709775",
-    fill: "#1c1c1c"
-  }
-};
 
 const styles = {
   section: {
@@ -224,6 +306,91 @@ const styles = {
     borderRadius: 12,
     marginVertical: 8,
   },
+  
+  // Single Data Styles
+  singleDataContainer: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    width: '80%',
+    marginVertical: 10,
+  },
+  singleDataTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  singleDataValue: {
+    color: '#709775',
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  singleDataUnit: {
+    color: '#BBBBBB',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  singleDataMonth: {
+    color: '#CCCCCC',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  
+  // Double Data Styles
+  doubleDataContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  doubleDataTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  doubleDataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 12,
+  },
+  dataCard: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    minWidth: 120,
+  },
+  dataCardValue: {
+    color: '#709775',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  dataCardUnit: {
+    color: '#BBBBBB',
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  dataCardMonth: {
+    color: '#CCCCCC',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  comparisonContainer: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 8,
+  },
+  comparisonText: {
+    color: '#BBBBBB',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  
   noDataText: {
     color: '#888',
     fontStyle: 'italic',
@@ -231,3 +398,5 @@ const styles = {
     textAlign: 'center',
   }
 };
+
+export default ChartSection;
