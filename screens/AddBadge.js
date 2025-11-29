@@ -12,9 +12,7 @@ const badgeCategories = [
   'Educational Materials',
   'Weekly Quiz',
   'Tasks',
-  'Leaderboard',
-  'Tasks Verified',
-  'Referral',
+  'New User'
 ];
 
 const AddBadge = () => {
@@ -43,12 +41,15 @@ const AddBadge = () => {
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
 
   const handleSave = async () => {
-    if (!name.trim() || !description.trim() || !imageUri || !targetNumber) {
+    if (!name.trim() || !description.trim() || !imageUri) {
       return Alert.alert('Missing Fields', 'Please fill all fields, select category and upload an image.');
     }
 
-    if (isNaN(targetNumber)) {
-      return Alert.alert('Invalid Number', 'Please enter a valid number for the target.');
+    // Only validate targetNumber if category is NOT "New User"
+    if (category !== 'New User') {
+      if (!targetNumber || isNaN(targetNumber)) {
+        return Alert.alert('Invalid Number', 'Please enter a valid number for the target.');
+      }
     }
 
     setSaving(true);
@@ -62,7 +63,7 @@ const AddBadge = () => {
         name: name.trim(),
         description: description.trim(),
         category,
-        targetNumber: Number(targetNumber),
+        targetNumber: category === 'New User' ? 1 : Number(targetNumber), // Default to 1 for New User
         imageurl: finalImageUrl,
         createdAt: new Date(),
       };
@@ -139,15 +140,20 @@ const AddBadge = () => {
           </TouchableOpacity>
         ))}
 
-        <Text style={styles.label}>Target Number</Text>
-        <TextInput
-          style={styles.input}
-          value={targetNumber}
-          onChangeText={setTargetNumber}
-          placeholder="Enter number"
-          placeholderTextColor="#888"
-          keyboardType="numeric"
-        />
+        {/* Only show Target Number if category is NOT "New User" */}
+        {category !== 'New User' && (
+          <>
+            <Text style={styles.label}>Target Number</Text>
+            <TextInput
+              style={styles.input}
+              value={targetNumber}
+              onChangeText={setTargetNumber}
+              placeholder="Enter number"
+              placeholderTextColor="#888"
+              keyboardType="numeric"
+            />
+          </>
+        )}
       </ScrollView>
 
       <View style={styles.saveContainer}>

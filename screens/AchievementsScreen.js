@@ -139,26 +139,24 @@ const AchievementsScreen = ({ navigation }) => {
     }
   };
 
-  const renderAchievement = ({ item }) => {
-    if (!stats) return null;
+const renderAchievement = ({ item }) => {
+  if (!stats) return null;
 
-    // 🌟 FIXED: Guaranteed safe category mapping
-    let userValue = 0;
-    if (item.category === 'tasks') {
-      userValue = stats.taskFinished ?? 0;
-    } else if (item.category === 'weekly quiz') {
-      userValue = stats.weeklyQuizFinished ?? 0;
-    } else if (item.category === 'educational materials') {
-      userValue = stats.educationalMaterialsRead ?? 0;
-    }
+  // 🌟 FIXED: Guaranteed safe category mapping
+  let userValue = 0;
+  if (item.category === 'tasks') {
+    userValue = stats.taskFinished ?? 0;
+  } else if (item.category === 'weekly quiz') {
+    userValue = stats.weeklyQuizFinished ?? 0;
+  } else if (item.category === 'educational materials') {
+    userValue = stats.educationalMaterialsRead ?? 0;
+  }
 
-    const isClaimed = unlockedBadges[item.id];
+  const isClaimed = unlockedBadges[item.id];
+  const isNewUserBadge = item.category.toLowerCase() === 'new user';
 
-    const displayValue = isClaimed ? item.targetNumber : Math.min(userValue, item.targetNumber);
-    const progress = Math.min(displayValue / item.targetNumber, 1);
-    const progressText = `${displayValue}/${item.targetNumber}`;
-    const reachedGoal = userValue >= item.targetNumber;
-
+  // For New User badges, don't show progress bar
+  if (isNewUserBadge) {
     return (
       <TouchableOpacity
         style={styles.achievementCard}
@@ -169,33 +167,60 @@ const AchievementsScreen = ({ navigation }) => {
         <Image source={{ uri: item.imageurl }} style={styles.achievementImage} />
         <View style={styles.achievementDetails}>
           <Text style={styles.achievementTitle}>{item.name}</Text>
-          <View style={styles.progressContainer}>
-            <View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
-            <Text style={styles.progressText}>{progressText}</Text>
+          
+          {/* Always show as claimed for New User badges */}
+          <View style={styles.claimedContainer}>
+            <Ionicons name="checkmark-circle" size={20} color="#415D43" />
+            <Text style={styles.claimedText}>Achievement Unlocked</Text>
           </View>
-
-          {reachedGoal && !isClaimed && (
-            <TouchableOpacity
-              style={styles.claimButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                claimBadge(item);
-              }}
-            >
-              <Text style={styles.claimButtonText}>Claim Badge</Text>
-            </TouchableOpacity>
-          )}
-
-          {isClaimed && (
-            <View style={styles.claimedContainer}>
-              <Ionicons name="checkmark-circle" size={20} color="#415D43" />
-              <Text style={styles.claimedText}>Achievement Unlocked</Text>
-            </View>
-          )}
         </View>
       </TouchableOpacity>
     );
-  };
+  }
+
+  // Regular badges with progress bar
+  const displayValue = isClaimed ? item.targetNumber : Math.min(userValue, item.targetNumber);
+  const progress = Math.min(displayValue / item.targetNumber, 1);
+  const progressText = `${displayValue}/${item.targetNumber}`;
+  const reachedGoal = userValue >= item.targetNumber;
+
+  return (
+    <TouchableOpacity
+      style={styles.achievementCard}
+      onPress={() =>
+        navigation.navigate('AchievementDetailScreen', { currentBadge: item })
+      }
+    >
+      <Image source={{ uri: item.imageurl }} style={styles.achievementImage} />
+      <View style={styles.achievementDetails}>
+        <Text style={styles.achievementTitle}>{item.name}</Text>
+        <View style={styles.progressContainer}>
+          <View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
+          <Text style={styles.progressText}>{progressText}</Text>
+        </View>
+
+        {reachedGoal && !isClaimed && (
+          <TouchableOpacity
+            style={styles.claimButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              claimBadge(item);
+            }}
+          >
+            <Text style={styles.claimButtonText}>Claim Badge</Text>
+          </TouchableOpacity>
+        )}
+
+        {isClaimed && (
+          <View style={styles.claimedContainer}>
+            <Ionicons name="checkmark-circle" size={20} color="#415D43" />
+            <Text style={styles.claimedText}>Achievement Unlocked</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
 
   if (loading || !stats) {
     return (

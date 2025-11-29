@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { badgesRepository } from '../repositories/badgesRepository';
 import { useAuth } from '../context/AuthContext';
 import firestore from '@react-native-firebase/firestore';
@@ -12,14 +12,21 @@ const AchievementDetailScreen = ({ route, navigation }) => {
   const [stats, setStats] = useState(null);
   const [allCategoryBadges, setAllCategoryBadges] = useState([]);
   const [unlockedBadges, setUnlockedBadges] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStatsAndNextBadge();
-  }, [currentBadge]);
+    if (currentBadge && user) {
+      fetchStatsAndNextBadge();
+    } else {
+      setLoading(false);
+    }
+  }, [currentBadge, user]);
 
   const fetchStatsAndNextBadge = async () => {
     try {
-      // Fetch user stats
+      setLoading(true);
+
+      // Fetch user stats - handle case where document doesn't exist
       const statsDoc = await firestore()
         .collection('users')
         .doc(user.uid)
@@ -27,6 +34,7 @@ const AchievementDetailScreen = ({ route, navigation }) => {
         .doc('stats')
         .get();
 
+      // Always set stats, even if document doesn't exist
       const statsData = statsDoc.exists
         ? statsDoc.data()
         : {
@@ -39,6 +47,13 @@ const AchievementDetailScreen = ({ route, navigation }) => {
       // Get unlocked badges
       const unlocked = await badgesRepository.getUnlockedBadgesForUser(user.uid);
       setUnlockedBadges(unlocked);
+
+      // For New User category, don't fetch next badge
+      if (currentBadge.category.toLowerCase() === 'new user') {
+        setNextBadge(null);
+        setLoading(false);
+        return;
+      }
 
       // Get all badges in the current badge's category, sorted by targetNumber
       const categoryBadges = await badgesRepository.getBadgesByCategorySorted(currentBadge.category);
@@ -57,6 +72,8 @@ const AchievementDetailScreen = ({ route, navigation }) => {
       }
     } catch (err) {
       console.error('Error fetching data:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,15 +81,93 @@ const AchievementDetailScreen = ({ route, navigation }) => {
     navigation.goBack();
   };
 
-  if (!stats) return null;
+  // Show loading while fetching data
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#415D43" />
+      </View>
+    );
+  }
 
+  // Handle case where currentBadge is missing
+  if (!currentBadge) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <HeaderRow 
+            title="Badge Not Found" 
+            onBackPress={handleBackPress} 
+          />
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Badge information not available.</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Always ensure stats exists with default values
+  const safeStats = stats || {
+    educationalMaterialsRead: 0,
+    weeklyQuizFinished: 0,
+    taskFinished: 0,
+  };
+
+  const isNewUserBadge = currentBadge.category.toLowerCase() === 'new user';
+
+  // For New User badges, we don't need progress calculations
+  if (isNewUserBadge) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <HeaderRow 
+            title={currentBadge.name} 
+            onBackPress={handleBackPress} 
+          />
+        </View>
+        
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Simplified Current Achievement Card for New User */}
+          <View style={styles.currentCard}>
+            <Image source={{ uri: currentBadge.imageurl }} style={styles.image} />
+            <Text style={styles.title}>{currentBadge.name}</Text>
+            
+            {/* No category tag for New User */}
+            
+            <Text style={styles.description}>{currentBadge.description}</Text>
+            
+            {/* Special message for New User badge */}
+            <View style={styles.welcomeSection}>
+              <Text style={styles.welcomeTitle}>Welcome to TerraTrack!</Text>
+              <Text style={styles.welcomeMessage}>
+                You've taken your first step towards making a positive environmental impact. 
+                This badge marks the beginning of your sustainability journey.
+              </Text>
+            </View>
+
+            <View style={styles.unlockedContainer}>
+              <Text style={styles.unlockedText}>Achievement Unlocked</Text>
+              <Text style={styles.unlockedSubtext}>
+                This badge was awarded when you joined our community
+              </Text>
+            </View>
+          </View>
+
+          {/* No next tier section for New User */}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Regular badges (existing logic)
   const userValue =
     currentBadge.category.toLowerCase() === 'tasks'
-      ? stats.taskFinished
+      ? safeStats.taskFinished
       : currentBadge.category.toLowerCase() === 'weekly quiz'
-      ? stats.weeklyQuizFinished
+      ? safeStats.weeklyQuizFinished
       : currentBadge.category.toLowerCase() === 'educational materials'
-      ? stats.educationalMaterialsRead
+      ? safeStats.educationalMaterialsRead
       : 0;
 
   const isCurrentBadgeClaimed = unlockedBadges[currentBadge.id];
@@ -183,6 +278,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#121212',
   },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   headerContainer: {
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -270,6 +380,44 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // New User specific styles - simplified
+  welcomeSection: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    // Removed the green border on the side
+  },
+  welcomeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  welcomeMessage: {
+    fontSize: 14,
+    color: '#BBBBBB',
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  unlockedContainer: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  unlockedText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#709775',
+    marginBottom: 4,
+  },
+  unlockedSubtext: {
+    fontSize: 14,
+    color: '#BBBBBB',
+    textAlign: 'center',
+  },
 
   nextSection: {
     marginBottom: 24,
@@ -321,7 +469,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 12,
   },
-
 
   maxTierSection: {
     backgroundColor: '#2A2A2A',
