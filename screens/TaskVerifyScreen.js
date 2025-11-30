@@ -29,7 +29,7 @@ const TaskVerifyScreen = ({ navigation }) => {
     }
   };
 
-  // NEW: Function to get the latest distribution run ID
+  // Function to get the latest distribution run ID
   const getLatestDistributionRun = async () => {
     try {
       const distributionSnap = await firestore()
@@ -55,7 +55,7 @@ const TaskVerifyScreen = ({ navigation }) => {
     }
   };
 
-  // MODIFIED: Function to get assigned verification tasks from the latest distribution only
+  // Function to get assigned verification tasks from the latest distribution only
   const getLatestAssignedVerificationTasks = async (userId) => {
     try {
       const latestDistribution = await getLatestDistributionRun();
@@ -103,7 +103,7 @@ const TaskVerifyScreen = ({ navigation }) => {
     }
   };
 
-  // MODIFIED: Function to get submitted tasks from the latest distribution period only
+  // MODIFIED: Function to get submitted tasks from (latest distribution date - 1, latest distribution date, latest distribution date + 1)
   const getLatestSubmittedTasks = async (userId) => {
     try {
       const latestDistribution = await getLatestDistributionRun();
@@ -111,33 +111,46 @@ const TaskVerifyScreen = ({ navigation }) => {
         return [];
       }
 
-      const userRef = firestore().collection('users').doc(userId);
+      // Calculate the date range: previous day, current day, and next day
+      const latestDate = new Date(latestDistribution.date);
       
-      // Only get verifications from the distribution date
-      const verificationsRef = userRef.collection('verifications').doc(latestDistribution.date);
-      const verificationSnap = await verificationsRef.get();
+      const previousDate = new Date(latestDate);
+      previousDate.setDate(previousDate.getDate() - 1);
+      const previousDateStr = previousDate.toISOString().split('T')[0];
       
-      if (!verificationSnap.exists) {
-        return [];
-      }
+      const nextDate = new Date(latestDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = nextDate.toISOString().split('T')[0];
 
-      const data = verificationSnap.data();
+      const userRef = firestore().collection('users').doc(userId);
       const latestTasks = [];
+
+      // Fetch from three dates: previous day, current day, and next day
+      const datesToCheck = [previousDateStr, latestDistribution.date, nextDateStr];
       
-      // Extract tasks from the document
-      Object.keys(data).forEach(taskId => {
-        const taskData = data[taskId];
-        if (taskData && taskData.status === 'pending') {
-          latestTasks.push({
-            id: taskId,
-            ...taskData,
-            submittedDate: latestDistribution.date,
-            taskId: taskId
+      for (const date of datesToCheck) {
+        const verificationsRef = userRef.collection('verifications').doc(date);
+        const verificationSnap = await verificationsRef.get();
+        
+        if (verificationSnap.exists) {
+          const data = verificationSnap.data();
+          
+          // Extract tasks from the document
+          Object.keys(data).forEach(taskId => {
+            const taskData = data[taskId];
+            if (taskData && taskData.status === 'pending') {
+              latestTasks.push({
+                id: taskId,
+                ...taskData,
+                submittedDate: date, // Use the actual date from the document
+                taskId: taskId
+              });
+            }
           });
         }
-      });
+      }
 
-      console.log(`Found ${latestTasks.length} submitted tasks from latest distribution`);
+      console.log(`Found ${latestTasks.length} submitted tasks from dates: ${datesToCheck.join(', ')}`);
       return latestTasks;
     } catch (error) {
       console.error("Error fetching submitted tasks:", error);
