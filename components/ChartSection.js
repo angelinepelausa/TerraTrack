@@ -60,7 +60,7 @@ export const ChartSection = ({
       <View style={styles.singleDataContainer}>
         <Text style={styles.singleDataTitle}>Your {selectedCategory} Footprint</Text>
         <Text style={styles.singleDataValue}>{Math.round(data.value)}</Text>
-        <Text style={styles.singleDataUnit}>kg CO₂/year</Text>
+        <Text style={styles.singleDataUnit}>kg CO₂/month</Text>
         <Text style={styles.singleDataMonth}>{data.label} {selectedYear}</Text>
       </View>
     );
@@ -75,7 +75,7 @@ export const ChartSection = ({
           {meaningfulData.map((data, index) => (
             <View key={index} style={styles.dataCard}>
               <Text style={styles.dataCardValue}>{Math.round(data.value)}</Text>
-              <Text style={styles.dataCardUnit}>kg CO₂/year</Text>
+              <Text style={styles.dataCardUnit}>kg CO₂/month</Text>
               <Text style={styles.dataCardMonth}>{data.label}</Text>
             </View>
           ))}
@@ -83,7 +83,7 @@ export const ChartSection = ({
         {meaningfulData.length === 2 && (
           <View style={styles.comparisonContainer}>
             <Text style={styles.comparisonText}>
-              Difference: {Math.round(Math.abs(meaningfulData[0].value - meaningfulData[1].value))} kg CO₂/year
+              Difference: {Math.round(Math.abs(meaningfulData[0].value - meaningfulData[1].value))} kg CO₂/month
             </Text>
           </View>
         )}
