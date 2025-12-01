@@ -13,6 +13,7 @@ import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
 import Onboarding from './screens/Onboarding';
 import OnboardingScreen from './screens/OnboardingScreen';
+import EditOnboardingScreen from './screens/EditOnboardingScreen';
 import Calculator from './screens/Calculator';
 import HomeScreen from './screens/HomeScreen';
 import MainTabs from './navigation/MainTabs';
@@ -103,6 +104,10 @@ const App = () => {
             name="OnboardingScreen"
             component={OnboardingScreen}
             options={{ gestureEnabled: false }}
+          />
+          <Stack.Screen
+            name="EditOnboardingScreen"
+            component={EditOnboardingScreen}
           />
           <Stack.Screen
             name="Calculator"

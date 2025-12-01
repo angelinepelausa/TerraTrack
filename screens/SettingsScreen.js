@@ -15,7 +15,7 @@ import auth from "@react-native-firebase/auth";
 import firestore from "@react-native-firebase/firestore";
 import AvatarPicker from "../components/AvatarPicker";
 import { avatarsRepository } from "../repositories/avatarsRepository";
-import HeaderRow from "../components/HeaderRow"; // Import HeaderRow component
+import HeaderRow from "../components/HeaderRow";
 
 const SettingsScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
@@ -25,7 +25,6 @@ const SettingsScreen = ({ navigation }) => {
   const [avatarId, setAvatarId] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [avatarModalVisible, setAvatarModalVisible] = useState(false);
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState(null);
@@ -123,6 +122,10 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
+  const handleEditPreferences = () => {
+    navigation.navigate("EditOnboardingScreen");
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -145,7 +148,7 @@ const SettingsScreen = ({ navigation }) => {
           <Image source={{ uri: avatarUrl }} style={styles.avatar} />
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={{ color: "#888" }}>+</Text>
+            <Text style={{ color: "#888", fontSize: 24 }}>+</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -156,57 +159,84 @@ const SettingsScreen = ({ navigation }) => {
         onSelect={handleAvatarSelect}
       />
 
-      {/* Email */}
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={[styles.input, { backgroundColor: "#2A2A2A", color: "#aaa" }]}
-        value={email}
-        editable={false}
-      />
+      {/* Account Information Section */}
+      <View style={styles.settingsSection}>
+        <Text style={styles.sectionTitle}>Account Information</Text>
+        
+        {/* Email */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: "#2A2A2A", color: "#aaa" }]}
+            value={email}
+            editable={false}
+          />
+        </View>
 
-      {/* Username */}
-      <Text style={styles.label}>Username</Text>
-      <TextInput
-        style={styles.input}
-        value={username}
-        onChangeText={setUsername}
-        placeholder="Enter username"
-        placeholderTextColor="#666"
-      />
-
-      {/* Password */}
-      <Text style={styles.label}>New Password</Text>
-      <TextInput
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Enter new password"
-        placeholderTextColor="#666"
-        secureTextEntry
-      />
-
-      {password ? (
-        <>
-          <Text style={styles.label}>Confirm Password</Text>
+        {/* Username */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Username</Text>
           <TextInput
             style={styles.input}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Confirm new password"
+            value={username}
+            onChangeText={setUsername}
+            placeholder="Enter username"
+            placeholderTextColor="#666"
+          />
+        </View>
+
+        {/* Password */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>New Password</Text>
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Enter new password"
             placeholderTextColor="#666"
             secureTextEntry
           />
-        </>
-      ) : null}
+        </View>
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
-      </TouchableOpacity>
+        {password ? (
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Confirm Password</Text>
+            <TextInput
+              style={styles.input}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="Confirm new password"
+              placeholderTextColor="#666"
+              secureTextEntry
+            />
+          </View>
+        ) : null}
+      </View>
 
-      {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Log Out</Text>
-      </TouchableOpacity>
+      {/* Preferences Section */}
+      <View style={styles.settingsSection}>
+        <Text style={styles.sectionTitle}>Preferences</Text>
+        
+        <View style={styles.listContainer}>
+          <TouchableOpacity style={styles.listItem} onPress={handleEditPreferences}>
+            <View style={styles.listItemContent}>
+              <Text style={styles.listItemText}>Transportation & Lifestyle</Text>
+            </View>
+            <Text style={styles.chevron}>{">"}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Action Buttons */}
+      <View style={styles.settingsSection}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };
@@ -225,8 +255,8 @@ const styles = StyleSheet.create({
   },
   avatarWrapper: {
     alignItems: "center",
-    marginBottom: 20,
-    marginTop: 10, // Added some top margin after the header
+    marginBottom: 30,
+    marginTop: 10,
   },
   avatar: {
     width: 100,
@@ -241,11 +271,25 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
   },
+  settingsSection: {
+    width: '100%',
+    marginBottom: 30,
+  },
+  sectionTitle: {
+    color: '#888',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 15,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  inputContainer: {
+    marginBottom: 15,
+  },
   label: {
     color: "#ccc",
     fontSize: 14,
     marginBottom: 6,
-    marginTop: 10,
     alignSelf: "flex-start",
   },
   input: {
@@ -253,15 +297,39 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     color: "#fff",
-    marginBottom: 10,
     width: "100%",
+  },
+  listContainer: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  listItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  listItemText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  chevron: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '300',
   },
   saveButton: {
     backgroundColor: "#709775",
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
-    marginTop: 20,
+    marginBottom: 15,
     width: "100%",
   },
   saveButtonText: {
@@ -274,7 +342,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
-    marginTop: 20,
     width: "100%",
   },
   logoutButtonText: {
