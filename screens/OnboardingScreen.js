@@ -4,6 +4,7 @@ import { scale, vScale } from '../utils/scaling';
 import { onboardingQuestions, REFERRAL_STEP } from '../services/onboardingService';
 import OptionButton from '../components/OptionButton';
 import ProgressIndicator from '../components/ProgressIndicator';
+import ConfirmationPopup from '../components/ConfirmationPopup'; // Import the ConfirmationPopup
 import { onboardingRepository, saveOnboardingPreferences } from '../repositories/onboardingRepository';
 import { useAuth } from '../context/AuthContext';
 import firestore from '@react-native-firebase/firestore';
@@ -15,6 +16,11 @@ const OnboardingScreen = ({ navigation }) => {
   const [referralCode, setReferralCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCarbonFootprintScreen, setShowCarbonFootprintScreen] = useState(false);
+  
+  // States for ConfirmationPopup (only for errors)
+  const [showInvalidCodePopup, setShowInvalidCodePopup] = useState(false);
+  const [showSubmitErrorPopup, setShowSubmitErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const MULTI_SELECT_QUESTIONS = [0, 2, 3];
   const isReferralStep = currentStep === REFERRAL_STEP;
@@ -46,7 +52,7 @@ const OnboardingScreen = ({ navigation }) => {
     referredBy: referralCode || null
   });
 
-    const handleSubmit = async () => {
+  const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
@@ -55,7 +61,8 @@ const OnboardingScreen = ({ navigation }) => {
         try {
           await onboardingRepository.validateAndApplyReferral(referralCode);
         } catch (err) {
-          Alert.alert('Invalid Code', err.message || 'This referral code is not valid.');
+          setErrorMessage(err.message || 'This referral code is not valid.');
+          setShowInvalidCodePopup(true);
           setIsSubmitting(false);
           return;
         }
@@ -70,14 +77,12 @@ const OnboardingScreen = ({ navigation }) => {
         hasSeenHomeWalkthrough: false // Reset this so walkthrough shows after calculator
       });
 
+      // Show the "Almost there!" screen (no popup for success)
       setShowCarbonFootprintScreen(true);
     } catch (error) {
       console.error('Submission error:', error);
-      Alert.alert(
-        'Save Failed',
-        error.message || 'Failed to save preferences. Please try again.',
-        [{ text: 'OK' }]
-      );
+      setErrorMessage(error.message || 'Failed to save preferences. Please try again.');
+      setShowSubmitErrorPopup(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -91,7 +96,8 @@ const OnboardingScreen = ({ navigation }) => {
 
     if ((isMultiSelect && currentAnswer.length === 0) ||
       (!isMultiSelect && !currentAnswer)) {
-      Alert.alert('Error', 'Please select at least one option');
+      setErrorMessage('Please select at least one option');
+      setShowInvalidCodePopup(true); // Reusing the popup for validation errors
       return;
     }
 
@@ -254,6 +260,29 @@ const OnboardingScreen = ({ navigation }) => {
           answers={answers}
         />
       )}
+
+      {/* Confirmation Popups - ONLY FOR ERRORS */}
+      <ConfirmationPopup
+        visible={showInvalidCodePopup}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        type="error"
+        onConfirm={() => setShowInvalidCodePopup(false)}
+        showCancel={false}
+      />
+
+      <ConfirmationPopup
+        visible={showSubmitErrorPopup}
+        title="Save Failed"
+        message={errorMessage}
+        confirmText="Try Again"
+        cancelText="Cancel"
+        type="error"
+        onConfirm={() => setShowSubmitErrorPopup(false)}
+        onCancel={() => setShowSubmitErrorPopup(false)}
+        showCancel={true}
+      />
     </View>
   );
 };
@@ -338,7 +367,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textDecorationLine: 'underline',
   },
-
   textContainer: {
     alignItems: 'center',
   },

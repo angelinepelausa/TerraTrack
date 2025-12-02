@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, TextInput, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, ScrollView } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
 import OptionButton from '../components/OptionButton';
 import ProgressIndicator from '../components/ProgressIndicator';
+import ConfirmationPopup from '../components/ConfirmationPopup';
 import { calculatorBaseQuestions } from '../services/calculatorService';
 import { saveCarbonFootprint } from '../repositories/calculatorRepository';
 
@@ -10,6 +11,10 @@ const Calculator = ({ navigation }) => {
   const [answers, setAnswers] = useState({});
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // States for error handling with ConfirmationPopup
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Build dynamic steps array
   const steps = useMemo(() => {
@@ -66,15 +71,18 @@ const Calculator = ({ navigation }) => {
 
   const handleNext = () => {
     if (isMultiSelect && currentAnswer.length === 0) {
-      Alert.alert('Error', 'Please select at least one option');
+      setErrorMessage('Please select at least one option');
+      setShowErrorPopup(true);
       return;
     }
     if (!isMultiSelect && !isInput && !currentAnswer) {
-      Alert.alert('Error', 'Please select an option');
+      setErrorMessage('Please select an option');
+      setShowErrorPopup(true);
       return;
     }
     if (isInput && (!currentAnswer || currentAnswer.trim() === '')) {
-      Alert.alert('Error', 'Please enter a value');
+      setErrorMessage('Please enter a value');
+      setShowErrorPopup(true);
       return;
     }
 
@@ -97,7 +105,7 @@ const Calculator = ({ navigation }) => {
     }
   };
 
-    const handleSubmit = async () => {
+  const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
       const results = await saveCarbonFootprint(answers);
@@ -118,7 +126,8 @@ const Calculator = ({ navigation }) => {
         navigation.navigate('ResultsScreen', { results });
       }
     } catch (error) {
-      Alert.alert('Error', 'Something went wrong while saving your results.');
+      setErrorMessage('Something went wrong while saving your results.');
+      setShowErrorPopup(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -192,6 +201,17 @@ const Calculator = ({ navigation }) => {
         totalSteps={steps.length}
         onStepPress={handleStepPress}
         answers={answers}
+      />
+
+      {/* Error ConfirmationPopup */}
+      <ConfirmationPopup
+        visible={showErrorPopup}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        type="error"
+        onConfirm={() => setShowErrorPopup(false)}
+        showCancel={false}
       />
     </View>
   );

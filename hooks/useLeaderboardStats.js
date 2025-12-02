@@ -46,6 +46,7 @@ export const useLeaderboardStats = (userId) => {
   const fetchLeaderboardHistoryStats = async (uid) => {
     try {
       if (!uid) {
+        console.log('No user ID provided, skipping leaderboard fetch');
         resetStats();
         return;
       }
@@ -80,6 +81,10 @@ export const useLeaderboardStats = (userId) => {
       }
     } catch (err) {
       console.error('Error fetching leaderboard stats:', err);
+      // Check if error is permission denied
+      if (err.code === 'permission-denied' || err.message.includes('permission-denied')) {
+        console.log('Permission denied for leaderboard access');
+      }
       resetStats();
     } finally {
       setHistoryLoading(false);
@@ -144,7 +149,11 @@ export const useLeaderboardStats = (userId) => {
         }
       } catch (err) {
         console.error('Error processing document', doc.id, ':', err);
-        continue;
+        // Skip this document if there's a permission error
+        if (err.code === 'permission-denied' || err.message.includes('permission-denied')) {
+          console.log('Permission denied for document:', doc.id, 'skipping...');
+          continue;
+        }
       }
     }
 

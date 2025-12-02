@@ -5,7 +5,8 @@ import {
   Image, 
   StyleSheet, 
   ActivityIndicator, 
-  TouchableOpacity 
+  TouchableOpacity,
+  ScrollView 
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Avatar from '../assets/images/Avatar.png';
@@ -106,156 +107,174 @@ const Leaderboard = ({
   };
 
   return (
-    <View style={styles.container}>
-      {showTitle && <Text style={styles.title}>Leaderboards</Text>}
+    <ScrollView 
+      style={styles.scrollContainer}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scrollContent}
+    >
+      <View style={styles.container}>
+        {showTitle && <Text style={styles.title}>Leaderboards</Text>}
 
-      <View style={styles.podium}>
-        {top3[1] && (
-          <View style={[styles.podiumItem, { marginTop: 30 }]}>
-            <RankedAvatar
-              user={top3[1]}
-              currentUserId={currentUserId}
-              avatarSize={podiumAvatarSize}
-              rankCircleSize={rankCircleSize}
-            />
-          </View>
-        )}
+        <View style={styles.podium}>
+          {top3[1] && (
+            <View style={[styles.podiumItem, { marginTop: 30 }]}>
+              <RankedAvatar
+                user={top3[1]}
+                currentUserId={currentUserId}
+                avatarSize={podiumAvatarSize}
+                rankCircleSize={rankCircleSize}
+              />
+            </View>
+          )}
 
-        {top3[0] && (
-          <View style={[styles.podiumItem, { marginBottom: 20 }]}>
-            <Image source={Crown} style={styles.crown} />
-            <RankedAvatar
-              user={top3[0]}
-              currentUserId={currentUserId}
-              avatarSize={podiumAvatarSize}
-              rankCircleSize={rankCircleSize}
-            />
-          </View>
-        )}
+          {top3[0] && (
+            <View style={[styles.podiumItem, { marginBottom: 20 }]}>
+              <Image source={Crown} style={styles.crown} />
+              <RankedAvatar
+                user={top3[0]}
+                currentUserId={currentUserId}
+                avatarSize={podiumAvatarSize}
+                rankCircleSize={rankCircleSize}
+              />
+            </View>
+          )}
 
-        {top3[2] && (
-          <View style={[styles.podiumItem, { marginTop: 30 }]}>
-            <RankedAvatar
-              user={top3[2]}
-              currentUserId={currentUserId}
-              avatarSize={podiumAvatarSize}
-              rankCircleSize={rankCircleSize}
-            />
-          </View>
-        )}
-      </View>
+          {top3[2] && (
+            <View style={[styles.podiumItem, { marginTop: 30 }]}>
+              <RankedAvatar
+                user={top3[2]}
+                currentUserId={currentUserId}
+                avatarSize={podiumAvatarSize}
+                rankCircleSize={rankCircleSize}
+              />
+            </View>
+          )}
+        </View>
 
-      {rest.length > 0 && (
-        <View
-          style={[
-            styles.restContainer,
-            { paddingVertical: restContainerPaddingVertical },
-          ]}
-        >
-          {rest.map((item) => {
-            const isCurrentUser = item.id === currentUserId;
-            const highlight = isCurrentUser && item.rank >= 4 && item.rank <= 10;
+        {rest.length > 0 && (
+          <View
+            style={[
+              styles.restContainer,
+              { paddingVertical: restContainerPaddingVertical },
+            ]}
+          >
+            {rest.map((item) => {
+              const isCurrentUser = item.id === currentUserId;
+              const highlight = isCurrentUser && item.rank >= 4 && item.rank <= 10;
 
-            return (
+              return (
+                <TouchableOpacity 
+                  key={item.id}
+                  onPress={() => handleUserPress(item)}
+                >
+                  <View
+                    style={[
+                      styles.listItem,
+                      { paddingVertical: listItemPaddingVertical },
+                      highlight && { backgroundColor: "#415D43" },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.listRank,
+                        highlight && { color: "#D9D9D9", backgroundColor: "transparent" },
+                      ]}
+                    >
+                      {item.rank}
+                    </Text>
+                    <Image
+                      source={item.avatarUrl ? { uri: item.avatarUrl } : Avatar}
+                      style={styles.listAvatar}
+                    />
+                    <Text
+                      style={[
+                        styles.listUsername,
+                        highlight && { color: "#D9D9D9" },
+                      ]}
+                    >
+                      {item.username}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.listPoints,
+                        highlight && { color: "#D9D9D9" },
+                      ]}
+                    >
+                      {item.terraPoints} pts
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+
+            {isBeyond10 && currentUserRank && (
               <TouchableOpacity 
-                key={item.id}
-                onPress={() => handleUserPress(item)}
+                onPress={() => handleUserPress(currentUserRank)}
               >
                 <View
                   style={[
                     styles.listItem,
-                    { paddingVertical: listItemPaddingVertical },
-                    highlight && { backgroundColor: "#415D43" },
+                    { backgroundColor: "#415D43", marginTop: 10, paddingVertical: 4 },
                   ]}
                 >
                   <Text
                     style={[
                       styles.listRank,
-                      highlight && { color: "#D9D9D9", backgroundColor: "transparent" },
+                      { color: "#D9D9D9", backgroundColor: "transparent" },
                     ]}
                   >
-                    {item.rank}
+                    {currentUserRank.rank}
                   </Text>
                   <Image
-                    source={item.avatarUrl ? { uri: item.avatarUrl } : Avatar}
+                    source={currentUserRank.avatarUrl ? { uri: currentUserRank.avatarUrl } : Avatar}
                     style={styles.listAvatar}
                   />
-                  <Text
-                    style={[
-                      styles.listUsername,
-                      highlight && { color: "#D9D9D9" },
-                    ]}
-                  >
-                    {item.username}
+                  <Text style={[styles.listUsername, { color: "#D9D9D9" }]}>
+                    {currentUserRank.username}
                   </Text>
-                  <Text
-                    style={[
-                      styles.listPoints,
-                      highlight && { color: "#D9D9D9" },
-                    ]}
-                  >
-                    {item.terraPoints} pts
+                  <Text style={[styles.listPoints, { color: "#D9D9D9" }]}>
+                    {currentUserRank.terraPoints} pts
                   </Text>
                 </View>
               </TouchableOpacity>
-            );
-          })}
+            )}
+          </View>
+        )}
 
-          {isBeyond10 && currentUserRank && (
-            <TouchableOpacity 
-              onPress={() => handleUserPress(currentUserRank)}
-            >
-              <View
-                style={[
-                  styles.listItem,
-                  { backgroundColor: "#415D43", marginTop: 10, paddingVertical: 4 },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.listRank,
-                    { color: "#D9D9D9", backgroundColor: "transparent" },
-                  ]}
-                >
-                  {currentUserRank.rank}
-                </Text>
-                <Image
-                  source={currentUserRank.avatarUrl ? { uri: currentUserRank.avatarUrl } : Avatar}
-                  style={styles.listAvatar}
-                />
-                <Text style={[styles.listUsername, { color: "#D9D9D9" }]}>
-                  {currentUserRank.username}
-                </Text>
-                <Text style={[styles.listPoints, { color: "#D9D9D9" }]}>
-                  {currentUserRank.terraPoints} pts
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-
-      {processedLeaderboard.length === 0 && !loading && (
-        <Text style={styles.noDataText}>No leaderboard data available</Text>
-      )}
-    </View>
+        {processedLeaderboard.length === 0 && !loading && (
+          <Text style={styles.noDataText}>No leaderboard data available</Text>
+        )}
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: '#131313',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'hidden',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   container: {
     paddingVertical: 20,
     alignItems: 'center',
     backgroundColor: '#131313',
     paddingBottom: 30,
-    minHeight: 400,
+    flex: 1,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   title: {
     fontSize: 18,
     color: '#CCCCCC',
     textAlign: 'center',
-    marginBottom: 10,
-    marginTop: 40,
+    marginBottom: 15,
+    marginTop: 10,
     fontWeight: 'bold',
   },
   podium: {
@@ -263,10 +282,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'flex-end',
     width: '100%',
-    marginBottom: 10,
+    marginBottom: 20,
   },
   podiumItem: {
     alignItems: 'center',
+    flex: 1,
   },
   crown: {
     width: 35,
@@ -302,6 +322,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     width: '100%',
     alignSelf: 'center',
+    flex: 1,
   },
   listItem: {
     flexDirection: 'row',

@@ -1,11 +1,11 @@
 // screens/EditOnboardingScreen.js
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
 import { onboardingQuestions } from '../services/onboardingService';
 import OptionButton from '../components/OptionButton';
 import ProgressIndicator from '../components/ProgressIndicator';
-import { onboardingRepository, saveOnboardingPreferences } from '../repositories/onboardingRepository';
+import { saveOnboardingPreferences } from '../repositories/onboardingRepository';
 import { useAuth } from '../context/AuthContext';
 import firestore from '@react-native-firebase/firestore';
 import ConfirmationPopup from '../components/ConfirmationPopup';
@@ -17,7 +17,11 @@ const EditOnboardingScreen = ({ navigation }) => {
   const [answers, setAnswers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // States for ConfirmationPopup
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const MULTI_SELECT_QUESTIONS = [0, 2, 3];
   const isMultiSelect = MULTI_SELECT_QUESTIONS.includes(currentStep);
@@ -45,7 +49,8 @@ const EditOnboardingScreen = ({ navigation }) => {
         }
       } catch (error) {
         console.error('Error loading preferences:', error);
-        Alert.alert('Error', 'Failed to load your existing preferences.');
+        setErrorMessage('Failed to load your existing preferences.');
+        setShowErrorPopup(true);
       } finally {
         setLoading(false);
       }
@@ -89,11 +94,8 @@ const EditOnboardingScreen = ({ navigation }) => {
       setShowSaveConfirmation(true);
     } catch (error) {
       console.error('Save error:', error);
-      Alert.alert(
-        'Save Failed',
-        error.message || 'Failed to save preferences. Please try again.',
-        [{ text: 'OK' }]
-      );
+      setErrorMessage(error.message || 'Failed to save preferences. Please try again.');
+      setShowErrorPopup(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -107,7 +109,8 @@ const EditOnboardingScreen = ({ navigation }) => {
   const handleNext = () => {
     if ((isMultiSelect && currentAnswer.length === 0) ||
       (!isMultiSelect && !currentAnswer)) {
-      Alert.alert('Error', 'Please select at least one option');
+      setErrorMessage('Please select at least one option');
+      setShowErrorPopup(true);
       return;
     }
 
@@ -200,10 +203,21 @@ const EditOnboardingScreen = ({ navigation }) => {
         answers={answers}
       />
 
+      {/* Error ConfirmationPopup */}
+      <ConfirmationPopup
+        visible={showErrorPopup}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        type="error"
+        onConfirm={() => setShowErrorPopup(false)}
+        showCancel={false}
+      />
+
+      {/* Success ConfirmationPopup */}
       <ConfirmationPopup
         visible={showSaveConfirmation}
         onConfirm={handleConfirmSave}
-        onCancel={() => setShowSaveConfirmation(false)}
         title="Preferences Updated"
         message="Your preferences have been successfully updated!"
         confirmText="OK"

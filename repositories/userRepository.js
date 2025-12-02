@@ -62,7 +62,10 @@ export const createUserDocument = async (userData) => {
         referralCode: referralCode,
         createdAt: firestore.FieldValue.serverTimestamp(),
         status: "Active",
-        avatar: defaultAvatarId, 
+        avatar: defaultAvatarId,
+        referredBy: null, // Will be set if user entered a referral code
+        // REMOVED: hasSeenReferralRewards and referralRewardsClaimed
+        // They will be created when needed, like walkthrough and badge
       });
 
     return { success: true, referralCode };
@@ -194,5 +197,111 @@ export const getUsersByFilter = async (filter = {}) => {
   } catch (error) {
     console.error("Error fetching filtered users:", error);
     return [];
+  }
+};
+
+// --- NEW FUNCTIONS FOR REFERRAL REWARDS ---
+
+// Check if user should see referral rewards popup
+export const shouldShowReferralRewards = async (userId) => {
+  try {
+    const userDoc = await firestore().collection('users').doc(userId).get();
+    
+    if (!userDoc.exists) {
+      return { shouldShow: false, alreadyClaimed: true };
+    }
+    
+    const userData = userDoc.data();
+    
+    // Conditions to show popup:
+    // 1. User has referredBy field (was invited)
+    // 2. Has not seen the popup yet (field doesn't exist or is false)
+    // 3. Has not claimed rewards yet (field doesn't exist or is false)
+    const hasSeen = userData.hasSeenReferralRewards || false;
+    const alreadyClaimed = userData.referralRewardsClaimed || false;
+    
+    const shouldShow = userData.referredBy && !hasSeen && !alreadyClaimed;
+    
+    return { 
+      shouldShow, 
+      alreadyClaimed,
+      referredBy: userData.referredBy || null
+    };
+  } catch (error) {
+    console.error('Error checking referral rewards:', error);
+    return { shouldShow: false, alreadyClaimed: true };
+  }
+};
+
+// Add referral rewards to user account
+export const addReferralRewards = async (userId) => {
+  try {
+    const userRef = firestore().collection('users').doc(userId);
+    
+    // First check if rewards were already claimed
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      return { success: false, error: 'User not found' };
+    }
+    
+    const userData = userDoc.data();
+    
+    // Check if already claimed
+    const alreadyClaimed = userData.referralRewardsClaimed || false;
+    if (alreadyClaimed) {
+      return { success: false, error: 'Referral rewards already claimed' };
+    }
+    
+    // Check if user was referred (has referredBy field)
+    if (!userData.referredBy) {
+      return { success: false, error: 'User was not referred' };
+    }
+    
+    // Update in a transaction to ensure atomicity
+    await firestore().runTransaction(async (transaction) => {
+      // Get latest user data
+      const freshDoc = await transaction.get(userRef);
+      const freshData = freshDoc.data();
+      
+      // Double-check not already claimed
+      const freshClaimed = freshData.referralRewardsClaimed || false;
+      if (freshClaimed) {
+        throw new Error('Rewards already claimed');
+      }
+      
+      // Add rewards (15 Terra Coins + 50 Terra Points)
+      const newCoins = (freshData.terraCoins || 0) + 15;
+      const newPoints = (freshData.terraPoints || 0) + 50;
+      
+      // Update user document - create fields if they don't exist
+      transaction.update(userRef, {
+        terraCoins: newCoins,
+        terraPoints: newPoints,
+        referralRewardsClaimed: true,
+        hasSeenReferralRewards: true,
+      });
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error adding referral rewards:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Mark referral rewards as seen (without claiming)
+export const markReferralRewardsAsSeen = async (userId) => {
+  try {
+    await firestore()
+      .collection('users')
+      .doc(userId)
+      .update({
+        hasSeenReferralRewards: true,
+      });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error marking referral rewards as seen:', error);
+    return { success: false, error: error.message };
   }
 };
