@@ -38,38 +38,47 @@ const VerifyTaskScreen = ({ route, navigation }) => {
       throw new Error('Missing ownerUid/taskId. Provide ownerId & taskId or an id like "ownerUid_taskId".');
     }
     const compositeKey = `${ownerUid}_${taskId}`;
-    return { ownerUid, taskId, compositeKey };
+    
+    // Get the submitted date from the task or use today as fallback
+    const submittedDate = t.submittedDate || today();
+    
+    return { ownerUid, taskId, compositeKey, submittedDate };
   };
 
-  const updateOwnerVerification = async ({ ownerUid, taskId }, status, notes, verifierUid) => {
+  const updateOwnerVerification = async ({ ownerUid, taskId, submittedDate }, status, notes, verifierUid) => {
     const ref = firestore()
       .collection('users').doc(ownerUid)
-      .collection('verifications').doc(today());
+      .collection('verifications').doc(submittedDate);
 
     const updatePayload = {
       [`${taskId}.status`]: status,
       [`${taskId}.verifiedBy`]: verifierUid,
+      [`${taskId}.verifiedAt`]: firestore.FieldValue.serverTimestamp(),
     };
     if (status === 'rejected') {
       updatePayload[`${taskId}.detailsForRejection`] = notes;
     }
 
-    await ref.update(updatePayload);
+    // Use set with merge instead of update to handle non-existent documents
+    await ref.set(updatePayload, { merge: true });
   };
 
-  const updateGlobalSubmitted = async (compositeKey, status, notes, verifierUid) => {
+  const updateGlobalSubmitted = async (compositeKey, status, notes, verifierUid, submittedDate) => {
     const ref = firestore()
-      .collection('tasks_verification').doc(today())
+      .collection('tasks_verification').doc(submittedDate)
       .collection('submitted').doc(compositeKey);
 
     const updatePayload = {
       status,
       verifiedBy: verifierUid,
+      verifiedAt: firestore.FieldValue.serverTimestamp(),
     };
     if (status === 'rejected') {
       updatePayload.detailsForRejection = notes;
     }
-    await ref.update(updatePayload);
+    
+    // Use set with merge instead of update
+    await ref.set(updatePayload, { merge: true });
   };
 
   const updateVerifierAssigned = async (verifierUid, compositeKey, status) => {
@@ -80,23 +89,21 @@ const VerifyTaskScreen = ({ route, navigation }) => {
     const snap = await coll.get();
     if (snap.empty) return;
 
-    const todaysDocs = snap.docs.filter(d => d.id.startsWith(`${today()}_`));
-    for (const d of todaysDocs) {
+    // Check all documents, not just today's
+    for (const d of snap.docs) {
       const data = d.data() || {};
       if (Object.prototype.hasOwnProperty.call(data, compositeKey)) {
         const ref = coll.doc(d.id);
-        await ref.update({
+        await ref.set({
           [`${compositeKey}.status`]: status,
-        });
+        }, { merge: true });
         return;
       }
     }
   };
 
-  // --- NEW: update all other assigned verifiers too --------------------------
+  // --- update all other assigned verifiers too --------------------------
   const updateAllAssignedVerifiers = async (compositeKey, status, notes, verifierUid) => {
-    const todayStr = today();
-
     const usersSnap = await firestore().collection('users').get();
     const userIds = usersSnap.docs.map(d => d.id);
 
@@ -108,8 +115,8 @@ const VerifyTaskScreen = ({ route, navigation }) => {
       const snap = await coll.get();
       if (snap.empty) continue;
 
-      const todaysDocs = snap.docs.filter(d => d.id.startsWith(`${todayStr}_`));
-      for (const d of todaysDocs) {
+      // Check all documents for this user
+      for (const d of snap.docs) {
         const data = d.data() || {};
         if (Object.prototype.hasOwnProperty.call(data, compositeKey)) {
           const ref = coll.doc(d.id);
@@ -120,7 +127,8 @@ const VerifyTaskScreen = ({ route, navigation }) => {
           if (status === 'rejected') {
             updatePayload[`${compositeKey}.detailsForRejection`] = notes;
           }
-          await ref.update(updatePayload);
+          // Use set with merge instead of update
+          await ref.set(updatePayload, { merge: true });
         }
       }
     }
@@ -141,11 +149,12 @@ const VerifyTaskScreen = ({ route, navigation }) => {
 
     setLoading(true);
     try {
-      const { ownerUid, taskId, compositeKey } = extractIds(task);
+      // Get submittedDate from the extracted IDs
+      const { ownerUid, taskId, compositeKey, submittedDate } = extractIds(task);
       const status = decision;
 
-      await updateOwnerVerification({ ownerUid, taskId }, status, rejectionNotes.trim(), user.uid);
-      await updateGlobalSubmitted(compositeKey, status, rejectionNotes.trim(), user.uid);
+      await updateOwnerVerification({ ownerUid, taskId, submittedDate }, status, rejectionNotes.trim(), user.uid);
+      await updateGlobalSubmitted(compositeKey, status, rejectionNotes.trim(), user.uid, submittedDate);
       await updateVerifierAssigned(user.uid, compositeKey, status);
       await updateAllAssignedVerifiers(compositeKey, status, rejectionNotes.trim(), user.uid);
 

@@ -533,7 +533,7 @@ const HomeScreen = ({ navigation, route }) => {
     }
   };
 
-  // 🔥 Monthly footprint check
+  // 🔥 Monthly footprint check - FIXED VERSION
   const checkMonthlyFootprint = async () => {
     try {
       console.log("👀 Running checkMonthlyFootprint for", user.uid);
@@ -559,9 +559,22 @@ const HomeScreen = ({ navigation, route }) => {
       const currentData = currentDoc.exists ? currentDoc.data() : null;
       const hasCurrentFootprint = currentData && currentData.results && Object.keys(currentData.results).length > 0;
 
-      // Show popup if today is the 1st OR footprint is missing/empty
-      if (currentDay === 1 || !hasCurrentFootprint) {
-        console.log(`📌 Showing popup for ${currentMonthKey}`);
+      // FIXED LOGIC: Check if footprint was created this month
+      if (hasCurrentFootprint && currentData.createdAt) {
+        const footprintDate = new Date(currentData.createdAt);
+        const footprintMonth = `${footprintDate.getFullYear()}-${String(footprintDate.getMonth() + 1).padStart(2, '0')}`;
+        const alreadyCalculatedThisMonth = (footprintMonth === currentMonthKey);
+        
+        // Don't show popup if they already calculated this month
+        if (alreadyCalculatedThisMonth) {
+          console.log(`✅ Already calculated footprint for ${currentMonthKey} (created on ${footprintDate}) → no popup`);
+          return;
+        }
+      }
+
+      // Show popup only if there's no footprint for current month
+      if (!hasCurrentFootprint) {
+        console.log(`📌 Showing popup for ${currentMonthKey} - no footprint found`);
 
         const lastMonthDoc = await firestore()
           .collection('users')

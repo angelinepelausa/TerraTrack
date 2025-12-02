@@ -256,7 +256,14 @@ const TaskVerifyScreen = ({ navigation }) => {
                 <TouchableOpacity
                   style={[styles.taskVerifyBtn, task.status !== 'pending' && { backgroundColor: '#6A6A6A' }]}
                   disabled={task.status !== 'pending'}
-                  onPress={() => navigation.navigate('VerifyTaskScreen', { task, onVerificationComplete: loadTasks })}
+                  // In TaskVerifyScreen.js, when navigating to VerifyTaskScreen
+                  onPress={() => navigation.navigate('VerifyTaskScreen', { 
+                    task: { 
+                      ...task, 
+                      submittedDate: task.submittedDate // Make sure this is passed
+                    }, 
+                    onVerificationComplete: loadTasks 
+                  })}
                 >
                   <Text style={styles.taskVerifyText}>{task.status !== 'pending' ? 'Reviewed' : 'Verify'}</Text>
                 </TouchableOpacity>
