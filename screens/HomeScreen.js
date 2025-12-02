@@ -11,7 +11,7 @@ import {
   Modal
 } from 'react-native';
 import { getCommunityProgress } from '../repositories/communityProgressRepository';
-import { getUserTerraCoins } from '../repositories/userRepository';
+import { getUserTerraCoins, addReferralRewards, shouldShowReferralRewards } from '../repositories/userRepository';
 import { hasAttemptedQuiz } from '../repositories/quizAttemptsRepository';
 import ProgressBar from '../components/ProgressBar';
 import { scale, vScale } from '../utils/scaling';
@@ -20,6 +20,7 @@ import firestore from '@react-native-firebase/firestore';
 import SuspensionPopup from '../components/SuspensionPopup';
 import ConfirmationPopup from '../components/ConfirmationPopup';
 import BadgePopup from '../components/BadgePopup';
+import ReferralRewardPopup from '../components/ReferralRewardPopup';
 import { badgesRepository } from '../repositories/badgesRepository';
 
 const { width, height } = Dimensions.get('window');
@@ -171,6 +172,12 @@ const HomeScreen = ({ navigation, route }) => {
   const [welcomeBadge, setWelcomeBadge] = useState(null);
   const [hasCheckedBadge, setHasCheckedBadge] = useState(false);
 
+  // NEW STATES FOR REFERRAL REWARDS
+  const [showReferralRewards, setShowReferralRewards] = useState(false);
+  const [isClaimingReferralRewards, setIsClaimingReferralRewards] = useState(false);
+  const [hasCheckedReferralRewards, setHasCheckedReferralRewards] = useState(false);
+  const [showClaimSuccessPopup, setShowClaimSuccessPopup] = useState(false); // NEW STATE
+
   // Check if user has seen walkthrough before - UPDATED LOGIC
   useEffect(() => {
     const checkFirstTimeUser = async () => {
@@ -218,6 +225,106 @@ const HomeScreen = ({ navigation, route }) => {
       navigation.setParams({ showWalkthrough: undefined });
     }
   }, [route.params, navigation]);
+
+  // SINGLE FUNCTION TO HANDLE THE COMPLETE FLOW
+  const handleAfterWalkthrough = async () => {
+    try {
+      console.log('🔄 Starting post-walkthrough flow...');
+      
+      // Step 1: Check and show badge popup
+      await checkAndShowWelcomeBadge();
+      
+      // If badge popup was shown, we'll check referral rewards AFTER badge closes
+      // The check for referral rewards happens in the badge popup's onClose handler
+      
+    } catch (error) {
+      console.error('Error in post-walkthrough flow:', error);
+    }
+  };
+
+  // NEW FUNCTION: Check and show welcome badge
+  const checkAndShowWelcomeBadge = async () => {
+    try {
+      console.log('🔍 Checking for welcome badge...');
+      
+      // Check if user has the welcome badge unlocked
+      const unlockedBadges = await badgesRepository.getUnlockedBadgesForUser(user.uid);
+      const welcomeBadgeId = "8HxNEC8FmZoszwYMRWbM";
+      
+      if (unlockedBadges[welcomeBadgeId]) {
+        console.log('✅ User has welcome badge, fetching badge details...');
+        // Get badge details from badges collection
+        const badgeDetails = await badgesRepository.getBadgeById(welcomeBadgeId);
+        
+        if (badgeDetails) {
+          // Check if we should show the popup (only show once)
+          const hasSeenBadgePopup = await firestore()
+            .collection('users')
+            .doc(user.uid)
+            .get()
+            .then(doc => doc.data()?.hasSeenWelcomeBadgePopup);
+          
+          if (!hasSeenBadgePopup) {
+            console.log('🎉 Showing welcome badge popup!');
+            setWelcomeBadge(badgeDetails);
+            setShowBadgePopup(true);
+            
+            // Mark as seen in database
+            await firestore().collection('users').doc(user.uid).update({
+              hasSeenWelcomeBadgePopup: true
+            });
+          } else {
+            // If already seen badge popup, check referral rewards immediately
+            console.log('✅ Already seen badge popup, checking referral rewards...');
+            await checkReferralRewards();
+          }
+        }
+      } else {
+        // If no badge, check referral rewards immediately
+        console.log('❌ No welcome badge found, checking referral rewards...');
+        await checkReferralRewards();
+      }
+      
+      setHasCheckedBadge(true);
+    } catch (error) {
+      console.error('Error checking welcome badge:', error);
+      setHasCheckedBadge(true);
+    }
+  };
+
+  // NEW FUNCTION: Check referral rewards
+  const checkReferralRewards = async () => {
+    try {
+      if (user?.uid && !hasCheckedReferralRewards) {
+        console.log('🔍 Checking for referral rewards...');
+        
+        const { shouldShow, alreadyClaimed } = await shouldShowReferralRewards(user.uid);
+        
+        if (shouldShow && !alreadyClaimed) {
+          console.log('🎉 User is eligible for referral rewards!');
+          // Show referral rewards popup
+          setTimeout(() => {
+            setShowReferralRewards(true);
+          }, 300);
+        } else {
+          console.log('❌ Not eligible for referral rewards or already claimed');
+        }
+        
+        setHasCheckedReferralRewards(true);
+      }
+    } catch (error) {
+      console.error('Error checking referral rewards:', error);
+      setHasCheckedReferralRewards(true);
+    }
+  };
+
+  // NEW FUNCTION: Handle badge popup close
+  const handleBadgePopupClose = () => {
+    console.log('📌 Badge popup closed, now checking referral rewards...');
+    setShowBadgePopup(false);
+    // Check referral rewards after badge popup is closed
+    checkReferralRewards();
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -268,46 +375,48 @@ const HomeScreen = ({ navigation, route }) => {
     };
   }, [user?.uid]);
 
-  // NEW FUNCTION: Check and show welcome badge
-  const checkAndShowWelcomeBadge = async () => {
+  // NEW FUNCTION: Handle claiming referral rewards
+  const handleClaimReferralRewards = async () => {
     try {
-      console.log('🔍 Checking for welcome badge after walkthrough completion...');
+      setIsClaimingReferralRewards(true);
       
-      // Check if user has the welcome badge unlocked
-      const unlockedBadges = await badgesRepository.getUnlockedBadgesForUser(user.uid);
-      const welcomeBadgeId = "8HxNEC8FmZoszwYMRWbM";
+      const result = await addReferralRewards(user.uid);
       
-      if (unlockedBadges[welcomeBadgeId]) {
-        console.log('✅ User has welcome badge, fetching badge details...');
-        // Get badge details from badges collection
-        const badgeDetails = await badgesRepository.getBadgeById(welcomeBadgeId);
+      if (result.success) {
+        console.log('✅ Referral rewards claimed successfully');
+        // Update local state to reflect new coins/points
+        // The real-time subscription will update this automatically
+        setShowReferralRewards(false);
         
-        if (badgeDetails) {
-          // Check if we should show the popup (only show once)
-          const hasSeenBadgePopup = await firestore()
-            .collection('users')
-            .doc(user.uid)
-            .get()
-            .then(doc => doc.data()?.hasSeenWelcomeBadgePopup);
-          
-          if (!hasSeenBadgePopup) {
-            console.log('🎉 Showing welcome badge popup!');
-            // Small delay to ensure walkthrough is completely closed
-            setTimeout(() => {
-              setWelcomeBadge(badgeDetails);
-              setShowBadgePopup(true);
-            }, 500);
-            
-            // Mark as seen in database
-            await firestore().collection('users').doc(user.uid).update({
-              hasSeenWelcomeBadgePopup: true
-            });
-          }
-        }
+        // Show success confirmation popup instead of Alert.alert
+        setShowClaimSuccessPopup(true);
+        
+      } else {
+        // Show error using ConfirmationPopup
+        setShowClaimSuccessPopup(false);
+        // You could also create an error popup here if needed
+        Alert.alert(
+          'Error',
+          result.error || 'Failed to claim rewards. Please try again.',
+          [{ text: 'OK' }]
+        );
       }
     } catch (error) {
-      console.error('Error checking welcome badge:', error);
+      console.error('Error claiming referral rewards:', error);
+      setShowClaimSuccessPopup(false);
+      Alert.alert(
+        'Error',
+        'Something went wrong. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsClaimingReferralRewards(false);
     }
+  };
+
+  // NEW FUNCTION: Handle success popup close
+  const handleSuccessPopupClose = () => {
+    setShowClaimSuccessPopup(false);
   };
 
   // Calculate precise positions based on your layout
@@ -452,15 +561,15 @@ const HomeScreen = ({ navigation, route }) => {
   const handleSkipWalkthrough = () => {
     setShowWalkthrough(false);
     setCurrentStep(0);
-    // Check for badge after skipping walkthrough
-    checkAndShowWelcomeBadge();
+    // Start the post-walkthrough flow
+    handleAfterWalkthrough();
   };
 
   const handleCompleteWalkthrough = () => {
     setShowWalkthrough(false);
     setCurrentStep(0);
-    // Check for badge after completing walkthrough
-    checkAndShowWelcomeBadge();
+    // Start the post-walkthrough flow
+    handleAfterWalkthrough();
   };
 
   // REAL-TIME TerraCoins subscription
@@ -533,7 +642,7 @@ const HomeScreen = ({ navigation, route }) => {
     }
   };
 
-  // 🔥 Monthly footprint check - FIXED VERSION
+  // 🔥 Monthly footprint check
   const checkMonthlyFootprint = async () => {
     try {
       console.log("👀 Running checkMonthlyFootprint for", user.uid);
@@ -559,22 +668,9 @@ const HomeScreen = ({ navigation, route }) => {
       const currentData = currentDoc.exists ? currentDoc.data() : null;
       const hasCurrentFootprint = currentData && currentData.results && Object.keys(currentData.results).length > 0;
 
-      // FIXED LOGIC: Check if footprint was created this month
-      if (hasCurrentFootprint && currentData.createdAt) {
-        const footprintDate = new Date(currentData.createdAt);
-        const footprintMonth = `${footprintDate.getFullYear()}-${String(footprintDate.getMonth() + 1).padStart(2, '0')}`;
-        const alreadyCalculatedThisMonth = (footprintMonth === currentMonthKey);
-        
-        // Don't show popup if they already calculated this month
-        if (alreadyCalculatedThisMonth) {
-          console.log(`✅ Already calculated footprint for ${currentMonthKey} (created on ${footprintDate}) → no popup`);
-          return;
-        }
-      }
-
-      // Show popup only if there's no footprint for current month
-      if (!hasCurrentFootprint) {
-        console.log(`📌 Showing popup for ${currentMonthKey} - no footprint found`);
+      // Show popup if today is the 1st OR footprint is missing/empty
+      if (currentDay === 1 || !hasCurrentFootprint) {
+        console.log(`📌 Showing popup for ${currentMonthKey}`);
 
         const lastMonthDoc = await firestore()
           .collection('users')
@@ -681,11 +777,29 @@ const HomeScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      {/* BADGE POPUP */}
+      {/* REFERRAL REWARDS POPUP - Shows ONLY after badge popup is closed */}
+      <ReferralRewardPopup
+        visible={showReferralRewards}
+        onClaim={handleClaimReferralRewards}
+        isClaiming={isClaimingReferralRewards}
+      />
+
+      {/* SUCCESS CONFIRMATION POPUP - Shows after claiming rewards */}
+      <ConfirmationPopup
+        visible={showClaimSuccessPopup}
+        title="Success!"
+        message="You have claimed 15 Terra Coins and 50 Terra Points!"
+        confirmText="OK"
+        showCancel={false}
+        type="success"
+        onConfirm={handleSuccessPopupClose}
+      />
+
+      {/* BADGE POPUP - Shows first after walkthrough */}
       <BadgePopup
         visible={showBadgePopup}
         badge={welcomeBadge}
-        onClose={() => setShowBadgePopup(false)}
+        onClose={handleBadgePopupClose} // This triggers referral check AFTER badge closes
       />
 
       {/* WALKTHROUGH OVERLAY */}
