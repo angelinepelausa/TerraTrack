@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { vScale, scale } from '../utils/scaling';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 // Repositories
 import {
@@ -24,15 +25,16 @@ import {
   getUpcomingQuarters,
   deleteCommunityProgress,
 } from '../repositories/communityProgressRepository';
+import { populateUserData } from '../repositories/userRepository'; // Import the helper function
 
 // Components
 import HeaderRow from '../components/HeaderRow';
-import QuarterCard from '../components/QuarterCard';
-import RewardsCard from '../components/RewardsCard';
 import RankedAvatar from '../components/RankedAvatar';
 
-// Assets
+// Icons
 import Crown from '../assets/images/Crown.png';
+import TerraCoin from '../assets/images/TerraCoin.png';
+import TerraPoint from '../assets/images/TerraPoint.png';
 
 const { width, height } = Dimensions.get('window');
 
@@ -50,6 +52,7 @@ const AdminCommunityProgress = () => {
   const [activeTab, setActiveTab] = useState('current');
   const [selectedQuarter, setSelectedQuarter] = useState(null);
   const [showQuarterModal, setShowQuarterModal] = useState(false);
+  const [showRewardsDropdown, setShowRewardsDropdown] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -64,6 +67,7 @@ const AdminCommunityProgress = () => {
       ]);
 
       setProgressData(progress);
+      
       setLeaderboard(topUsers || []);
       setUpcomingQuarters(upcoming || []);
     } catch (error) {
@@ -161,7 +165,48 @@ const AdminCommunityProgress = () => {
             </View>
           </View>
 
-          {rewards && <RewardsCard rewards={rewards} />}
+          {/* Simplified Rewards Dropdown with Images */}
+          {rewards && (
+            <View style={styles.rewardsDropdownContainer}>
+              <TouchableOpacity 
+                style={styles.rewardsDropdownHeader}
+                onPress={() => setShowRewardsDropdown(!showRewardsDropdown)}
+              >
+                <Text style={styles.rewardsDropdownTitle}>Rewards</Text>
+                <Icon 
+                  name={showRewardsDropdown ? "chevron-up" : "chevron-down"} 
+                  size={20} 
+                  color="#709775" 
+                />
+              </TouchableOpacity>
+              
+              {showRewardsDropdown && (
+                <View style={styles.rewardsDropdownContent}>
+                  {[
+                    { label: "Top 1", reward: rewards.top1 },
+                    { label: "Top 2", reward: rewards.top2 },
+                    { label: "Top 3", reward: rewards.top3 },
+                    { label: "Top 4-10", reward: rewards.top4to10 },
+                    { label: "Top 11+", reward: rewards.top11plus },
+                  ].map((item, index) => (
+                    <View key={item.label} style={styles.rewardItem}>
+                      <Text style={styles.rewardLabel}>{item.label}</Text>
+                      <View style={styles.rewardValues}>
+                        <View style={styles.rewardValue}>
+                          <Image source={TerraPoint} style={styles.rewardIcon} />
+                          <Text style={styles.rewardText}>{item.reward.terraPoints}</Text>
+                        </View>
+                        <View style={styles.rewardValue}>
+                          <Image source={TerraCoin} style={styles.rewardIcon} />
+                          <Text style={styles.rewardText}>{item.reward.terraCoins}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
         </View>
       </View>
     );
@@ -169,27 +214,61 @@ const AdminCommunityProgress = () => {
 
   const renderUpcomingQuarters = () => {
     return (
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming Quarters</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => navigation.navigate('AddCommunityProgress', { onSaved: loadData })}
-          >
-            <Text style={styles.addButtonText}>+ Add New</Text>
-          </TouchableOpacity>
-        </View>
-
+      <View style={styles.upcomingSection}>
+        {/* Removed the header with "Upcoming Quarters" text */}
+        
         {upcomingQuarters.length === 0 ? (
-          <Text style={styles.emptyText}>No upcoming quarters scheduled</Text>
+          <View style={styles.emptyUpcoming}>
+            <Text style={styles.emptyText}>No upcoming quarters scheduled</Text>
+          </View>
         ) : (
-          upcomingQuarters.map((quarter) => (
-            <QuarterCard
-              key={quarter.id}
-              quarter={quarter}
-              onPress={() => openQuarterDetails(quarter)}
-            />
-          ))
+          <View style={styles.upcomingGrid}>
+            {upcomingQuarters.map((quarter) => (
+              <TouchableOpacity
+                key={quarter.id}
+                style={styles.quarterCard}
+                onPress={() => openQuarterDetails(quarter)}
+              >
+                {quarter.image && (
+                  <Image 
+                    source={{ uri: quarter.image }} 
+                    style={styles.quarterImage}
+                    resizeMode="contain"
+                  />
+                )}
+                <View style={styles.quarterContent}>
+                  <View style={styles.quarterHeader}>
+                    <Text style={styles.quarterId}>{quarter.id}</Text>
+                    <Icon name="chevron-forward" size={18} color="#709775" />
+                  </View>
+                  {quarter.title && (
+                    <Text style={styles.quarterTitle} numberOfLines={1}>
+                      {quarter.title}
+                    </Text>
+                  )}
+                  {quarter.description && (
+                    <Text style={styles.quarterDescription} numberOfLines={2}>
+                      {quarter.description}
+                    </Text>
+                  )}
+                  <View style={styles.quarterStats}>
+                    <View style={styles.statItem}>
+                      <Icon name="flag" size={14} color="#709775" style={styles.statIcon} />
+                      <Text style={styles.quarterStat}>
+                        {quarter.goal} tasks
+                      </Text>
+                    </View>
+                    <View style={styles.statItem}>
+                      <Icon name="calendar" size={14} color="#709775" style={styles.statIcon} />
+                      <Text style={styles.quarterStat}>
+                        {quarter.startDate ? new Date(quarter.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
       </View>
     );
@@ -201,7 +280,6 @@ const AdminCommunityProgress = () => {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Top Contributors</Text>
         
         {top3.length > 0 && (
           <View style={styles.podium}>
@@ -229,10 +307,17 @@ const AdminCommunityProgress = () => {
             {rest.map((item, index) => (
               <View key={item.id} style={styles.leaderboardItem}>
                 <Text style={styles.rankBadge}>{index + 4}</Text>
-                <Image 
-                  source={require('../assets/images/Avatar.png')} 
-                  style={styles.avatarSmall} 
-                />
+                {item.avatar ? (
+                  <Image 
+                    source={{ uri: item.avatar }} 
+                    style={styles.avatarSmall} 
+                  />
+                ) : (
+                  <Image 
+                    source={require('../assets/images/Avatar.png')} 
+                    style={styles.avatarSmall} 
+                  />
+                )}
                 <Text style={styles.username}>{item.username}</Text>
                 <Text style={styles.points}>{item.terraPoints} pts</Text>
               </View>
@@ -287,6 +372,16 @@ const AdminCommunityProgress = () => {
         {activeTab === 'leaderboard' && renderLeaderboard()}
       </ScrollView>
 
+      {/* Floating Add Button - Only visible on upcoming tab */}
+      {activeTab === 'upcoming' && (
+        <TouchableOpacity
+          style={styles.floatingAddButton}
+          onPress={() => navigation.navigate('AddCommunityProgress', { onSaved: loadData })}
+        >
+          <Icon name="add" size={28} color="#fff" />
+        </TouchableOpacity>
+      )}
+
       <QuarterDetailsModal
         visible={showQuarterModal}
         quarter={selectedQuarter}
@@ -299,7 +394,13 @@ const AdminCommunityProgress = () => {
 };
 
 const QuarterDetailsModal = ({ visible, quarter, onEdit, onDelete, onClose }) => {
+  const [showRewards, setShowRewards] = useState(false);
+
   if (!quarter) return null;
+
+  // Check if quarter is upcoming (start date is in the future)
+  const isUpcoming = quarter.startDate ? new Date(quarter.startDate) > new Date() : false;
+  const status = isUpcoming ? 'Inactive' : (quarter.processed ? 'Completed' : 'Active');
 
   return (
     <Modal
@@ -312,12 +413,16 @@ const QuarterDetailsModal = ({ visible, quarter, onEdit, onDelete, onClose }) =>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{quarter.id}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButtonContainer}>
-              <Text style={styles.closeButton}>✕</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Icon name="close" size={24} color="#CCCCCC" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.modalBody} 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.modalBodyContent}
+          >
             {quarter.image && (
               <Image 
                 source={{ uri: quarter.image }} 
@@ -329,24 +434,95 @@ const QuarterDetailsModal = ({ visible, quarter, onEdit, onDelete, onClose }) =>
             {quarter.title && (
               <Text style={styles.modalTitleText}>{quarter.title}</Text>
             )}
+            
             <Text style={styles.modalDescription}>{quarter.description}</Text>
             
-            <View style={styles.modalInfoRow}>
-              <Text style={styles.modalLabel}>Goal:</Text>
-              <Text style={styles.modalValue}>{quarter.goal} tasks</Text>
+            <View style={styles.modalInfoSection}>
+              <View style={styles.modalInfoRow}>
+                <Text style={styles.modalLabel}>Goal:</Text>
+                <Text style={styles.modalValue}>{quarter.goal} tasks</Text>
+              </View>
+
+              <View style={styles.modalInfoRow}>
+                <Text style={styles.modalLabel}>Start Date:</Text>
+                <Text style={styles.modalValue}>
+                  {quarter.startDate ? new Date(quarter.startDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  }) : 'Not set'}
+                </Text>
+              </View>
+
+              <View style={styles.modalInfoRow}>
+                <Text style={styles.modalLabel}>End Date:</Text>
+                <Text style={styles.modalValue}>
+                  {quarter.endDate ? new Date(quarter.endDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  }) : 'Not set'}
+                </Text>
+              </View>
+
+              <View style={styles.modalInfoRow}>
+                <Text style={styles.modalLabel}>Current Progress:</Text>
+                <Text style={styles.modalValue}>{quarter.current || 0} / {quarter.goal}</Text>
+              </View>
+
+              <View style={styles.modalInfoRow}>
+                <Text style={styles.modalLabel}>Status:</Text>
+                <Text style={[
+                  styles.modalValue,
+                  status === 'Inactive' && styles.inactiveStatus,
+                  status === 'Active' && styles.activeStatus,
+                  status === 'Completed' && styles.completedStatus
+                ]}>
+                  {status}
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.modalInfoRow}>
-              <Text style={styles.modalLabel}>Duration:</Text>
-              <Text style={styles.modalValue}>
-                {new Date(quarter.startDate).toLocaleDateString()} - {new Date(quarter.endDate).toLocaleDateString()}
-              </Text>
-            </View>
-
+            {/* Simplified Rewards Section in Modal matching Current Tab style */}
             {quarter.rewards && (
-              <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Rewards</Text>
-                <RewardsCard rewards={quarter.rewards} />
+              <View style={styles.modalRewardsSection}>
+                <TouchableOpacity 
+                  style={styles.modalRewardsHeader}
+                  onPress={() => setShowRewards(!showRewards)}
+                >
+                  <Text style={styles.modalSectionTitle}>Rewards</Text>
+                  <Icon 
+                    name={showRewards ? "chevron-up" : "chevron-down"} 
+                    size={20} 
+                    color="#709775" 
+                  />
+                </TouchableOpacity>
+                
+                {showRewards && (
+                  <View style={styles.modalRewardsContent}>
+                    {[
+                      { label: "Top 1", reward: quarter.rewards.top1 },
+                      { label: "Top 2", reward: quarter.rewards.top2 },
+                      { label: "Top 3", reward: quarter.rewards.top3 },
+                      { label: "Top 4-10", reward: quarter.rewards.top4to10 },
+                      { label: "Top 11+", reward: quarter.rewards.top11plus },
+                    ].map((item, index) => (
+                      <View key={item.label} style={styles.modalRewardItem}>
+                        <Text style={styles.modalRewardLabel}>{item.label}</Text>
+                        <View style={styles.modalRewardValues}>
+                          <View style={styles.modalRewardValue}>
+                            <Image source={TerraPoint} style={styles.modalRewardIcon} />
+                            <Text style={styles.modalRewardText}>{item.reward.terraPoints}</Text>
+                          </View>
+                          <View style={styles.modalRewardValue}>
+                            <Image source={TerraCoin} style={styles.modalRewardIcon} />
+                            <Text style={styles.modalRewardText}>{item.reward.terraCoins}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             )}
 
@@ -379,7 +555,6 @@ const styles = StyleSheet.create({
   headerContainer: {
     paddingHorizontal: scale(16),
     paddingTop: scale(20),
-    paddingBottom: scale(10),
   },
   loadingContainer: { 
     flex: 1, 
@@ -390,14 +565,34 @@ const styles = StyleSheet.create({
     paddingBottom: scale(30),
   },
 
+  // Floating Add Button
+  floatingAddButton: {
+    position: 'absolute',
+    bottom: scale(30),
+    right: scale(30),
+    width: scale(60),
+    height: scale(60),
+    borderRadius: scale(30),
+    backgroundColor: '#709775',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+    zIndex: 100,
+  },
+
   // Tabs
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#1E1E1E',
     marginHorizontal: scale(16),
     borderRadius: scale(12),
-    marginBottom: scale(16),
-    marginTop: scale(8),
     padding: scale(2),
   },
   tab: {
@@ -424,16 +619,19 @@ const styles = StyleSheet.create({
   section: { 
     padding: scale(16) 
   },
+  upcomingSection: {
+    padding: scale(16),
+  },
   centeredSection: { 
     padding: scale(16), 
     alignItems: 'center', 
     justifyContent: 'center' 
   },
-  sectionHeader: {
+  upcomingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: scale(16),
+    marginBottom: scale(20),
   },
   sectionTitle: { 
     fontSize: scale(18), 
@@ -468,6 +666,12 @@ const styles = StyleSheet.create({
     borderRadius: scale(12),
     marginBottom: scale(16),
     alignSelf: 'center',
+  },
+
+  // Quarter Image
+  quarterImage: {
+    width: '100%',
+    height: scale(140),
   },
 
   // Cards
@@ -542,36 +746,171 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Buttons
-  addButton: {
-    backgroundColor: '#709775',
-    paddingVertical: scale(8),
-    paddingHorizontal: scale(12),
+  // Status Styles
+  inactiveStatus: {
+    color: '#FFA500', // Orange for inactive
+  },
+  activeStatus: {
+    color: '#4CAF50', // Green for active
+  },
+  completedStatus: {
+    color: '#709775', // Teal for completed
+  },
+
+  // Simplified Rewards Dropdown with Images (USED IN BOTH CURRENT AND MODAL)
+  rewardsDropdownContainer: {
+    backgroundColor: '#2A2A2A',
     borderRadius: scale(12),
-    minWidth: scale(80),
+    overflow: 'hidden',
+    marginTop: scale(16),
+  },
+  rewardsDropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    padding: scale(16),
+  },
+  rewardsDropdownTitle: {
+    fontSize: scale(16),
+    fontWeight: 'bold',
+    color: '#709775',
+  },
+  rewardsDropdownContent: {
+    padding: scale(16),
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  rewardItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: scale(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  rewardLabel: {
+    fontSize: scale(14),
+    color: '#CCCCCC',
+    fontWeight: '600',
+    flex: 1,
+  },
+  rewardValues: {
+    flexDirection: 'row',
+    gap: scale(20),
+    alignItems: 'center',
+  },
+  rewardValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+    minWidth: scale(60),
+  },
+  rewardIcon: {
+    width: scale(20),
+    height: scale(20),
+    resizeMode: 'contain',
+  },
+  rewardText: {
+    fontSize: scale(14),
+    color: '#fff',
+    fontWeight: '600',
+    minWidth: scale(30),
+  },
+
+  // Upcoming Quarters Grid
+  upcomingGrid: {
+    gap: scale(16),
+  },
+  quarterCard: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: scale(12),
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  quarterContent: {
+    padding: scale(16),
+  },
+  quarterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: scale(8),
+  },
+  quarterId: {
+    fontSize: scale(16),
+    fontWeight: 'bold',
+    color: '#709775',
+  },
+  quarterTitle: {
+    fontSize: scale(14),
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: scale(8),
+  },
+  quarterDescription: {
+    fontSize: scale(12),
+    color: '#CCCCCC',
+    marginBottom: scale(12),
+    lineHeight: scale(16),
+  },
+  quarterStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+  },
+  statIcon: {
+    marginRight: scale(4),
+  },
+  quarterStat: {
+    fontSize: scale(12),
+    color: '#709775',
+    fontWeight: '600',
+  },
+
+  // Buttons (old add button removed)
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#709775',
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(20),
+    borderRadius: scale(12),
+    marginTop: scale(16),
+    gap: scale(8),
   },
   addButtonText: { 
     color: '#fff', 
     fontWeight: '600', 
-    fontSize: scale(12),
+    fontSize: scale(14),
     letterSpacing: 0.3,
   },
+  emptyUpcoming: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: scale(40),
+  },
 
-  // Modal
+  // Modal - EXPANDED with smaller text
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: scale(16),
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: '#1E1E1E',
-    borderRadius: scale(16),
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
     width: '100%',
-    maxHeight: '85%',
+    height: height * 0.85,
     overflow: 'hidden',
   },
   modalHeader: {
@@ -583,47 +922,105 @@ const styles = StyleSheet.create({
     borderBottomColor: '#333',
   },
   modalTitle: { 
-    fontSize: scale(18), 
+    fontSize: scale(18),
     color: '#709775', 
     fontWeight: 'bold',
     letterSpacing: 0.5,
     flex: 1,
   },
   modalTitleText: {
-    fontSize: scale(20),
+    fontSize: scale(18),
     color: '#709775',
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: scale(12),
     letterSpacing: 0.5,
+    paddingHorizontal: scale(16),
   },
-  closeButtonContainer: {
+  closeButton: {
     padding: scale(4),
   },
-  closeButton: { 
-    color: '#CCCCCC', 
-    fontSize: scale(20), 
-    fontWeight: 'bold',
-  },
   modalBody: { 
-    padding: scale(20),
-    maxHeight: height * 0.8,
+    flex: 1,
   },
-  modalSection: { 
-    marginTop: scale(16) 
+  modalBodyContent: {
+    paddingBottom: scale(40),
+  },
+  modalInfoSection: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: scale(12),
+    padding: scale(16),
+    margin: scale(16),
+    marginTop: scale(8),
+    gap: scale(12),
+  },
+  
+  // Modal Rewards Section - NOW MATCHES CURRENT TAB STYLE
+  modalRewardsSection: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: scale(12),
+    margin: scale(16),
+    marginTop: scale(8),
+    overflow: 'hidden',
+  },
+  modalRewardsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: scale(16),
   },
   modalSectionTitle: { 
     color: '#709775', 
     fontWeight: 'bold', 
-    marginBottom: scale(12),
     fontSize: scale(16),
     letterSpacing: 0.5,
   },
+  modalRewardsContent: {
+    padding: scale(16),
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  modalRewardItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: scale(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  modalRewardLabel: {
+    fontSize: scale(14),
+    color: '#CCCCCC',
+    fontWeight: '600',
+    flex: 1,
+  },
+  modalRewardValues: {
+    flexDirection: 'row',
+    gap: scale(20),
+    alignItems: 'center',
+  },
+  modalRewardValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+    minWidth: scale(60),
+  },
+  modalRewardIcon: {
+    width: scale(20),
+    height: scale(20),
+    resizeMode: 'contain',
+  },
+  modalRewardText: {
+    fontSize: scale(14),
+    color: '#fff',
+    fontWeight: '600',
+    minWidth: scale(30),
+  },
+  
   modalInfoRow: { 
     flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: scale(12),
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   modalLabel: { 
     color: '#CCCCCC', 
@@ -631,8 +1028,12 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
   },
   modalValue: { 
-    color: '#CCCCCC',
+    color: '#fff',
     fontSize: scale(14),
+    fontWeight: '500',
+    textAlign: 'right',
+    flex: 1,
+    paddingLeft: scale(10),
   },
   modalDescription: { 
     color: '#CCCCCC', 
@@ -641,22 +1042,22 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     letterSpacing: 0.3,
     textAlign: 'center',
+    paddingHorizontal: scale(16),
   },
   modalActions: { 
-    padding: scale(20),
-    borderTopWidth: 1,
-    borderTopColor: '#333',
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: scale(12),
+    marginTop: scale(24),
+    marginBottom: scale(16),
+    paddingHorizontal: scale(16),
   },
   modalButton: { 
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: scale(16), 
     borderRadius: scale(12), 
-    alignItems: 'center',
-    flex: 1,
-    minHeight: scale(50),
-    justifyContent: 'center',
   },
   editButton: { 
     backgroundColor: '#709775' 

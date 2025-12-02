@@ -15,6 +15,7 @@ import { adminUserRepository } from "../repositories/adminUserRepository";
 import HeaderRow from "../components/HeaderRow";
 import { ChartSection } from "../components/ChartSection";
 import { useChartData } from "../hooks/useChartData";
+import { scale } from "../utils/scaling";
 
 // Suspension Modal Component
 const SuspensionModal = ({ visible, onClose, onConfirm }) => {
@@ -40,6 +41,11 @@ const SuspensionModal = ({ visible, onClose, onConfirm }) => {
               ]}
               onPress={() => setSelectedDuration(option.value)}
             >
+              <View style={styles.durationRadio}>
+                {selectedDuration === option.value && (
+                  <View style={styles.durationRadioDot} />
+                )}
+              </View>
               <Text style={[
                 styles.durationText,
                 selectedDuration === option.value && styles.durationTextSelected
@@ -51,13 +57,13 @@ const SuspensionModal = ({ visible, onClose, onConfirm }) => {
           
           <View style={styles.modalButtons}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.buttonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.confirmButton} 
               onPress={() => onConfirm(selectedDuration)}
             >
-              <Text style={styles.buttonText}>Confirm Suspension</Text>
+              <Text style={styles.confirmButtonText}>Confirm</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -69,7 +75,6 @@ const SuspensionModal = ({ visible, onClose, onConfirm }) => {
 // Tab Components
 const ProfileTab = ({ 
     userDetails, 
-    userId, 
     onBanUser, 
     onSuspendUser, 
     onActivateUser,
@@ -84,58 +89,65 @@ const ProfileTab = ({
     setSelectedYear,
     setSelectedCategory 
 }) => (
-    <ScrollView style={styles.tabContentScroll} contentContainerStyle={styles.tabContentContainer}>
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+        {/* Basic Information */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Information</Text>
-            <InfoRow label="Username" value={userDetails.username} />
-            <InfoRow label="Email" value={userDetails.email} />
-            <InfoRow label="User ID" value={userDetails.id} />
-            <InfoRow label="Status" value={userDetails.status || 'Active'} />
-            <InfoRow label="Referral Code" value={userDetails.referralCode} />
-            <InfoRow label="Referred By" value={userDetails.referredBy || 'None'} />
-        </View>
-
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Progress & Stats</Text>
-            <InfoRow label="Terra Coins" value={userDetails.terraCoins?.toString()} />
-            <InfoRow label="Terra Points" value={userDetails.terraPoints?.toString()} />
-            <InfoRow label="Materials Read" value={userDetails.stats?.educationalMaterialsRead?.toString()} />
-            <InfoRow label="Quizzes Finished" value={userDetails.stats?.educationalQuizFinished?.toString()} />
-            <InfoRow label="Tasks Completed" value={userDetails.stats?.taskFinished?.toString()} />
-
-            <View style={{ width: '100%', alignItems: 'center' }}>
-                <View style={styles.adminChartWrapper}>
-                    <ChartSection
-                    chartData={chartData}
-                    chartLoading={chartLoading}
-                    selectedYear={selectedYear}
-                    selectedCategory={selectedCategory}
-                    years={years}
-                    categories={categories}
-                    dropdownOpen={dropdownOpen}
-                    setDropdownOpen={setDropdownOpen}
-                    setSelectedYear={setSelectedYear}
-                    setSelectedCategory={setSelectedCategory}
-                    />
-                </View>
+            <View style={styles.infoGrid}>
+                <InfoRow label="Username" value={userDetails.username} />
+                <InfoRow label="Email" value={userDetails.email} />
+                <InfoRow label="User ID" value={userDetails.id} />
+                <InfoRow label="Status" value={userDetails.status || 'Active'} />
+                <InfoRow label="Referral Code" value={userDetails.referralCode} />
+                <InfoRow label="Referred By" value={userDetails.referredBy || 'None'} />
             </View>
         </View>
 
+        {/* Stats */}
+        <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Progress & Stats</Text>
+            <View style={styles.statsGrid}>
+                <StatItem label="Terra Coins" value={userDetails.terraCoins?.toString()} />
+                <StatItem label="Terra Points" value={userDetails.terraPoints?.toString()} />
+                <StatItem label="Materials Read" value={userDetails.stats?.educationalMaterialsRead?.toString()} />
+                <StatItem label="Quizzes Finished" value={userDetails.stats?.educationalQuizFinished?.toString()} />
+                <StatItem label="Tasks Completed" value={userDetails.stats?.taskFinished?.toString()} />
+            </View>
+        </View>
+
+        {/* Chart */}
+        <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Environmental Impact</Text>
+            <ChartSection
+                chartData={chartData}
+                chartLoading={chartLoading}
+                selectedYear={selectedYear}
+                selectedCategory={selectedCategory}
+                years={years}
+                categories={categories}
+                dropdownOpen={dropdownOpen}
+                setDropdownOpen={setDropdownOpen}
+                setSelectedYear={setSelectedYear}
+                setSelectedCategory={setSelectedCategory}
+            />
+        </View>
+
+        {/* Admin Actions */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Admin Actions</Text>
-            <View style={styles.adminActions}>
+            <View style={styles.actionButtons}>
                 {userDetails?.status?.toLowerCase() === 'active' ? (
                     <>
-                        <TouchableOpacity style={[styles.adminActionBtn, styles.suspendBtn]} onPress={onSuspendUser}>
-                            <Text style={styles.adminActionBtnText}>Suspend User</Text>
+                        <TouchableOpacity style={[styles.actionButton, styles.suspendButton]} onPress={onSuspendUser}>
+                            <Text style={styles.actionButtonText}>Suspend</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.adminActionBtn, styles.banBtn]} onPress={onBanUser}>
-                            <Text style={styles.adminActionBtnText}>Ban User</Text>
+                        <TouchableOpacity style={[styles.actionButton, styles.banButton]} onPress={onBanUser}>
+                            <Text style={styles.actionButtonText}>Ban</Text>
                         </TouchableOpacity>
                     </>
                 ) : (
-                    <TouchableOpacity style={[styles.adminActionBtn, styles.activateBtn]} onPress={onActivateUser}>
-                        <Text style={styles.adminActionBtnText}>Activate User</Text>
+                    <TouchableOpacity style={[styles.actionButton, styles.activateButton]} onPress={onActivateUser}>
+                        <Text style={styles.actionButtonText}>Activate</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -144,131 +156,180 @@ const ProfileTab = ({
 );
 
 const PreferencesTab = ({ userDetails }) => (
-    <ScrollView style={styles.tabContentScroll} contentContainerStyle={styles.tabContentContainer}>
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+        {/* Lifestyle */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Lifestyle Preferences</Text>
-            <InfoRow label="Budget Level" value={userDetails.preferences?.budgetLevel} />
-            <InfoRow label="Commute Distance" value={userDetails.preferences?.commuteDistance} />
+            <View style={styles.preferenceCards}>
+                <PreferenceCard label="Budget Level" value={userDetails.preferences?.budgetLevel} />
+                <PreferenceCard label="Commute Distance" value={userDetails.preferences?.commuteDistance} />
+            </View>
         </View>
 
+        {/* Diet */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Diet Preferences</Text>
             {userDetails.preferences?.dietType?.length > 0 ? (
-                userDetails.preferences.dietType.map((diet, index) => (
-                    <Text key={index} style={styles.itemLine}>{diet}</Text>
-                ))
+                <View style={styles.tagContainer}>
+                    {userDetails.preferences.dietType.map((diet, index) => (
+                        <View key={index} style={styles.tag}>
+                            <Text style={styles.tagText}>{diet}</Text>
+                        </View>
+                    ))}
+                </View>
             ) : (
-                <Text style={styles.noDataText}>No diet preferences set</Text>
+                <EmptyState text="No diet preferences set" />
             )}
         </View>
 
+        {/* Energy */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Energy Control</Text>
             {userDetails.preferences?.energyControl?.length > 0 ? (
-                userDetails.preferences.energyControl.map((energy, index) => (
-                    <Text key={index} style={styles.itemLine}>{energy}</Text>
-                ))
+                <View style={styles.tagContainer}>
+                    {userDetails.preferences.energyControl.map((energy, index) => (
+                        <View key={index} style={styles.tag}>
+                            <Text style={styles.tagText}>{energy}</Text>
+                        </View>
+                    ))}
+                </View>
             ) : (
-                <Text style={styles.noDataText}>No energy preferences set</Text>
+                <EmptyState text="No energy preferences set" />
             )}
         </View>
 
+        {/* Transportation */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Transportation</Text>
             {userDetails.preferences?.transportationOptions?.length > 0 ? (
-                userDetails.preferences.transportationOptions.map((transport, index) => (
-                    <Text key={index} style={styles.itemLine}>{transport}</Text>
-                ))
+                <View style={styles.tagContainer}>
+                    {userDetails.preferences.transportationOptions.map((transport, index) => (
+                        <View key={index} style={styles.tag}>
+                            <Text style={styles.tagText}>{transport}</Text>
+                        </View>
+                    ))}
+                </View>
             ) : (
-                <Text style={styles.noDataText}>No transportation preferences set</Text>
+                <EmptyState text="No transportation preferences set" />
             )}
         </View>
     </ScrollView>
 );
 
 const AchievementsTab = ({ userDetails }) => (
-  <ScrollView style={styles.tabContentScroll} contentContainerStyle={styles.tabContentContainer}>
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Badges ({userDetails.unlockedBadges?.length || 0})</Text>
-      {userDetails.unlockedBadges?.length > 0 ? (
-        <View style={styles.gridContainer}>
-          {userDetails.unlockedBadges.map((badge) => (
-            <View key={badge.id} style={styles.gridItem}>
-              <Image
-                source={badge.imageUrl ? { uri: badge.imageUrl } : require("../assets/images/Avatar.png")}
-                style={styles.gridImage}
-                onError={(e) => {
-                  console.log('Error loading badge image:', badge.imageUrl);
-                  e.nativeEvent.target = null;
-                }}
-                defaultSource={require("../assets/images/Avatar.png")}
-              />
-              <Text style={styles.gridText} numberOfLines={2}>{badge.name || 'Unnamed Badge'}</Text>
-            </View>
-          ))}
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+        {/* Badges */}
+        <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Badges ({userDetails.unlockedBadges?.length || 0})</Text>
+            {userDetails.unlockedBadges?.length > 0 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                    {userDetails.unlockedBadges.map((badge) => (
+                        <View key={badge.id} style={styles.badgeCard}>
+                            <Image
+                                source={badge.imageUrl ? { uri: badge.imageUrl } : require("../assets/images/Avatar.png")}
+                                style={styles.badgeImage}
+                                onError={(e) => {
+                                    console.log('Error loading badge image:', badge.imageUrl);
+                                    e.nativeEvent.target = null;
+                                }}
+                                defaultSource={require("../assets/images/Avatar.png")}
+                            />
+                            <Text style={styles.badgeName} numberOfLines={1}>{badge.name || 'Unnamed Badge'}</Text>
+                        </View>
+                    ))}
+                </ScrollView>
+            ) : (
+                <EmptyState text="No badges unlocked yet" />
+            )}
         </View>
-      ) : (
-        <Text style={styles.noDataText}>No badges unlocked yet</Text>
-      )}
-    </View>
 
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Avatars ({userDetails.purchasedAvatars?.length || 0})</Text>
-      {userDetails.purchasedAvatars && userDetails.purchasedAvatars.length > 0 ? (
-        <View style={styles.gridContainer}>
-          {userDetails.purchasedAvatars.map((avatar) => (
-            <View key={avatar.id} style={styles.gridItem}>
-              <Image
-                source={avatar.imageUrl ? { uri: avatar.imageUrl } : require("../assets/images/Avatar.png")}
-                style={styles.gridImage}
-                onError={(e) => {
-                  console.log('Error loading avatar image:', avatar.imageUrl);
-                  e.nativeEvent.target = null;
-                }}
-                defaultSource={require("../assets/images/Avatar.png")}
-              />
-              <Text style={styles.gridText} numberOfLines={2}>{avatar.name || 'Unnamed Avatar'}</Text>
-            </View>
-          ))}
+        {/* Avatars */}
+        <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Avatars ({userDetails.purchasedAvatars?.length || 0})</Text>
+            {userDetails.purchasedAvatars && userDetails.purchasedAvatars.length > 0 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                    {userDetails.purchasedAvatars.map((avatar) => (
+                        <View key={avatar.id} style={styles.avatarCard}>
+                            <Image
+                                source={avatar.imageUrl ? { uri: avatar.imageUrl } : require("../assets/images/Avatar.png")}
+                                style={styles.avatarImage}
+                                onError={(e) => {
+                                    console.log('Error loading avatar image:', avatar.imageUrl);
+                                    e.nativeEvent.target = null;
+                                }}
+                                defaultSource={require("../assets/images/Avatar.png")}
+                            />
+                            <Text style={styles.avatarName} numberOfLines={1}>{avatar.name || 'Unnamed Avatar'}</Text>
+                        </View>
+                    ))}
+                </ScrollView>
+            ) : (
+                <EmptyState text="No avatars purchased yet" />
+            )}
         </View>
-      ) : (
-        <Text style={styles.noDataText}>No avatars purchased yet</Text>
-      )}
-    </View>
 
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Invites ({userDetails.invites?.length || 0})</Text>
-      {userDetails.invites?.length > 0 ? (
-        userDetails.invites.map((invite) => (
-          <View key={invite.id} style={styles.inviteItem}>
-            <Text style={styles.inviteUsername}>{invite.invitedUsername || 'Unknown User'}</Text>
-            <Text style={styles.inviteId}>User ID: {invite.id}</Text>
-            <Text style={styles.inviteEmail}>Email: {invite.invitedUserEmail || 'No email'}</Text>
-            <Text style={styles.inviteDate}>
-              Invited: {invite.createdAt?.toDate ? invite.createdAt.toDate().toLocaleDateString() : 'Unknown date'}
-            </Text>
-            <View style={styles.inviteStats}>
-              <Text style={styles.inviteStat}>Tasks: {invite.taskFinished || 0}</Text>
-              <Text style={styles.inviteStat}>Quizzes: {invite.educationalQuizFinished || 0}</Text>
-              <Text style={styles.inviteStat}>Weekly: {invite.weeklyQuizFinished || 0}</Text>
-            </View>
-            <Text style={styles.rewardStatus}>
-              Rewards {invite.rewardsClaimed ? 'Claimed' : 'Not Claimed'}
-            </Text>
-          </View>
-        ))
-      ) : (
-        <Text style={styles.noDataText}>No users invited yet</Text>
-      )}
-    </View>
-  </ScrollView>
+        {/* Invites */}
+        <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Invites ({userDetails.invites?.length || 0})</Text>
+            {userDetails.invites?.length > 0 ? (
+                <View style={styles.invitesList}>
+                    {userDetails.invites.map((invite) => (
+                        <View key={invite.id} style={styles.inviteCard}>
+                            <View style={styles.inviteHeader}>
+                                <Text style={styles.inviteUsername}>{invite.invitedUsername || 'Unknown User'}</Text>
+                                <View style={[
+                                    styles.inviteStatusBadge,
+                                    invite.rewardsClaimed ? styles.statusClaimed : styles.statusUnclaimed
+                                ]}>
+                                    <Text style={styles.inviteStatusText}>
+                                        {invite.rewardsClaimed ? 'Claimed' : 'Unclaimed'}
+                                    </Text>
+                                </View>
+                            </View>
+                            <Text style={styles.inviteEmail}>{invite.invitedUserEmail || 'No email'}</Text>
+                            <Text style={styles.inviteDate}>
+                                {invite.createdAt?.toDate ? invite.createdAt.toDate().toLocaleDateString() : 'Unknown date'}
+                            </Text>
+                            <View style={styles.inviteStats}>
+                                <Text style={styles.inviteStat}>{invite.taskFinished || 0} tasks</Text>
+                                <Text style={styles.inviteStat}>{invite.educationalQuizFinished || 0} quizzes</Text>
+                                <Text style={styles.inviteStat}>{invite.weeklyQuizFinished || 0} weekly</Text>
+                            </View>
+                        </View>
+                    ))}
+                </View>
+            ) : (
+                <EmptyState text="No users invited yet" />
+            )}
+        </View>
+    </ScrollView>
 );
 
 // Reusable Components
 const InfoRow = ({ label, value }) => (
     <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value || 'Not set'}</Text>
+        <Text style={styles.infoValue} numberOfLines={1}>{value || 'Not set'}</Text>
+    </View>
+);
+
+const StatItem = ({ label, value }) => (
+    <View style={styles.statItem}>
+        <Text style={styles.statValue}>{value || '0'}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+    </View>
+);
+
+const PreferenceCard = ({ label, value }) => (
+    <View style={styles.preferenceCard}>
+        <Text style={styles.preferenceLabel}>{label}</Text>
+        <Text style={styles.preferenceValue}>{value || 'Not set'}</Text>
+    </View>
+);
+
+const EmptyState = ({ text }) => (
+    <View style={styles.emptyState}>
+        <Text style={styles.emptyStateText}>{text}</Text>
     </View>
 );
 
@@ -301,16 +362,6 @@ const AdminUserProfile = () => {
         setLoading(true);
         try {
             const userData = await adminUserRepository.getUserFullData(userId);
-            console.log('Fetched user data:', userData);
-
-            if (userData.unlockedBadges && userData.unlockedBadges.length > 0) {
-                console.log('First badge details:', userData.unlockedBadges[0]);
-            }
-
-            if (userData.purchasedAvatars && Object.keys(userData.purchasedAvatars).length > 0) {
-                console.log('First avatar details:', Object.values(userData.purchasedAvatars)[0]);
-            }
-
             setUserDetails(userData);
             
             // Set available years for chart dropdown
@@ -324,7 +375,7 @@ const AdminUserProfile = () => {
             }
         } catch (error) {
             console.error("Error fetching user details:", error);
-            Alert.alert("Error", "Failed to load user details. You may not have admin permissions.");
+            Alert.alert("Error", "Failed to load user details.");
         } finally {
             setLoading(false);
         }
@@ -361,7 +412,7 @@ const AdminUserProfile = () => {
         try {
             await adminUserRepository.suspendUser(userId, parseInt(durationDays));
             fetchUserDetails();
-            Alert.alert("Success", `User has been suspended for ${durationDays} day(s)`);
+            Alert.alert("Success", `User suspended for ${durationDays} day(s)`);
         } catch (error) {
             Alert.alert("Error", "Failed to suspend user");
         }
@@ -380,7 +431,11 @@ const AdminUserProfile = () => {
 
     const renderTabContent = () => {
         if (loading || !userDetails) {
-            return <ActivityIndicator size="large" color="#709775" style={styles.loader} />;
+            return (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#709775" />
+                </View>
+            );
         }
 
         switch (activeTab) {
@@ -388,7 +443,6 @@ const AdminUserProfile = () => {
                 return (
                     <ProfileTab
                         userDetails={userDetails}
-                        userId={userId}
                         onBanUser={handleBanUser}
                         onSuspendUser={handleSuspendUser}
                         onActivateUser={handleActivateUser}
@@ -412,7 +466,6 @@ const AdminUserProfile = () => {
                 return (
                     <ProfileTab
                         userDetails={userDetails}
-                        userId={userId}
                         onBanUser={handleBanUser}
                         onSuspendUser={handleSuspendUser}
                         onActivateUser={handleActivateUser}
@@ -437,11 +490,12 @@ const AdminUserProfile = () => {
                 <View style={styles.headerContainer}>
                     <HeaderRow
                         title="User Profile"
-                        showBack={true}
                         onBackPress={() => navigation.goBack()}
                     />
                 </View>
-                <ActivityIndicator size="large" color="#709775" style={styles.loader} />
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#709775" />
+                </View>
             </View>
         );
     }
@@ -452,12 +506,12 @@ const AdminUserProfile = () => {
             <View style={styles.headerContainer}>
                 <HeaderRow
                     title="User Profile"
-                    showBack={true}
                     onBackPress={() => navigation.goBack()}
                 />
             </View>
 
-            <View style={styles.userSummary}>
+            {/* User Header Card */}
+            <View style={styles.userHeaderCard}>
                 <Image
                     source={
                         userDetails?.avatar
@@ -467,8 +521,8 @@ const AdminUserProfile = () => {
                     style={styles.avatar}
                 />
                 <View style={styles.userInfo}>
-                    <View style={styles.usernameRow}>
-                        <Text style={styles.username}>{userDetails?.username || 'Unknown User'}</Text>
+                    <View style={styles.userInfoRow}>
+                        <Text style={styles.username} numberOfLines={1}>{userDetails?.username || 'Unknown User'}</Text>
                         <View style={[
                             styles.statusBadge,
                             userDetails?.status === 'Banned' && styles.statusBanned,
@@ -482,38 +536,22 @@ const AdminUserProfile = () => {
 
             {/* Tabs */}
             <View style={styles.tabsContainer}>
-                <View style={styles.tabs}>
+                {["profile", "preferences", "achievements"].map((tab) => (
                     <TouchableOpacity
-                        style={[styles.tab, activeTab === "profile" && styles.activeTab]}
-                        onPress={() => setActiveTab("profile")}
+                        key={tab}
+                        style={[styles.tab, activeTab === tab && styles.activeTab]}
+                        onPress={() => setActiveTab(tab)}
                     >
-                        <Text style={[styles.tabText, activeTab === "profile" && styles.activeTabText]}>
-                            Profile
+                        <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </Text>
+                        {activeTab === tab && <View style={styles.tabIndicator} />}
                     </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === "preferences" && styles.activeTab]}
-                        onPress={() => setActiveTab("preferences")}
-                    >
-                        <Text style={[styles.tabText, activeTab === "preferences" && styles.activeTabText]}>
-                            Preferences
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === "achievements" && styles.activeTab]}
-                        onPress={() => setActiveTab("achievements")}
-                    >
-                        <Text style={[styles.tabText, activeTab === "achievements" && styles.activeTabText]}>
-                            Achievements
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                ))}
             </View>
 
             {/* Tab Content */}
-            <View style={styles.tabContent}>
+            <View style={styles.contentContainer}>
                 {renderTabContent()}
             </View>
 
@@ -533,328 +571,459 @@ const styles = StyleSheet.create({
         backgroundColor: "#131313",
     },
     headerContainer: {
-        paddingTop: 20,
-        paddingHorizontal: 20,
+        paddingHorizontal: scale(16),
+        paddingTop: scale(20),
     },
-    userSummary: {
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    
+    // User Header Card
+    userHeaderCard: {
         flexDirection: "row",
         alignItems: "center",
-        padding: 20,
         backgroundColor: "#1E1E1E",
-        marginHorizontal: 20,
-        marginTop: 10,
-        borderRadius: 12,
+        marginHorizontal: scale(16),
+        marginTop: scale(16),
+        marginBottom: scale(16),
+        padding: scale(20),
+        borderRadius: scale(16),
+        borderWidth: 1,
+        borderColor: "#2A2A2A",
     },
     avatar: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        marginRight: 15,
+        width: scale(64),
+        height: scale(64),
+        borderRadius: scale(32),
+        marginRight: scale(16),
     },
     userInfo: {
         flex: 1,
     },
-    usernameRow: {
+    userInfoRow: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 8,
     },
     username: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#FFFFFF",
-        flex: 1,
-        marginRight: 10,
-    },
-    statusBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
-        backgroundColor: "#709775",
-        minWidth: 70,
-        alignItems: "center",
-    },
-    statusBanned: {
-        backgroundColor: "#DC2626",
-    },
-    statusSuspended: {
-        backgroundColor: "#F59E0B",
-    },
-    statusText: {
-        fontSize: 12,
+        fontSize: scale(18),
         fontWeight: "600",
         color: "#FFFFFF",
+        flex: 1,
+        marginRight: scale(12),
     },
+    statusBadge: {
+        paddingHorizontal: scale(12),
+        paddingVertical: scale(6),
+        borderRadius: scale(20),
+        backgroundColor: "#709775",
+    },
+    statusBanned: {
+        backgroundColor: "#FF6B6B",
+    },
+    statusSuspended: {
+        backgroundColor: "#FFA500",
+    },
+    statusText: {
+        fontSize: scale(12),
+        fontWeight: "600",
+        color: "#FFFFFF",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
+    
+    // Tabs
     tabsContainer: {
-        paddingHorizontal: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: "#2A2A2A",
-        marginTop: 10,
-    },
-    tabs: {
         flexDirection: "row",
+        backgroundColor: "#1E1E1E",
+        marginHorizontal: scale(16),
+        marginBottom: scale(16),
+        borderRadius: scale(12),
+        padding: scale(4),
     },
     tab: {
         flex: 1,
-        paddingVertical: 15,
         alignItems: "center",
-        borderBottomWidth: 3,
-        borderBottomColor: "transparent",
+        paddingVertical: scale(12),
+        borderRadius: scale(8),
+        position: "relative",
     },
     activeTab: {
-        borderBottomColor: "#709775",
+        backgroundColor: "#252525",
     },
     tabText: {
-        fontSize: 14,
-        fontWeight: "500",
-        color: "#888888",
+        fontSize: scale(14),
+        fontWeight: "600",
+        color: "#888",
         textAlign: "center",
     },
     activeTabText: {
-        color: "#709775",
-        fontWeight: "600",
+        color: "#FFFFFF",
+    },
+    tabIndicator: {
+        position: "absolute",
+        bottom: 0,
+        left: "25%",
+        right: "25%",
+        height: scale(3),
+        backgroundColor: "#709775",
+        borderTopLeftRadius: scale(2),
+        borderTopRightRadius: scale(2),
+    },
+    
+    // Content
+    contentContainer: {
+        flex: 1,
+        marginHorizontal: scale(16),
+        marginBottom: scale(16),
     },
     tabContent: {
         flex: 1,
     },
-    tabContentScroll: {
-        flex: 1,
-    },
-    tabContentContainer: {
-        flexGrow: 1,
-    },
+    
+    // Sections
     section: {
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: "#2A2A2A",
+        backgroundColor: "#1E1E1E",
+        borderRadius: scale(16),
+        padding: scale(20),
+        marginBottom: scale(16),
+        borderWidth: 1,
+        borderColor: "#2A2A2A",
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: scale(18),
         fontWeight: "600",
-        color: "#709775",
-        marginBottom: 15,
+        color: "#FFFFFF",
+        marginBottom: scale(20),
+    },
+    
+    // Info Grid
+    infoGrid: {
+        gap: scale(12),
     },
     infoRow: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        paddingVertical: 8,
+        paddingVertical: scale(10),
+        borderBottomWidth: 1,
+        borderBottomColor: "#2A2A2A",
     },
     infoLabel: {
-        fontSize: 14,
-        color: "#CCCCCC",
+        fontSize: scale(14),
+        color: "#888",
         fontWeight: "500",
         flex: 1,
     },
     infoValue: {
-        fontSize: 14,
+        fontSize: scale(14),
         color: "#FFFFFF",
-        fontWeight: "400",
+        fontWeight: "500",
         textAlign: "right",
         flex: 1,
-        paddingLeft: 10,
+        paddingLeft: scale(12),
     },
-    chartContainer: {
-        marginTop: 15,
-        paddingTop: 15,
-        borderTopWidth: 1,
-        borderTopColor: "#2A2A2A",
-    },
-    adminChartWrapper: {
-        width: '120%',
-        alignItems: 'center',
-        paddingTop: 20,
-        paddingHorizontal: 10,
-    },
-    adminActions: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        marginTop: 10,
-        gap: 10,
-    },
-    adminActionBtn: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 8,
-        flex: 1,
-        alignItems: "center",
-        minHeight: 44,
-        justifyContent: "center",
-    },
-    suspendBtn: {
-        backgroundColor: "#db8e08ff",
-    },
-    banBtn: {
-        backgroundColor: "#b41f1fff",
-    },
-    activateBtn: {
-        backgroundColor: "#709775",
-    },
-    adminActionBtnText: {
-        color: "#FFFFFF",
-        fontWeight: "600",
-        fontSize: 14,
-        textAlign: "center",
-    },
-    listItem: {
-        fontSize: 14,
-        color: "#FFFFFF",
-        marginBottom: 6,
-        paddingLeft: 8,
-    },
-    itemLine: {
-        fontSize: 14,
-        color: "#FFFFFF",
-        marginBottom: 6,
-    },
-    gridContainer: {
+    
+    // Stats Grid
+    statsGrid: {
         flexDirection: "row",
         flexWrap: "wrap",
         justifyContent: "space-between",
+        gap: scale(12),
     },
-    gridItem: {
+    statItem: {
+        flex: 1,
+        minWidth: scale(100),
+        backgroundColor: "#252525",
+        borderRadius: scale(12),
+        padding: scale(16),
         alignItems: "center",
-        width: "30%",
-        marginBottom: 15,
     },
-    gridImage: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        marginBottom: 8,
-    },
-    gridText: {
-        fontSize: 12,
+    statValue: {
+        fontSize: scale(20),
+        fontWeight: "600",
         color: "#FFFFFF",
+        marginBottom: scale(4),
+    },
+    statLabel: {
+        fontSize: scale(12),
+        color: "#888",
         textAlign: "center",
-        fontWeight: "400",
     },
-    inviteItem: {
-        backgroundColor: "#2A2A2A",
-        padding: 16,
-        borderRadius: 8,
-        marginBottom: 12,
+    
+    // Action Buttons
+    actionButtons: {
+        flexDirection: "row",
+        gap: scale(12),
     },
-    inviteUsername: {
-        fontSize: 16,
+    actionButton: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: scale(14),
+        borderRadius: scale(12),
+    },
+    suspendButton: {
+        backgroundColor: "#FFA500",
+    },
+    banButton: {
+        backgroundColor: "#FF6B6B",
+    },
+    activateButton: {
+        backgroundColor: "#709775",
+    },
+    actionButtonText: {
+        fontSize: scale(14),
+        fontWeight: "600",
+        color: "#FFFFFF",
+    },
+    
+    // Preferences
+    preferenceCards: {
+        gap: scale(12),
+    },
+    preferenceCard: {
+        backgroundColor: "#252525",
+        borderRadius: scale(12),
+        padding: scale(16),
+    },
+    preferenceLabel: {
+        fontSize: scale(14),
+        color: "#888",
+        fontWeight: "500",
+        marginBottom: scale(4),
+    },
+    preferenceValue: {
+        fontSize: scale(16),
         color: "#FFFFFF",
         fontWeight: "600",
-        marginBottom: 4,
     },
-    inviteId: {
-        fontSize: 12,
-        color: "#888888",
-        marginBottom: 2,
+    
+    // Tags
+    tagContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: scale(8),
+    },
+    tag: {
+        backgroundColor: "#252525",
+        paddingHorizontal: scale(12),
+        paddingVertical: scale(8),
+        borderRadius: scale(20),
+    },
+    tagText: {
+        fontSize: scale(12),
+        color: "#FFFFFF",
+        fontWeight: "500",
+    },
+    
+    // Empty State
+    emptyState: {
+        padding: scale(40),
+        alignItems: "center",
+    },
+    emptyStateText: {
+        fontSize: scale(14),
+        color: "#888",
+        fontStyle: "italic",
+    },
+    
+    // Horizontal Scroll
+    horizontalScroll: {
+        marginHorizontal: scale(-20),
+        paddingHorizontal: scale(20),
+    },
+    
+    // Badges & Avatars
+    badgeCard: {
+        alignItems: "center",
+        marginRight: scale(16),
+        width: scale(100),
+    },
+    badgeImage: {
+        width: scale(80),
+        height: scale(80),
+        borderRadius: scale(40),
+        marginBottom: scale(8),
+        backgroundColor: "#252525",
+    },
+    badgeName: {
+        fontSize: scale(12),
+        color: "#FFFFFF",
+        textAlign: "center",
+        fontWeight: "500",
+    },
+    avatarCard: {
+        alignItems: "center",
+        marginRight: scale(16),
+        width: scale(100),
+    },
+    avatarImage: {
+        width: scale(80),
+        height: scale(80),
+        borderRadius: scale(40),
+        marginBottom: scale(8),
+        backgroundColor: "#252525",
+    },
+    avatarName: {
+        fontSize: scale(12),
+        color: "#FFFFFF",
+        textAlign: "center",
+        fontWeight: "500",
+    },
+    
+    // Invites
+    invitesList: {
+        gap: scale(12),
+    },
+    inviteCard: {
+        backgroundColor: "#252525",
+        borderRadius: scale(12),
+        padding: scale(16),
+    },
+    inviteHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: scale(8),
+    },
+    inviteUsername: {
+        fontSize: scale(16),
+        fontWeight: "600",
+        color: "#FFFFFF",
+        flex: 1,
+        marginRight: scale(12),
+    },
+    inviteStatusBadge: {
+        paddingHorizontal: scale(8),
+        paddingVertical: scale(4),
+        borderRadius: scale(20),
+    },
+    statusClaimed: {
+        backgroundColor: "rgba(76, 175, 80, 0.2)",
+    },
+    statusUnclaimed: {
+        backgroundColor: "rgba(255, 165, 0, 0.2)",
+    },
+    inviteStatusText: {
+        fontSize: scale(10),
+        fontWeight: "600",
+        color: "#709775",
     },
     inviteEmail: {
-        fontSize: 12,
-        color: "#888888",
-        marginBottom: 8,
+        fontSize: scale(12),
+        color: "#888",
+        marginBottom: scale(8),
     },
     inviteDate: {
-        fontSize: 12,
+        fontSize: scale(11),
         color: "#709775",
         fontWeight: "500",
-        marginBottom: 8,
+        marginBottom: scale(12),
     },
     inviteStats: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginBottom: 8,
     },
     inviteStat: {
-        fontSize: 11,
-        color: "#CCCCCC",
+        fontSize: scale(11),
+        color: "#888",
     },
-    rewardStatus: {
-        fontSize: 11,
-        color: "#F59E0B",
-        fontWeight: "500",
-        textAlign: "right",
-    },
-    noDataText: {
-        fontSize: 14,
-        color: "#888888",
-        fontStyle: "italic",
-        textAlign: "center",
-        marginVertical: 10,
-    },
-    loader: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-    },
+    
     // Modal Styles
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
+        backgroundColor: "rgba(0, 0, 0, 0.8)",
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: scale(16),
     },
     modalContent: {
-        width: '100%',
-        backgroundColor: '#1E1E1E',
-        borderRadius: 15,
-        padding: 20,
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#2A2A2A',
+        width: "100%",
+        backgroundColor: "#1E1E1E",
+        borderRadius: scale(20),
+        padding: scale(24),
+        borderWidth: 1,
+        borderColor: "#2A2A2A",
     },
     modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-        marginBottom: 20,
-        textAlign: 'center',
+        fontSize: scale(18),
+        fontWeight: "600",
+        color: "#FFFFFF",
+        marginBottom: scale(24),
+        textAlign: "center",
+    },
+    durationOptions: {
+        gap: scale(12),
+        marginBottom: scale(24),
     },
     durationOption: {
-        width: '100%',
-        padding: 15,
-        backgroundColor: '#2A2A2A',
-        borderRadius: 8,
-        marginBottom: 10,
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#252525",
+        padding: scale(16),
+        borderRadius: scale(12),
+        borderWidth: 1,
+        borderColor: "#2A2A2A",
     },
     durationOptionSelected: {
-        backgroundColor: '#709775',
+        borderColor: "#709775",
+        backgroundColor: "rgba(112, 151, 117, 0.1)",
+    },
+    durationRadio: {
+        width: scale(20),
+        height: scale(20),
+        borderRadius: scale(10),
+        borderWidth: 2,
+        borderColor: "#888",
+        marginRight: scale(12),
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    durationRadioDot: {
+        width: scale(10),
+        height: scale(10),
+        borderRadius: scale(5),
+        backgroundColor: "#709775",
     },
     durationText: {
-        fontSize: 16,
-        color: '#FFFFFF',
-        fontWeight: '500',
+        fontSize: scale(16),
+        color: "#FFFFFF",
+        fontWeight: "500",
     },
     durationTextSelected: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
+        color: "#709775",
+        fontWeight: "600",
     },
     modalButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        width: '100%',
-        marginTop: 20,
+        flexDirection: "row",
+        gap: scale(12),
     },
     cancelButton: {
         flex: 1,
-        backgroundColor: '#666',
-        paddingVertical: 12,
-        borderRadius: 8,
-        marginRight: 10,
-        alignItems: 'center',
+        backgroundColor: "#2A2A2A",
+        paddingVertical: scale(14),
+        borderRadius: scale(12),
+        alignItems: "center",
+    },
+    cancelButtonText: {
+        color: "#FFFFFF",
+        fontSize: scale(14),
+        fontWeight: "600",
     },
     confirmButton: {
         flex: 1,
-        backgroundColor: '#F59E0B',
-        paddingVertical: 12,
-        borderRadius: 8,
-        marginLeft: 10,
-        alignItems: 'center',
+        backgroundColor: "#FFA500",
+        paddingVertical: scale(14),
+        borderRadius: scale(12),
+        alignItems: "center",
     },
-    buttonText: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '600',
+    confirmButtonText: {
+        color: "#FFFFFF",
+        fontSize: scale(14),
+        fontWeight: "600",
     },
 });
 

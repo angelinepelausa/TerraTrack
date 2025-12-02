@@ -5,6 +5,7 @@ import {
 import { launchImageLibrary } from 'react-native-image-picker';
 import { addCommunityProgress, updateCommunityProgress, getCommunityProgress } from '../repositories/communityProgressRepository';
 import { uploadImageToCloudinary } from '../services/cloudinary';
+import HeaderRow from '../components/HeaderRow';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -212,13 +213,16 @@ const AddCommunityProgress = ({ navigation, route }) => {
     setShowYearDropdown(false);
   };
 
-    const handleYearButtonPress = (event) => {
-      if (isEditing) return;
-      event.target.measure((fx, fy, width, height, px, py) => {
-        setDropdownPosition({ x: px, y: py + height + 5, width });
-        setShowYearDropdown(true);
-      });
-    };
+  const handleYearButtonPress = (event) => {
+    if (isEditing) return;
+    const { nativeEvent } = event;
+    setDropdownPosition({
+      x: nativeEvent.pageX,
+      y: nativeEvent.pageY + 30,
+      width: 100
+    });
+    setShowYearDropdown(true);
+  };
 
   const handleRewardChange = (key, field, value) => {
     setRewards(prev => ({
@@ -256,6 +260,7 @@ const AddCommunityProgress = ({ navigation, route }) => {
         uploadedImageUrl = await uploadImageToCloudinary(imageUri);
       }
 
+      // Basic payload with only the fields being edited
       const payload = {
         yearQuarter: `${year}-${quarter}`,
         title,
@@ -274,7 +279,32 @@ const AddCommunityProgress = ({ navigation, route }) => {
           }},
         ]);
       } else {
-        await addCommunityProgress(payload);
+        // For new entries, calculate startDate and endDate
+        const [yearStr, quarterStr] = payload.yearQuarter.split('-');
+        const yearNum = parseInt(yearStr);
+        let startMonth = 0;
+        let endMonth = 2;
+
+        if (quarterStr === 'Q1') { startMonth = 0; endMonth = 2; }
+        else if (quarterStr === 'Q2') { startMonth = 3; endMonth = 5; }
+        else if (quarterStr === 'Q3') { startMonth = 6; endMonth = 8; }
+        else if (quarterStr === 'Q4') { startMonth = 9; endMonth = 11; }
+
+        const startDate = new Date(yearNum, startMonth, 1).toISOString();
+        const endDate = new Date(yearNum, endMonth + 1, 0, 23, 59, 59).toISOString();
+
+        const newPayload = {
+          ...payload,
+          startDate,
+          endDate,
+          current: 0,
+          participants: [],
+          contributors: {},
+          processed: false,
+          finalLeaderboard: [],
+        };
+
+        await addCommunityProgress(newPayload);
         Alert.alert('Success', 'Community progress added successfully!', [
           { text: 'OK', onPress: () => {
             if (route.params?.onSaved) route.params.onSaved();
@@ -303,23 +333,21 @@ const AddCommunityProgress = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      {/* Fixed Header */}
-      <View style={styles.headerRow}>
-        <Text style={styles.headerText}>
-          {isEditing ? 'Edit Community Progress' : 'Add Community Progress'}
-        </Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image source={require('../assets/icons/back.png')} style={styles.backIcon} />
-        </TouchableOpacity>
+      {/* Fixed Header using HeaderRow component */}
+      <View style={styles.headerContainer}>
+        <HeaderRow
+          title={isEditing ? 'Edit Community Progress' : 'Add Community Progress'}
+          onBackPress={() => navigation.goBack()}
+        />
       </View>
 
       {/* Scrollable Content */}
       <ScrollView 
-        contentContainerStyle={{ padding: 20, paddingBottom: 40, paddingTop: 90 }}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-          <View style={{ flex: 0.58, marginRight: 10 }}>
+        <View style={styles.yearQuarterRow}>
+          <View style={styles.yearContainer}>
             <Text style={styles.label}>Year</Text>
             <TouchableOpacity
               style={styles.dropdownButton}
@@ -330,9 +358,9 @@ const AddCommunityProgress = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
 
-          <View style={{ flex: 1 }}>
+          <View style={styles.quarterContainer}>
             <Text style={styles.label}>Quarter</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            <View style={styles.quarterButtonsContainer}>
               {quarters.map(q => {
                 const disabled = isQuarterDisabled(q);
                 return (
@@ -342,7 +370,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
                       styles.quarterButton, 
                       quarter === q && styles.quarterSelected,
                       disabled && styles.quarterDisabled,
-                      { marginRight: 6, marginBottom: 6 }
                     ]}
                     onPress={() => !disabled && setQuarter(q)}
                     disabled={disabled}
@@ -371,7 +398,7 @@ const AddCommunityProgress = ({ navigation, route }) => {
 
         <Text style={styles.label}>Description</Text>
         <TextInput 
-          style={[styles.input, { height: 100 }]} 
+          style={[styles.input, styles.textArea]} 
           value={description} 
           onChangeText={setDescription} 
           multiline
@@ -482,15 +509,15 @@ const AddCommunityProgress = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 30,
+  container: { 
+    flex: 1, 
+    backgroundColor: '#000' 
+  },
+  
+  headerContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 30,
+    paddingBottom: 12,
     backgroundColor: '#000',
     position: 'absolute',
     top: 0,
@@ -498,13 +525,55 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 10,
   },
-  headerText: { fontSize: 20, fontWeight: '700', color: '#709775' },
-  backIcon: { width: 40, height: 40, resizeMode: 'contain' },
+  
+  scrollContent: { 
+    padding: 20, 
+    paddingTop: 90,  // Adjusted for header height
+    paddingBottom: 40 
+  },
 
-  label: { color: '#CCCCCC', marginTop: 12, marginBottom: 6, fontWeight: '600' },
-  input: { backgroundColor: '#1E1E1E', color: '#fff', borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 10 },
+  yearQuarterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  
+  yearContainer: {
+    flex: 0.58,
+    marginRight: 10,
+  },
+  
+  quarterContainer: {
+    flex: 1,
+  },
+  
+  quarterButtonsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
 
-  // Year Dropdown Styles - UPDATED TO MATCH CHART COMPONENT
+  label: { 
+    color: '#CCCCCC', 
+    marginTop: 12, 
+    marginBottom: 6, 
+    fontWeight: '600' 
+  },
+  
+  input: { 
+    backgroundColor: '#1E1E1E', 
+    color: '#fff', 
+    borderRadius: 12, 
+    padding: 12, 
+    fontSize: 14, 
+    marginBottom: 10 
+  },
+  
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+
+  // Year Dropdown Styles
   dropdownButton: {
     backgroundColor: '#2A2A2A',
     paddingVertical: 12,
@@ -514,17 +583,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minWidth: 80,
   },
+  
   dropdownButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '500',
   },
 
-  // Modal Styles - UPDATED TO MATCH CHART COMPONENT
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
+  
   dropdownContainer: {
     backgroundColor: '#2A2A2A',
     borderRadius: 8,
@@ -535,52 +606,136 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
+  
   dropdownScroll: {
     maxHeight: 200,
   },
+  
   option: {
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderBottomColor: '#333',
     borderBottomWidth: 1,
   },
+  
   optionSelected: {
     backgroundColor: '#709775',
   },
+  
   optionText: {
     color: '#ccc',
     fontSize: 12,
     textAlign: 'center',
   },
+  
   optionTextSelected: {
     color: '#fff',
   },
 
   // Quarter Styles
-  quarterButton: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: '#CCCCCC' },
-  quarterSelected: { backgroundColor: '#415D43' },
+  quarterButton: { 
+    paddingVertical: 8, 
+    paddingHorizontal: 14, 
+    borderRadius: 12, 
+    borderWidth: 1, 
+    borderColor: '#CCCCCC',
+    marginRight: 6, 
+    marginBottom: 6 
+  },
+  
+  quarterSelected: { 
+    backgroundColor: '#415D43' 
+  },
+  
   quarterDisabled: { 
     backgroundColor: '#2A2A2A', 
     borderColor: '#666666',
     opacity: 0.6,
   },
-  quarterText: { color: '#CCCCCC', fontWeight: '600' },
-  quarterTextSelected: { color: '#fff', fontWeight: '700' },
-  quarterTextDisabled: { color: '#666666' },
+  
+  quarterText: { 
+    color: '#CCCCCC', 
+    fontWeight: '600' 
+  },
+  
+  quarterTextSelected: { 
+    color: '#fff', 
+    fontWeight: '700' 
+  },
+  
+  quarterTextDisabled: { 
+    color: '#666666' 
+  },
 
-  sectionHeader: { fontSize: 18, fontWeight: 'bold', color: '#CCCCCC', marginBottom: 12, marginTop: 20 },
+  sectionHeader: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#CCCCCC', 
+    marginBottom: 12, 
+    marginTop: 20 
+  },
 
-  rewardHeaderRow: { flexDirection: 'row', marginBottom: 5 },
-  rewardRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  rewardLabel: { flex: 1, color: '#CCCCCC', fontWeight: '600' },
-  rewardInput: { flex: 1, backgroundColor: '#222', color: '#fff', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, marginLeft: 8 },
+  rewardHeaderRow: { 
+    flexDirection: 'row', 
+    marginBottom: 5 
+  },
+  
+  rewardRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 10 
+  },
+  
+  rewardLabel: { 
+    flex: 1, 
+    color: '#CCCCCC', 
+    fontWeight: '600' 
+  },
+  
+  rewardInput: { 
+    flex: 1, 
+    backgroundColor: '#222', 
+    color: '#fff', 
+    paddingHorizontal: 10, 
+    paddingVertical: 6, 
+    borderRadius: 10, 
+    marginLeft: 8 
+  },
 
-  submitButton: { backgroundColor: '#709775', paddingVertical: 14, borderRadius: 25, alignItems: 'center', marginTop: 20, marginBottom: 40 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  submitButton: { 
+    backgroundColor: '#709775', 
+    paddingVertical: 14, 
+    borderRadius: 25, 
+    alignItems: 'center', 
+    marginTop: 20, 
+    marginBottom: 40 
+  },
+  
+  submitButtonText: { 
+    color: '#fff', 
+    fontSize: 16, 
+    fontWeight: '700' 
+  },
 
-  uploadButton: { backgroundColor: '#709775', paddingVertical: 12, borderRadius: 25, alignItems: 'center', marginBottom: 16 },
-  uploadButtonText: { color: '#fff', fontWeight: '600' },
-  previewImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 10 },
+  uploadButton: { 
+    backgroundColor: '#709775', 
+    paddingVertical: 12, 
+    borderRadius: 25, 
+    alignItems: 'center', 
+    marginBottom: 16 
+  },
+  
+  uploadButtonText: { 
+    color: '#fff', 
+    fontWeight: '600' 
+  },
+  
+  previewImage: { 
+    width: '100%', 
+    height: 200, 
+    borderRadius: 12, 
+    marginBottom: 10 
+  },
 });
 
 export default AddCommunityProgress;

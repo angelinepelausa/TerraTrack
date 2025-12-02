@@ -1,4 +1,3 @@
-// screens/AdminPostDetailScreen.js
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -13,6 +12,7 @@ import { moderationRepository } from "../repositories/moderationRepository";
 import { moderationService } from "../services/moderationService";
 import { scale } from "../utils/scaling";
 import HeaderRow from "../components/HeaderRow";
+import firestore from "@react-native-firebase/firestore";
 
 const AdminPostDetailScreen = ({ route, navigation }) => {
   const { reportId, category = "posts" } = route.params;
@@ -20,57 +20,97 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [expandedReporters, setExpandedReporters] = useState({});
+  const [username, setUsername] = useState("Loading...");
 
   useEffect(() => {
     let unsubscribe = null;
+    let isMounted = true; // Add this flag
+
+    const fetchUserDetails = async (userId) => {
+      if (!userId || !isMounted) return; // Check if component is mounted
+      
+      try {
+        const userDoc = await firestore().collection("users").doc(userId).get();
+        if (isMounted && userDoc.exists) {
+          const userData = userDoc.data();
+          setUsername(userData.username || "Unknown User");
+        } else if (isMounted) {
+          setUsername("Unknown User");
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        if (isMounted) setUsername("Unknown User");
+      }
+    };
 
     const setupRealTimeListener = async () => {
+      if (!isMounted) return; // Check if component is mounted
+      
       try {
-        // Set up real-time listener for this specific report
         unsubscribe = await moderationRepository.getReportRealTimeListener(
           reportId, 
           (updatedReport) => {
-            if (updatedReport) {
-              console.log("Real-time update received:", updatedReport.status);
+            if (isMounted && updatedReport) { // Check if mounted
               setReport(updatedReport);
+              if (updatedReport.originalData?.userId) {
+                fetchUserDetails(updatedReport.originalData.userId);
+              }
             }
           },
           (error) => {
-            console.error("Real-time listener error:", error);
+            if (isMounted) { // Only log if component is mounted
+              console.error("Real-time listener error:", error);
+            }
           }
         );
       } catch (error) {
-        console.error("Error setting up real-time listener:", error);
+        if (isMounted) { // Only log if component is mounted
+          console.error("Error setting up real-time listener:", error);
+        }
       }
     };
 
     const fetchReportDetails = async () => {
+      if (!isMounted) return; // Check if component is mounted
+      
       try {
         setLoading(true);
         const posts = await moderationRepository.getForReviewPosts();
         const foundReport = posts.find(post => post.id === reportId);
         
-        if (foundReport) {
+        if (isMounted && foundReport) {
           setReport(foundReport);
-          // Set up real-time listener after initial fetch
+          
+          // Fetch username from userId
+          if (foundReport.originalData?.userId) {
+            await fetchUserDetails(foundReport.originalData.userId);
+          } else if (foundReport.username) {
+            setUsername(foundReport.username);
+          }
+          
           await setupRealTimeListener();
-        } else {
+        } else if (isMounted) {
           console.error("Report not found");
         }
       } catch (error) {
-        console.error("Error fetching report details:", error);
-        Alert.alert("Error", "Failed to load report details");
+        if (isMounted) {
+          console.error("Error fetching report details:", error);
+          Alert.alert("Error", "Failed to load report details");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchReportDetails();
 
-    // Cleanup function to unsubscribe from real-time listener
     return () => {
+      isMounted = false; // Set to false when component unmounts
+      
       if (unsubscribe) {
-        unsubscribe();
+        unsubscribe(); // Unsubscribe from real-time listener
       }
     };
   }, [reportId]);
@@ -83,13 +123,25 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
       switch (action) {
         case "safe":
           await moderationService.markAsSafe(report.id, report);
-          // No need to navigate back immediately since status will update in real-time
-          Alert.alert("Marked as Safe", "Content has been reviewed and approved.");
+          Alert.alert("Success", "Content has been reviewed and approved.");
           break;
 
         case "suspend":
-          await moderationService.suspendUser(report.id, report);
-          Alert.alert("User Suspended", "Content deleted and user has been suspended.");
+          Alert.alert(
+            "Confirm Suspension",
+            "Are you sure you want to suspend this user? This will delete the content and suspend the user account.",
+            [
+              { text: "Cancel", style: "cancel" },
+              { 
+                text: "Suspend", 
+                style: "destructive",
+                onPress: async () => {
+                  await moderationService.suspendUser(report.id, report);
+                  Alert.alert("User Suspended", "Content deleted and user has been suspended.");
+                }
+              }
+            ]
+          );
           break;
 
         default:
@@ -114,9 +166,23 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
     if (!timestamp) return "N/A";
     try {
       const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      return date.toLocaleString();
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     } catch (error) {
       return "Invalid Date";
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'reviewed': return '#4CAF50';
+      case 'pending': return '#FF9800';
+      default: return '#888';
     }
   };
 
@@ -133,114 +199,212 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
     return (
       <View style={styles.centered}>
         <Text style={styles.emptyText}>Report not found</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+        >
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  const isReviewed = report.status?.toLowerCase() === 'reviewed';
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <HeaderRow title="Report Details" onBackPress={() => navigation.goBack()} />
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Basic Information</Text>
-        <InfoRow label="Item ID" value={report.itemId} />
-        <InfoRow label="Item Type" value={report.itemType} />
-        <InfoRow label="Status" value={report.status} />
-        <InfoRow label="Total Reports" value={report.reportsCount?.toString() || report.reporters?.length?.toString() || "0"} />
-        <InfoRow label="Quarter" value={report.quarter} />
-        <InfoRow label="Action Taken" value={report.actionTaken || "None"} />
-        <InfoRow label="Created At" value={formatTimestamp(report.createdAt)} />
+    <View style={styles.container}>
+      {/* HeaderRow with proper padding */}
+      <View style={styles.headerRowContainer}>
+        <HeaderRow 
+          title="Report Details" 
+          onBackPress={() => navigation.goBack()}
+        />
       </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Original Content</Text>
-        <InfoRow label="User ID" value={report.originalData?.userId || "Unknown"} />
-        <InfoRow label="Username" value={report.username || "Unknown"} />
-        <InfoRow label="Text Content" value={report.originalData?.text || report.text || "No text content"} />
-        <InfoRow label="Posted At" value={formatTimestamp(report.originalData?.timestamp || report.timestamp)} />
-        <InfoRow label="Parent Comment ID" value={report.originalData?.parentCommentId || "None"} />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Report ({report.reporters?.length || 0})</Text>
-        {report.reporters?.map((reporter, index) => (
-          <View key={reporter.reportId || index} style={styles.reporterCard}>
-            <TouchableOpacity 
-              style={styles.reporterHeader} 
-              onPress={() => toggleReporter(index)}
-            >
-              <Text style={styles.reporterHeaderText}>Report #{index + 1}</Text>
-              <Text style={styles.expandIcon}>
-                {expandedReporters[index] ? "−" : "+"}
+      
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Card - Simplified Info */}
+        <View style={styles.headerCard}>
+          <View style={styles.userStatusRow}>
+            <View style={styles.userInfo}>
+              <Text style={styles.userLabel}>USER</Text>
+              <Text style={styles.userName} numberOfLines={1}>
+                {username}
               </Text>
-            </TouchableOpacity>
+            </View>
             
-            {expandedReporters[index] && (
-              <View style={styles.reporterDetails}>
-                <InfoRow label="User ID" value={reporter.userId} />
-                <InfoRow label="Category" value={reporter.category} />
-                <InfoRow label="Subtype" value={reporter.subType} />
-                <InfoRow label="Reported At" value={formatTimestamp(reporter.timestamp)} />
-                <InfoRow label="Report ID" value={reporter.reportId} />
-              </View>
-            )}
+            <View style={styles.statusBadge}>
+              <View style={[styles.statusDot, { backgroundColor: getStatusColor(report.status) }]} />
+              <Text style={styles.statusText}>
+                {report.status?.toUpperCase() || "UNKNOWN"}
+              </Text>
+            </View>
           </View>
-        ))}
-        
-        {(!report.reporters || report.reporters.length === 0) && (
-          <Text style={styles.noDataText}>No reporters found</Text>
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Admin Actions</Text>
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.safeButton, actionLoading && styles.disabledButton]}
-            onPress={() => handleAction("safe")}
-            disabled={actionLoading}
-          >
-            {actionLoading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.actionButtonText}>Mark as Safe</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.suspendButton, actionLoading && styles.disabledButton]}
-            onPress={() => handleAction("suspend")}
-            disabled={actionLoading}
-          >
-            {actionLoading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.actionButtonText}>Suspend User</Text>
-            )}
-          </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* Content Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Content Details</Text>
+          </View>
+          
+          <View style={styles.contentCard}>
+            <Text style={styles.contentLabel}>FULL CONTENT</Text>
+            <View style={styles.contentBox}>
+              <Text style={styles.contentText}>
+                {report.originalData?.text || report.text || "No text content available"}
+              </Text>
+            </View>
+            
+            <View style={styles.metadataGrid}>
+              <View style={styles.metadataItem}>
+                <Text style={styles.metadataLabel}>USER ID</Text>
+                <Text style={styles.metadataValue} numberOfLines={1}>
+                  {report.originalData?.userId || "N/A"}
+                </Text>
+              </View>
+              <View style={styles.metadataItem}>
+                <Text style={styles.metadataLabel}>ITEM ID</Text>
+                <Text style={styles.metadataValue} numberOfLines={1}>
+                  {report.itemId || "N/A"}
+                </Text>
+              </View>
+              <View style={styles.metadataItem}>
+                <Text style={styles.metadataLabel}>POSTED AT</Text>
+                <Text style={styles.metadataValue}>
+                  {formatTimestamp(report.originalData?.timestamp)}
+                </Text>
+              </View>
+              <View style={styles.metadataItem}>
+                <Text style={styles.metadataLabel}>REPORTED AT</Text>
+                <Text style={styles.metadataValue}>
+                  {formatTimestamp(report.createdAt)}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Reports Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Reports ({report.reporters?.length || 0})</Text>
+          </View>
+          
+          {report.reporters?.map((reporter, index) => (
+            <TouchableOpacity
+              key={reporter.reportId || index}
+              style={styles.reporterCard}
+              onPress={() => toggleReporter(index)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.reporterHeader}>
+                <View style={styles.reporterIndex}>
+                  <Text style={styles.reporterIndexText}>{index + 1}</Text>
+                </View>
+                <View style={styles.reporterInfo}>
+                  <Text style={styles.reporterCategory}>{reporter.category || "Uncategorized"}</Text>
+                  <Text style={styles.reporterSubtype}>{reporter.subType || "No subtype specified"}</Text>
+                </View>
+                <Text style={styles.expandIcon}>
+                  {expandedReporters[index] ? "−" : "+"}
+                </Text>
+              </View>
+              
+              {expandedReporters[index] && (
+                <View style={styles.reporterDetails}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabelSmall}>REPORTING USER ID</Text>
+                    <Text style={styles.detailValueSmall}>{reporter.userId || "N/A"}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabelSmall}>REPORT ID</Text>
+                    <Text style={styles.detailValueSmall}>{reporter.reportId || "N/A"}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabelSmall}>REPORTED AT</Text>
+                    <Text style={styles.detailValueSmall}>{formatTimestamp(reporter.timestamp)}</Text>
+                  </View>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+          
+          {(!report.reporters || report.reporters.length === 0) && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No reports found</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Only show Admin Actions if NOT reviewed */}
+        {!isReviewed && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Admin Actions</Text>
+            </View>
+            
+            <View style={styles.actionsContainer}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.safeButton]}
+                onPress={() => handleAction("safe")}
+                disabled={actionLoading}
+              >
+                <View style={styles.actionContent}>
+                  <Text style={styles.actionTitle}>Mark as Safe</Text>
+                  <Text style={styles.actionDescription}>
+                    Approve this content and clear all reports
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionButton, styles.suspendButton]}
+                onPress={() => handleAction("suspend")}
+                disabled={actionLoading}
+              >
+                <View style={styles.actionContent}>
+                  <Text style={styles.actionTitle}>Suspend User</Text>
+                  <Text style={styles.actionDescription}>
+                    Remove content and suspend user account
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Loading Overlay */}
+        {actionLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#709775" />
+            <Text style={styles.loadingOverlayText}>Processing...</Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 };
-
-const InfoRow = ({ label, value }) => (
-  <View style={styles.infoRow}>
-    <Text style={styles.infoLabel}>{label}:</Text>
-    <Text style={styles.infoValue}>{value || "N/A"}</Text>
-  </View>
-);
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: "#131313" 
   },
+  // Header Row Container with proper padding
+  headerRowContainer: {
+    paddingHorizontal: scale(16),
+    marginTop: scale(20),
+  },
+  scrollView: {
+    flex: 1,
+  },
   contentContainer: { 
-    padding: scale(16) 
+    padding: scale(16),
+    paddingBottom: scale(32)
   },
   centered: { 
     flex: 1, 
@@ -261,7 +425,7 @@ const styles = StyleSheet.create({
   backButton: {
     backgroundColor: "#709775",
     paddingHorizontal: scale(20),
-    paddingVertical: scale(10),
+    paddingVertical: scale(12),
     borderRadius: scale(8)
   },
   backButtonText: {
@@ -269,98 +433,249 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: scale(14)
   },
-  section: {
+  // Header Card
+  headerCard: {
     backgroundColor: "#1E1E1E",
-    borderRadius: scale(12),
-    padding: scale(16),
-    marginBottom: scale(16)
+    borderRadius: scale(16),
+    padding: scale(20),
+    marginBottom: scale(24),
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
   },
-  sectionTitle: {
-    fontSize: scale(16),
-    fontWeight: "600",
-    color: "#709775",
-    marginBottom: scale(12)
-  },
-  infoRow: {
+  userStatusRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: scale(8),
-    paddingVertical: scale(4)
+    alignItems: "center",
   },
-  infoLabel: {
-    fontSize: scale(13),
-    fontWeight: "500",
+  userInfo: {
+    flex: 1,
+  },
+  userLabel: {
+    fontSize: scale(10),
     color: "#888",
-    flex: 1
+    fontWeight: "600",
+    marginBottom: scale(6),
+    letterSpacing: 0.8,
   },
-  infoValue: {
-    fontSize: scale(13),
-    fontWeight: "400",
+  userName: {
+    fontSize: scale(18),
+    fontWeight: "600",
     color: "#FFFFFF",
-    flex: 2,
-    textAlign: "right"
   },
-  reporterCard: {
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#2A2A2A",
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
+  },
+  statusDot: {
+    width: scale(10),
+    height: scale(10),
+    borderRadius: scale(5),
+    marginRight: scale(8),
+  },
+  statusText: {
+    fontSize: scale(13),
+    fontWeight: "600",
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
+  },
+  // Sections
+  section: {
+    marginBottom: scale(24),
+  },
+  sectionHeader: {
+    marginBottom: scale(16),
+    paddingLeft: scale(4),
+  },
+  sectionTitle: {
+    fontSize: scale(18),
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  // Content Section
+  contentCard: {
+    backgroundColor: "#1E1E1E",
+    borderRadius: scale(12),
+    padding: scale(20),
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  contentLabel: {
+    fontSize: scale(10),
+    color: "#888",
+    fontWeight: "600",
+    marginBottom: scale(12),
+    letterSpacing: 0.8,
+  },
+  contentBox: {
+    backgroundColor: "#252525",
     borderRadius: scale(8),
-    padding: scale(12),
-    marginBottom: scale(8)
+    padding: scale(16),
+    marginBottom: scale(20),
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  contentText: {
+    fontSize: scale(14),
+    color: "#FFFFFF",
+    lineHeight: scale(22),
+  },
+  metadataGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: scale(16),
+  },
+  metadataItem: {
+    flex: 1,
+    minWidth: scale(150),
+  },
+  metadataLabel: {
+    fontSize: scale(10),
+    color: "#888",
+    fontWeight: "600",
+    marginBottom: scale(6),
+    letterSpacing: 0.8,
+  },
+  metadataValue: {
+    fontSize: scale(13),
+    color: "#FFFFFF",
+    fontWeight: "500",
+  },
+  // Reporter Cards
+  reporterCard: {
+    backgroundColor: "#1E1E1E",
+    borderRadius: scale(12),
+    marginBottom: scale(12),
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    overflow: "hidden",
   },
   reporterHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: scale(8)
+    padding: scale(16),
   },
-  reporterHeaderText: {
+  reporterIndex: {
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(16),
+    backgroundColor: "#709775",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: scale(16),
+  },
+  reporterIndexText: {
     fontSize: scale(14),
     fontWeight: "600",
-    color: "#709775",
+    color: "#FFFFFF",
+  },
+  reporterInfo: {
+    flex: 1,
+  },
+  reporterCategory: {
+    fontSize: scale(15),
+    fontWeight: "600",
+    color: "#FFFFFF",
+    marginBottom: scale(4),
+  },
+  reporterSubtype: {
+    fontSize: scale(12),
+    color: "#888",
+    lineHeight: scale(16),
   },
   expandIcon: {
     fontSize: scale(18),
+    color: "#709775",
     fontWeight: "bold",
-    color: "#709775"
+    marginLeft: scale(8),
   },
   reporterDetails: {
-    marginTop: scale(8),
-    paddingTop: scale(8),
+    padding: scale(16),
+    paddingTop: 0,
+    backgroundColor: "#252525",
     borderTopWidth: 1,
-    borderTopColor: "#3A3A3A"
+    borderTopColor: "#2A2A2A",
   },
-  noDataText: {
-    color: "#888",
-    fontSize: scale(13),
-    fontStyle: "italic",
-    textAlign: "center"
-  },
-  actions: {
+  detailRow: {
     flexDirection: "row",
-    gap: scale(12)
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: scale(10),
+    borderBottomWidth: 1,
+    borderBottomColor: "#333",
+  },
+  detailLabelSmall: {
+    fontSize: scale(11),
+    color: "#888",
+    fontWeight: "500",
+  },
+  detailValueSmall: {
+    fontSize: scale(12),
+    color: "#FFFFFF",
+    fontWeight: "500",
+  },
+  emptyState: {
+    alignItems: "center",
+    padding: scale(40),
+    backgroundColor: "#1E1E1E",
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  emptyStateText: {
+    fontSize: scale(14),
+    color: "#888",
+  },
+  // Actions (for pending items)
+  actionsContainer: {
+    gap: scale(16),
   },
   actionButton: {
+    backgroundColor: "#1E1E1E",
+    padding: scale(20),
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  actionContent: {
     flex: 1,
-    paddingVertical: scale(12),
-    borderRadius: scale(8),
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: scale(44)
+  },
+  actionTitle: {
+    fontSize: scale(16),
+    fontWeight: "600",
+    color: "#FFFFFF",
+    marginBottom: scale(6),
+  },
+  actionDescription: {
+    fontSize: scale(13),
+    color: "#888",
+    lineHeight: scale(18),
   },
   safeButton: {
-    backgroundColor: "#4CAF50"
+    borderColor: "#4CAF50",
   },
   suspendButton: {
-    backgroundColor: "#FF6B6B"
+    borderColor: "#FF6B6B",
   },
-  disabledButton: {
-    opacity: 0.6
+  // Loading Overlay
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(19, 19, 19, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  actionButtonText: {
-    color: "#FFFFFF",
+  loadingOverlayText: {
+    color: "#888",
+    marginTop: scale(10),
     fontSize: scale(14),
-    fontWeight: "600"
-  }
+  },
 });
 
 export default AdminPostDetailScreen;

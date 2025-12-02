@@ -1,6 +1,6 @@
 // repositories/communityProgressRepository.js
 import firestore from '@react-native-firebase/firestore';
-import { addUserRewards } from './userRepository';
+import { addUserRewards, populateUserData } from './userRepository'; // Import from userRepository
 import auth from '@react-native-firebase/auth';
 
 // Utility to get the current year-quarter like "2025-Q3"
@@ -16,36 +16,6 @@ export const getCurrentYearQuarter = () => {
   else if (month >= 9 && month <= 11) quarter = 'Q4';
 
   return `${year}-${quarter}`;
-};
-
-// --- Helper function to populate user data ---
-const populateUserData = async (data) => {
-  let username = "Unknown User";
-  let avatar = null;
-
-  if (data.userId) {
-    try {
-      const userDoc = await firestore().collection('users').doc(data.userId).get();
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        username = userData.username || username;
-        if (userData.avatar) {
-          const avatarDoc = await firestore().collection('avatars').doc(userData.avatar).get();
-          if (avatarDoc.exists) avatar = avatarDoc.data()?.imageurl || null;
-        }
-      }
-    } catch (err) {
-      console.warn('populateUserData: error fetching user or avatar', err);
-    }
-  }
-
-  return {
-    ...data,
-    username,
-    avatar,
-    avatarUrl: avatar, // ✅ ensure avatarUrl is always available
-    timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp || Date.now())
-  };
 };
 
 // --- Get community progress ---
@@ -114,41 +84,42 @@ export const getCommunityLeaderboard = async (yearQuarter = null) => {
     if (!data) return [];
 
     if (data.processed && data.finalLeaderboard && data.finalLeaderboard.length > 0) {
+      // Final leaderboard already has populated data
       return data.finalLeaderboard;
     }
 
     const contributorsMap = data.contributors || {};
     const rewards = data.rewards || {};
 
+    // Convert contributors map to array and populate user data
     const contributorsArray = await Promise.all(
-      Object.entries(contributorsMap).map(async ([uid, points]) => {
-        let username = uid;
-        let avatar = null;
-
-        const userDoc = await firestore().collection('users').doc(uid).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          username = userData.username || uid;
-
-          if (userData.avatar) {
-            const avatarDoc = await firestore().collection('avatars').doc(userData.avatar).get();
-            if (avatarDoc.exists) avatar = avatarDoc.data()?.imageurl || null;
-          }
-        }
-
-        return { id: uid, username, avatar, avatarUrl: avatar, terraPoints: points }; // ✅ avatarUrl added
+      Object.entries(contributorsMap).map(async ([userId, points]) => {
+        // Use the populateUserData from userRepository
+        const { username, avatar } = await populateUserData(userId);
+        
+        return {
+          id: userId,
+          userId: userId, // Keep both id and userId for compatibility
+          username: username || userId,
+          avatar: avatar || null,
+          terraPoints: points || 0,
+          // Add rank and reward later
+        };
       })
     );
 
+    // Sort by points descending
     contributorsArray.sort((a, b) => b.terraPoints - a.terraPoints);
 
+    // Assign ranks and rewards
     contributorsArray.forEach((item, index) => {
       item.rank = index + 1;
+      
       if (item.rank === 1) item.reward = rewards.top1;
       else if (item.rank === 2) item.reward = rewards.top2;
       else if (item.rank === 3) item.reward = rewards.top3;
       else if (item.rank >= 4 && item.rank <= 10) item.reward = rewards.top4to10;
-      else item.reward = rewards.top11plus;
+      else item.reward = rewards.top11plus || { terraCoins: 0, terraPoints: 0 };
     });
 
     return contributorsArray;
@@ -245,11 +216,50 @@ export const updateCommunityProgress = async (originalYearQuarter, payload) => {
   try {
     const { yearQuarter, ...updateData } = payload;
 
+    // Get existing data first
+    const existingDoc = await firestore()
+      .collection('community_progress')
+      .doc(originalYearQuarter)
+      .get();
+    
+    if (!existingDoc.exists) {
+      throw new Error('Document not found');
+    }
+    
+    const existingData = existingDoc.data();
+    
+    // Create merged data - preserve critical fields that aren't being updated
+    const mergedData = {
+      ...existingData,
+      ...updateData,
+      // Always preserve these fields if not explicitly provided
+      startDate: updateData.startDate || existingData.startDate,
+      endDate: updateData.endDate || existingData.endDate,
+      current: updateData.current !== undefined ? updateData.current : existingData.current,
+      participants: updateData.participants || existingData.participants,
+      contributors: updateData.contributors || existingData.contributors,
+      processed: updateData.processed !== undefined ? updateData.processed : existingData.processed,
+      finalLeaderboard: updateData.finalLeaderboard || existingData.finalLeaderboard,
+    };
+    
     if (originalYearQuarter !== yearQuarter) {
-      await firestore().collection('community_progress').doc(originalYearQuarter).delete();
-      await firestore().collection('community_progress').doc(yearQuarter).set(updateData);
+      // Create new document with merged data
+      await firestore()
+        .collection('community_progress')
+        .doc(yearQuarter)
+        .set(mergedData);
+      
+      // Delete old document
+      await firestore()
+        .collection('community_progress')
+        .doc(originalYearQuarter)
+        .delete();
     } else {
-      await firestore().collection('community_progress').doc(yearQuarter).update(updateData);
+      // Update existing document
+      await firestore()
+        .collection('community_progress')
+        .doc(yearQuarter)
+        .update(mergedData);
     }
 
     return true;
@@ -292,11 +302,14 @@ export const getRecentActivity = async (limit = 3) => {
 
     return Promise.all(snapshot.docs.map(async doc => {
       const data = doc.data();
-      return await populateUserData({
+      const { username, avatar } = await populateUserData(data.userId);
+      return {
         id: doc.id,
         ...data,
+        username: username || data.username || "Unknown",
+        avatar: avatar || null,
         title: data.title || data.action || "finished a task",
-      });
+      };
     }));
   } catch (error) {
     console.log('No activity data available yet', error);
@@ -341,12 +354,15 @@ export const getRepliesForComment = async (progressId, commentId, parentReplyId 
       const likes = likesSnap.docs.map(likeDoc => likeDoc.id);
       const likesCount = likes.length;
 
-      return await populateUserData({
+      const { username, avatar } = await populateUserData(data.userId);
+      return {
         id: doc.id,
         ...data,
+        username: username || data.username || "Unknown",
+        avatar: avatar || null,
         likes,
         likesCount
-      });
+      };
     }));
 
     return replies.filter(reply => {
@@ -378,14 +394,18 @@ export const getComments = async (limit = 20) => {
       const replies = await getRepliesForComment(currentQuarter, doc.id);
       const likesSnapshot = await doc.ref.collection('likes').get();
       const likes = likesSnapshot.docs.map(likeDoc => likeDoc.id);
-
-      return await populateUserData({
+      
+      const { username, avatar } = await populateUserData(data.userId);
+      
+      return {
         id: doc.id,
         ...data,
+        username: username || data.username || "Unknown",
+        avatar: avatar || null,
         likes,
         likesCount: likes.length,
         replies
-      });
+      };
     }));
 
     return comments;
@@ -416,7 +436,16 @@ export const postComment = async (commentText) => {
     };
 
     await commentRef.set(comment);
-    return await populateUserData({ ...comment, likes: [], likesCount: 0, replies: [] });
+    
+    const { username, avatar } = await populateUserData(currentUser.uid);
+    return {
+      ...comment,
+      username: username || currentUser.displayName || "Anonymous",
+      avatar: avatar || null,
+      likes: [],
+      likesCount: 0,
+      replies: []
+    };
   } catch (error) {
     console.error('Failed to post comment:', error);
     throw error;
@@ -526,7 +555,15 @@ export const replyToComment = async (commentId, replyText, parentReplyId = null)
     };
 
     await replyDoc.set(replyData);
-    return await populateUserData({ ...replyData, likes: [], likesCount: 0 });
+    
+    const { username, avatar } = await populateUserData(currentUser.uid);
+    return {
+      ...replyData,
+      username: username || currentUser.displayName || "Anonymous",
+      avatar: avatar || null,
+      likes: [],
+      likesCount: 0
+    };
   } catch (error) {
     console.error('Failed to post reply:', error);
     throw error;

@@ -17,9 +17,7 @@ import { scale } from "../utils/scaling";
 
 const AdminSupport = () => {
   const navigation = useNavigation();
-  const [activeTab, setActiveTab] = useState("posts");
   const [posts, setPosts] = useState([]);
-  const [verifications, setVerifications] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -32,9 +30,8 @@ const AdminSupport = () => {
   });
 
   useEffect(() => {
-    if (activeTab === "posts") fetchReports("posts", setPosts);
-    else if (activeTab === "verifications") fetchReports("verifications", setVerifications);
-  }, [activeTab, filters]);
+    fetchReports("posts", setPosts);
+  }, [filters]);
 
   const fetchReports = async (category, setState) => {
     setLoading(true);
@@ -111,7 +108,7 @@ const AdminSupport = () => {
   };
 
   const getFilteredData = () => {
-    const data = activeTab === "posts" ? posts : verifications;
+    const data = posts;
     
     // Apply search filter
     return data.filter((item) =>
@@ -134,28 +131,8 @@ const AdminSupport = () => {
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         onFilterPress={() => setFilterVisible(true)}
-        placeholder={`Search ${activeTab}...`}
+        placeholder="Search reports"
       />
-
-      {/* Tabs */}
-      <View style={styles.tabContainer}>
-        {["posts", "verifications"].map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.activeTab]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab && styles.activeTabText,
-              ]}
-            >
-              {tab.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
 
       {/* Filter Status Display */}
       {(filters.category || filters.status) && (
@@ -180,7 +157,7 @@ const AdminSupport = () => {
         <Text style={styles.emptyText}>
           {searchQuery || filters.category || filters.status 
             ? "No items match your search or filters." 
-            : `No ${activeTab} to review.`
+            : "No posts to review."
           }
         </Text>
       ) : (
@@ -192,7 +169,7 @@ const AdminSupport = () => {
               item={item} 
               onPress={() => navigation.navigate("AdminPostDetailScreen", { 
                 reportId: item.id,
-                category: activeTab 
+                category: "posts" 
               })}
             />
           )}
@@ -212,22 +189,6 @@ const AdminSupport = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#131313", padding: 16, paddingTop: 40 },
-  tabContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 16,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    marginHorizontal: 5,
-    borderRadius: 20,
-    backgroundColor: "#333",
-    alignItems: "center",
-  },
-  activeTab: { backgroundColor: "#415D43" },
-  tabText: { color: "#bbb", fontWeight: "bold" },
-  activeTabText: { color: "#fff" },
   listContainer: { paddingBottom: scale(20) },
   emptyText: { textAlign: "center", color: "#888", marginTop: 20 },
   filterStatus: {
@@ -238,6 +199,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 8,
     marginBottom: 10,
+    marginTop: 10,
   },
   filterStatusText: {
     color: "#709775",
