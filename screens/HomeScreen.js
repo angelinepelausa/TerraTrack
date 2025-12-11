@@ -149,6 +149,9 @@ const HomeScreen = ({ navigation, route }) => {
   const [error, setError] = useState(null);
   const [weeklyQuizAttempted, setWeeklyQuizAttempted] = useState(false);
   const { user } = useAuth();
+  
+  // NEW STATE FOR USERNAME
+  const [username, setUsername] = useState('User');
 
   // Walkthrough states
   const [showWalkthrough, setShowWalkthrough] = useState(false);
@@ -177,6 +180,30 @@ const HomeScreen = ({ navigation, route }) => {
   const [isClaimingReferralRewards, setIsClaimingReferralRewards] = useState(false);
   const [hasCheckedReferralRewards, setHasCheckedReferralRewards] = useState(false);
   const [showClaimSuccessPopup, setShowClaimSuccessPopup] = useState(false); // NEW STATE
+
+  // NEW EFFECT: Fetch username from user data
+  useEffect(() => {
+    const fetchUsername = async () => {
+      if (user?.uid) {
+        try {
+          const userDoc = await firestore().collection('users').doc(user.uid).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            // Use displayName, username, or email as fallback
+            const name = userData?.displayName || 
+                        userData?.username || 
+                        userData?.email?.split('@')[0] || 
+                        'User';
+            setUsername(name);
+          }
+        } catch (error) {
+          console.error('Error fetching username:', error);
+        }
+      }
+    };
+
+    fetchUsername();
+  }, [user?.uid]);
 
   // Check if user has seen walkthrough before - UPDATED LOGIC
   useEffect(() => {
@@ -585,6 +612,12 @@ const HomeScreen = ({ navigation, route }) => {
             const userData = doc.data();
             setTerraCoins(userData.terraCoins || 0);
             
+            // Also update username from user data
+            if (userData?.displayName || userData?.username) {
+              const name = userData.displayName || userData.username || user.email?.split('@')[0] || 'User';
+              setUsername(name);
+            }
+            
             // Also update user data for suspension check
             setUserData(userData);
             setUserStatus(userData.status);
@@ -844,6 +877,11 @@ const HomeScreen = ({ navigation, route }) => {
         (userStatus === 'suspended' || userStatus === 'banned') && styles.disabledContent
       ]}>
         <View style={styles.topBar}>
+          {/* ADDED: Greeting text on the left */}
+          <View style={styles.greetingContainer}>
+            <Text style={styles.greetingText}>Hello, {username}!</Text>
+          </View>
+          
           <View style={styles.coinBox}>
             <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
             <Text style={styles.coinText}>{terraCoins}</Text>
@@ -961,6 +999,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
     padding: scale(10),
+    position: 'relative', // Added for positioning
+  },
+  // ADDED: Greeting container styles
+  greetingContainer: {
+    position: 'absolute',
+    left: scale(20),
+    bottom: scale(15),
+  },
+  greetingText: {
+    color: '#FFFFFF',
+    fontSize: scale(18),
+    fontWeight: 'bold',
   },
   coinBox: {
     width: scale(80),

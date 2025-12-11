@@ -10,6 +10,7 @@ import {
   Image,
   Alert,
   PermissionsAndroid,
+  Modal,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { tasksRepository } from '../repositories/tasksRepository';
@@ -339,6 +340,9 @@ const RoutineScreen = () => {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
   const [popupTitle, setPopupTitle] = useState('');
+  
+  // NEW STATE FOR LOADING DURING VERIFICATION
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const fetchAllTasks = async () => {
     if (!user) return;
@@ -528,6 +532,9 @@ useEffect(() => {
       }
     }
 
+    // Show loading indicator when verification starts
+    setIsVerifying(true);
+
     try {
       const photoUris = {};
 
@@ -700,6 +707,9 @@ useEffect(() => {
     } catch (error) {
       console.error('Error verifying tasks:', error);
       Alert.alert('Error', 'Something went wrong verifying tasks.');
+    } finally {
+      // Hide loading indicator when verification is complete
+      setIsVerifying(false);
     }
   };
 
@@ -754,6 +764,22 @@ useEffect(() => {
         type="success"
       />
 
+      {/* LOADING MODAL FOR VERIFICATION PROCESS */}
+      <Modal
+        transparent={true}
+        animationType="fade"
+        visible={isVerifying}
+        onRequestClose={() => {}} // Prevent closing by back button
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.loadingModal}>
+            <ActivityIndicator size="large" color="#415D43" />
+            <Text style={styles.loadingText}>Verifying Tasks...</Text>
+            <Text style={styles.loadingSubtext}>Please wait while we process your tasks</Text>
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.topBar}>
         <View style={styles.coinBox}>
           <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
@@ -799,13 +825,14 @@ useEffect(() => {
 
       <View style={styles.verifyWrapper}>
         <Button
-          title="Verify Action"
+          title={isVerifying ? "Verifying..." : "Verify Action"}
           style={[
             styles.verifyBtn,
-            { backgroundColor: selectedTasks.length > 0 ? '#415D43' : '#6A6A6A' },
+            { backgroundColor: (selectedTasks.length > 0 && !isVerifying) ? '#415D43' : '#6A6A6A' },
           ]}
           textStyle={styles.verifyText}
           onPress={handleVerifyAction}
+          disabled={isVerifying || selectedTasks.length === 0}
         />
       </View>
     </View>
@@ -896,6 +923,34 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   taskVerifyText: { color: '#131313', fontWeight: 'bold', fontSize: 16 },
+  // New styles for loading modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingModal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    padding: 30,
+    alignItems: 'center',
+    width: '80%',
+    maxWidth: 300,
+  },
+  loadingText: {
+    marginTop: 20,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#415D43',
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
 });
 
 export default RoutineScreen;

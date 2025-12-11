@@ -509,6 +509,13 @@ const ShopScreen = () => {
             />
           )}
         </View>
+
+        {/* 🆕 ADDED: SMALL TEXT SECTION */}
+        <View style={styles.smallTextContainer}>
+          <Text style={styles.smallText}>
+            To earn more Terra Coins, complete tasks, read materials, and answer quizzes.
+          </Text>
+        </View>
       </View>
 
       {/* 🆕 BUY MODALS */}
@@ -548,7 +555,7 @@ const ShopScreen = () => {
   );
 };
 
-// 🆕 ADD OWNED BADGE STYLES
+// 🆕 ADD OWNED BADGE STYLES AND NEW SMALL TEXT SECTION STYLES
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
   topBar: {
@@ -561,7 +568,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   headerContainer: { paddingHorizontal: 16 },
-  content: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
+  content: { flex: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 },
   coinBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -619,6 +626,19 @@ const styles = StyleSheet.create({
   unclaimedText: { color: '#FFFFFF', fontSize: 10, fontWeight: 'bold', fontFamily: 'DMSans-Bold' },
   emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
   emptyText: { color: '#999999', fontSize: 16, fontFamily: 'DMSans-Regular' },
+  // 🆕 NEW SMALL TEXT SECTION STYLES
+  smallTextContainer: {
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+  },
+  smallText: {
+    color: '#CCCCCC',
+    fontSize: 12,
+    textAlign: 'center',
+    fontFamily: 'DMSans-Regular',
+  },
 });
 
 export default ShopScreen;
