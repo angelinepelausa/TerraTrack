@@ -1,6 +1,6 @@
 // screens/TaskVerifyScreen.js
 import React, { useEffect, useState } from 'react';
-import { Text, View, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { Text, View, StyleSheet, Image, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
 import { useAuth } from '../context/AuthContext';
 import { getUserTerraCoins } from '../repositories/userRepository';
@@ -11,6 +11,7 @@ const TaskVerifyScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [mySubmittedTasks, setMySubmittedTasks] = useState([]);
   const [assignedTasks, setAssignedTasks] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -29,131 +30,127 @@ const TaskVerifyScreen = ({ navigation }) => {
     }
   };
 
-  // Function to get the latest distribution run ID
-  const getLatestDistributionRun = async () => {
-    try {
-      const distributionSnap = await firestore()
-        .collection('distribution')
-        .orderBy('completedAt', 'desc')
-        .limit(1)
-        .get();
-
-      if (distributionSnap.empty) {
-        console.log("No distribution runs found");
-        return null;
-      }
-
-      const latestDistribution = distributionSnap.docs[0].data();
-      console.log("Latest distribution:", latestDistribution.runId, "date:", latestDistribution.date);
-      return {
-        runId: latestDistribution.runId,
-        date: latestDistribution.date
-      };
-    } catch (error) {
-      console.error("Error fetching latest distribution:", error);
-      return null;
-    }
+  // Function to get TODAY'S date in the correct format
+  const getTodaysDate = () => {
+    // Use Philippine time (UTC+8) if needed, or use local time
+    const now = new Date();
+    // For Philippine time: const phTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+    // return phTime.toISOString().split('T')[0];
+    return now.toISOString().split('T')[0];
   };
 
-  // Function to get assigned verification tasks from the latest distribution only
-  const getLatestAssignedVerificationTasks = async (userId) => {
+  // NEW: Get ALL submitted tasks from user's verifications collection (not just latest distribution)
+  const getMySubmittedTasks = async (userId) => {
     try {
-      const latestDistribution = await getLatestDistributionRun();
-      if (!latestDistribution) {
-        return [];
-      }
-
       const userRef = firestore().collection('users').doc(userId);
-      const assignedVerificationsSnap = await userRef.collection('assigned_verifications').get();
+      const verificationsSnap = await userRef.collection('verifications').get();
       
-      if (assignedVerificationsSnap.empty) {
-        return [];
-      }
-
-      const latestTasks = [];
-      const expectedDocId = `${latestDistribution.date}_${latestDistribution.runId}`;
+      const submittedTasks = [];
       
-      console.log("Looking for document:", expectedDocId);
-
-      // Process only the document that matches the latest distribution
-      for (const doc of assignedVerificationsSnap.docs) {
-        if (doc.id === expectedDocId) {
+      if (!verificationsSnap.empty) {
+        for (const doc of verificationsSnap.docs) {
+          const date = doc.id; // Date is the document ID
           const data = doc.data();
           
-          // Extract tasks from the document (each field is a task)
-          Object.keys(data).forEach(key => {
-            const taskData = data[key];
-            if (taskData && taskData.status === 'pending') {
-              latestTasks.push({
-                id: key, // Use the composite key as id
-                ...taskData,
-                docId: doc.id // Store the document ID for reference
-              });
-            }
-          });
-          break; // Found the latest distribution document, no need to check others
+          if (data && typeof data === 'object') {
+            Object.keys(data).forEach(taskId => {
+              const taskData = data[taskId];
+              if (taskData && taskData.status === 'pending') {
+                submittedTasks.push({
+                  id: taskId,
+                  ...taskData,
+                  submittedDate: date,
+                  taskId: taskId
+                });
+              }
+            });
+          }
         }
       }
-
-      console.log(`Found ${latestTasks.length} tasks from latest distribution`);
-      return latestTasks;
+      
+      console.log(`Found ${submittedTasks.length} submitted tasks for user ${userId}`);
+      return submittedTasks;
     } catch (error) {
-      console.error("Error fetching assigned verification tasks:", error);
+      console.error("Error fetching submitted tasks:", error);
       return [];
     }
   };
 
-  // MODIFIED: Function to get submitted tasks from (latest distribution date - 1, latest distribution date, latest distribution date + 1)
-  const getLatestSubmittedTasks = async (userId) => {
+  // NEW: Get ALL assigned verification tasks (not just latest distribution)
+  const getMyAssignedTasks = async (userId) => {
     try {
-      const latestDistribution = await getLatestDistributionRun();
-      if (!latestDistribution) {
-        return [];
-      }
-
-      // Calculate the date range: previous day, current day, and next day
-      const latestDate = new Date(latestDistribution.date);
-      
-      const previousDate = new Date(latestDate);
-      previousDate.setDate(previousDate.getDate() - 1);
-      const previousDateStr = previousDate.toISOString().split('T')[0];
-      
-      const nextDate = new Date(latestDate);
-      nextDate.setDate(nextDate.getDate() + 1);
-      const nextDateStr = nextDate.toISOString().split('T')[0];
-
       const userRef = firestore().collection('users').doc(userId);
-      const latestTasks = [];
-
-      // Fetch from three dates: previous day, current day, and next day
-      const datesToCheck = [previousDateStr, latestDistribution.date, nextDateStr];
+      const assignedVerificationsSnap = await userRef.collection('assigned_verifications').get();
       
-      for (const date of datesToCheck) {
-        const verificationsRef = userRef.collection('verifications').doc(date);
-        const verificationSnap = await verificationsRef.get();
-        
-        if (verificationSnap.exists) {
-          const data = verificationSnap.data();
+      const assignedTasks = [];
+      
+      if (!assignedVerificationsSnap.empty) {
+        for (const doc of assignedVerificationsSnap.docs) {
+          const docId = doc.id; // Format: date_runId
+          const data = doc.data();
           
-          // Extract tasks from the document
-          Object.keys(data).forEach(taskId => {
-            const taskData = data[taskId];
-            if (taskData && taskData.status === 'pending') {
-              latestTasks.push({
-                id: taskId,
-                ...taskData,
-                submittedDate: date, // Use the actual date from the document
-                taskId: taskId
-              });
-            }
-          });
+          if (data && typeof data === 'object') {
+            Object.keys(data).forEach(compositeKey => {
+              const taskData = data[compositeKey];
+              if (taskData && taskData.status === 'pending') {
+                // Extract ownerId and taskId from composite key (format: ownerId_taskId)
+                const [ownerId, taskId] = compositeKey.split('_');
+                
+                assignedTasks.push({
+                  id: compositeKey,
+                  ...taskData,
+                  docId: docId,
+                  ownerId: ownerId,
+                  taskId: taskId
+                });
+              }
+            });
+          }
         }
       }
-
-      console.log(`Found ${latestTasks.length} submitted tasks from dates: ${datesToCheck.join(', ')}`);
-      return latestTasks;
+      
+      console.log(`Found ${assignedTasks.length} assigned tasks for user ${userId}`);
+      return assignedTasks;
     } catch (error) {
-      console.error("Error fetching submitted tasks:", error);
+      console.error("Error fetching assigned tasks:", error);
+      return [];
+    }
+  };
+
+  // NEW: Alternative method - check global tasks_verification collection
+  const getGlobalSubmittedTasks = async (userId) => {
+    try {
+      const today = getTodaysDate();
+      const globalRef = firestore()
+        .collection('tasks_verification')
+        .doc(today)
+        .collection('submitted');
+      
+      // Query for tasks submitted by this user with pending status
+      const querySnap = await globalRef
+        .where('userId', '==', userId)
+        .where('status', '==', 'pending')
+        .get();
+      
+      const submittedTasks = [];
+      
+      if (!querySnap.empty) {
+        querySnap.forEach(doc => {
+          const taskData = doc.data();
+          if (taskData) {
+            submittedTasks.push({
+              id: doc.id,
+              ...taskData,
+              submittedDate: today
+            });
+          }
+        });
+      }
+      
+      console.log(`Found ${submittedTasks.length} global submitted tasks for user ${userId} on ${today}`);
+      return submittedTasks;
+    } catch (error) {
+      console.error("Error fetching global submitted tasks:", error);
       return [];
     }
   };
@@ -161,22 +158,66 @@ const TaskVerifyScreen = ({ navigation }) => {
   const loadTasks = async () => {
     setLoading(true);
     try {
-      // Use the new functions to get only latest distribution tasks
-      const [submittedTasks, assignedTasks] = await Promise.all([
-        getLatestSubmittedTasks(user.uid),
-        getLatestAssignedVerificationTasks(user.uid)
+      // Try multiple approaches to get tasks
+      const [userSubmittedTasks, userAssignedTasks, globalSubmittedTasks] = await Promise.all([
+        getMySubmittedTasks(user.uid),
+        getMyAssignedTasks(user.uid),
+        getGlobalSubmittedTasks(user.uid)
       ]);
-
-      setMySubmittedTasks(submittedTasks);
-      setAssignedTasks(assignedTasks);
+      
+      // Combine results from different sources
+      const allSubmittedTasks = [...userSubmittedTasks, ...globalSubmittedTasks];
+      
+      // Remove duplicates by id
+      const uniqueSubmittedTasks = Array.from(
+        new Map(allSubmittedTasks.map(task => [task.id, task])).values()
+      );
+      
+      setMySubmittedTasks(uniqueSubmittedTasks);
+      setAssignedTasks(userAssignedTasks);
+      
+      console.log(`Final counts - Submitted: ${uniqueSubmittedTasks.length}, Assigned: ${userAssignedTasks.length}`);
+      
+      // DEBUG: Log what we found
+      if (uniqueSubmittedTasks.length === 0 && userAssignedTasks.length === 0) {
+        console.log("DEBUG: No tasks found. Checking collections...");
+        
+        // Debug: List available collections
+        const userRef = firestore().collection('users').doc(user.uid);
+        
+        const [verificationsSnap, assignedSnap] = await Promise.all([
+          userRef.collection('verifications').get(),
+          userRef.collection('assigned_verifications').get()
+        ]);
+        
+        console.log(`User has ${verificationsSnap.size} verification documents`);
+        console.log(`User has ${assignedSnap.size} assigned_verification documents`);
+        
+        verificationsSnap.forEach(doc => {
+          console.log(`Verification doc ${doc.id}:`, Object.keys(doc.data() || {}).length, "tasks");
+        });
+        
+        assignedSnap.forEach(doc => {
+          console.log(`Assigned doc ${doc.id}:`, Object.keys(doc.data() || {}).length, "tasks");
+        });
+      }
+      
     } catch (error) {
       console.error("Error loading tasks:", error);
+      setMySubmittedTasks([]);
+      setAssignedTasks([]);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadTasks();
+    setRefreshing(false);
+  };
+
+  if (loading && !refreshing) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={{ color: '#fff' }}>Loading tasks...</Text>
@@ -203,7 +244,13 @@ const TaskVerifyScreen = ({ navigation }) => {
       </View>
 
       {/* Scrollable content */}
-      <ScrollView contentContainerStyle={styles.scrollContainer} style={{ marginTop: vScale(150) }}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContainer} 
+        style={{ marginTop: vScale(150) }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+        }
+      >
         {/* My Submitted Tasks */}
         <Text style={styles.taskverText}>Task Verification</Text>
         <View style={styles.tasksContainer}>
@@ -245,22 +292,21 @@ const TaskVerifyScreen = ({ navigation }) => {
             assignedTasks.map((task) => (
               <View style={styles.vertaskCard} key={`${task.docId}_${task.id}`}>
                 <Image 
-                  source={{ uri: task.photoUrl }} 
+                  source={{ uri: task.photoUrl || task.photoUrl }} 
                   style={styles.vertaskimg} 
                   defaultSource={require('../assets/images/bus.png')}
                 />
                 <View style={{ flex: 1, marginRight: scale(10) }}>
                   <Text style={styles.vertaskTitle}>{task.title}</Text>
-                  <Text style={styles.taskDate}>Submitted: {task.submittedDate}</Text>
+                  <Text style={styles.taskDate}>Submitted: {task.submittedDate || 'Unknown'}</Text>
                 </View>
                 <TouchableOpacity
                   style={[styles.taskVerifyBtn, task.status !== 'pending' && { backgroundColor: '#6A6A6A' }]}
                   disabled={task.status !== 'pending'}
-                  // In TaskVerifyScreen.js, when navigating to VerifyTaskScreen
                   onPress={() => navigation.navigate('VerifyTaskScreen', { 
                     task: { 
                       ...task, 
-                      submittedDate: task.submittedDate // Make sure this is passed
+                      submittedDate: task.submittedDate || getTodaysDate()
                     }, 
                     onVerificationComplete: loadTasks 
                   })}
