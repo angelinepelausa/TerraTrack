@@ -94,7 +94,6 @@ const AdminPartnersVoucher = () => {
       style={styles.itemBox}
       onPress={() => showVoucherDetails(item)}
     >
-      {/* Store Logo - Fills top area with no space */}
       <View style={styles.logoContainer}>
         {item.partnerLogo ? (
           <Image source={{ uri: item.partnerLogo }} style={styles.storeLogo} />
@@ -105,17 +104,14 @@ const AdminPartnersVoucher = () => {
         )}
       </View>
 
-      {/* Store Name */}
       <Text style={styles.storeName} numberOfLines={1}>
         {item.partnerName}
       </Text>
 
-      {/* Voucher Title */}
       <Text style={styles.voucherTitle} numberOfLines={2}>
         {item.title}
       </Text>
 
-      {/* Delete Button - Bottom Middle */}
       <TouchableOpacity 
         style={styles.deleteButton}
         onPress={() => handleDeleteVoucher(item)}
@@ -160,8 +156,6 @@ const AdminPartnersVoucher = () => {
           columnWrapperStyle={{ justifyContent: "space-between", marginBottom: 16 }}
         />
       )}
-
-      {/* Voucher Details Modal */}
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -172,7 +166,6 @@ const AdminPartnersVoucher = () => {
           <View style={styles.modalContent}>
             {selectedVoucher && (
               <>
-                {/* Modal Header */}
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Voucher Details</Text>
                   <TouchableOpacity 
@@ -183,7 +176,6 @@ const AdminPartnersVoucher = () => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Store Logo and Name */}
                 <View style={styles.modalStoreInfo}>
                   {selectedVoucher.partnerLogo ? (
                     <Image source={{ uri: selectedVoucher.partnerLogo }} style={styles.modalStoreLogo} />
@@ -195,7 +187,6 @@ const AdminPartnersVoucher = () => {
                   <Text style={styles.modalStoreName}>{selectedVoucher.partnerName}</Text>
                 </View>
 
-                {/* Voucher Details */}
                 <View style={styles.detailsSection}>
                   <DetailRow label="Voucher Title" value={selectedVoucher.title} />
                   <DetailRow label="Description" value={selectedVoucher.description} />
@@ -204,7 +195,6 @@ const AdminPartnersVoucher = () => {
                   <DetailRow label="Status" value={selectedVoucher.status || "active"} />
                 </View>
 
-                {/* Action Buttons */}
                 <View style={styles.modalActions}>
                   <TouchableOpacity 
                     style={styles.editButton}
@@ -230,7 +220,6 @@ const AdminPartnersVoucher = () => {
   );
 };
 
-// Detail Row Component for Modal
 const DetailRow = ({ label, value }) => (
   <View style={styles.detailRow}>
     <Text style={styles.detailLabel}>{label}:</Text>
@@ -243,7 +232,6 @@ const styles = StyleSheet.create({
   listContainer: { paddingBottom: 100 },
   emptyText: { textAlign: "center", color: "#888", marginTop: 20, fontSize: 14 },
 
-  // Voucher Item Styles
   itemBox: {
     width: ITEM_WIDTH,
     backgroundColor: "#1E1E1E",
@@ -255,7 +243,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     width: ITEM_WIDTH,
-    height: ITEM_WIDTH / 2, // Fills half the card
+    height: ITEM_WIDTH / 2,
     marginBottom: 8,
   },
   storeLogo: {
@@ -291,7 +279,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
 
-  // Modal Styles
   modalContainer: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",

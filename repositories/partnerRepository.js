@@ -8,7 +8,7 @@ export const checkIfUserIsPartner = async (userId) => {
       .get();
 
     if (!partnerDoc.exists) {
-      return false; // Not a partner (admin or normal user)
+      return false; 
     }
 
     const data = partnerDoc.data() || {};

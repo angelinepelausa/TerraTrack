@@ -1,4 +1,3 @@
-// screens/AddBadge.js
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity, Image, ScrollView, Alert
@@ -45,7 +44,6 @@ const AddBadge = () => {
       return Alert.alert('Missing Fields', 'Please fill all fields, select category and upload an image.');
     }
 
-    // Only validate targetNumber if category is NOT "New User"
     if (category !== 'New User') {
       if (!targetNumber || isNaN(targetNumber)) {
         return Alert.alert('Invalid Number', 'Please enter a valid number for the target.');
@@ -63,7 +61,7 @@ const AddBadge = () => {
         name: name.trim(),
         description: description.trim(),
         category,
-        targetNumber: category === 'New User' ? 1 : Number(targetNumber), // Default to 1 for New User
+        targetNumber: category === 'New User' ? 1 : Number(targetNumber),
         imageurl: finalImageUrl,
         createdAt: new Date(),
       };
@@ -140,7 +138,6 @@ const AddBadge = () => {
           </TouchableOpacity>
         ))}
 
-        {/* Only show Target Number if category is NOT "New User" */}
         {category !== 'New User' && (
           <>
             <Text style={styles.label}>Target Number</Text>

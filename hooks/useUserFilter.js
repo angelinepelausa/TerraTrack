@@ -40,7 +40,7 @@ export const useUserFilter = () => {
 
             if (filters.dateRange.to) {
               const toDate = new Date(filters.dateRange.to);
-              toDate.setHours(23, 59, 59, 999); // End of the day
+              toDate.setHours(23, 59, 59, 999); 
               toMatch = userDate <= toDate;
             }
 

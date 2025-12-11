@@ -75,7 +75,7 @@ const ReportModal = ({ visible, onClose, onSelectCategory }) => {
   };
 
   const handleSelectSubOption = (subOption) => {
-    setPendingSubOption(subOption); // show confirmation inside modal
+    setPendingSubOption(subOption); 
   };
 
   const handleConfirm = () => {
@@ -93,7 +93,6 @@ const ReportModal = ({ visible, onClose, onSelectCategory }) => {
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.container}>
-          {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerContent}>
               {selectedCategory ? (
@@ -124,7 +123,6 @@ const ReportModal = ({ visible, onClose, onSelectCategory }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Content */}
           <View style={styles.content}>
             {!selectedCategory && (
               <Text style={styles.subtitle}>
@@ -132,7 +130,6 @@ const ReportModal = ({ visible, onClose, onSelectCategory }) => {
               </Text>
             )}
 
-            {/* Pending confirmation */}
             {pendingSubOption && (
               <View style={{ padding: 16 }}>
                 <Text style={{ color: "#fff", marginBottom: 12 }}>
@@ -149,7 +146,6 @@ const ReportModal = ({ visible, onClose, onSelectCategory }) => {
               </View>
             )}
 
-            {/* Category or sub-options list */}
             {!pendingSubOption && (
               <FlatList
                 style={{ maxHeight: 300 }}

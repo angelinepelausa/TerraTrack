@@ -1,11 +1,10 @@
 import firestore from '@react-native-firebase/firestore';
 import { computeWeeklyCycle } from '../utils/leaderboardUtils';
-import { populateUserData } from './userRepository'; // centralized user data
+import { populateUserData } from './userRepository'; 
 
 const CONFIG_DOC = firestore().collection('leaderboard').doc('config');
 const RESULTS_COLLECTION = firestore().collection('leaderboard');
 
-// Leaderboard config
 export const getLeaderboardConfig = async () => {
   const snapshot = await CONFIG_DOC.get();
 

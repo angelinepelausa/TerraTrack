@@ -24,10 +24,10 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     let unsubscribe = null;
-    let isMounted = true; // Add this flag
+    let isMounted = true; 
 
     const fetchUserDetails = async (userId) => {
-      if (!userId || !isMounted) return; // Check if component is mounted
+      if (!userId || !isMounted) return; 
       
       try {
         const userDoc = await firestore().collection("users").doc(userId).get();
@@ -44,13 +44,13 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
     };
 
     const setupRealTimeListener = async () => {
-      if (!isMounted) return; // Check if component is mounted
+      if (!isMounted) return;
       
       try {
         unsubscribe = await moderationRepository.getReportRealTimeListener(
           reportId, 
           (updatedReport) => {
-            if (isMounted && updatedReport) { // Check if mounted
+            if (isMounted && updatedReport) { 
               setReport(updatedReport);
               if (updatedReport.originalData?.userId) {
                 fetchUserDetails(updatedReport.originalData.userId);
@@ -58,20 +58,20 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
             }
           },
           (error) => {
-            if (isMounted) { // Only log if component is mounted
+            if (isMounted) { 
               console.error("Real-time listener error:", error);
             }
           }
         );
       } catch (error) {
-        if (isMounted) { // Only log if component is mounted
+        if (isMounted) {
           console.error("Error setting up real-time listener:", error);
         }
       }
     };
 
     const fetchReportDetails = async () => {
-      if (!isMounted) return; // Check if component is mounted
+      if (!isMounted) return; 
       
       try {
         setLoading(true);
@@ -81,7 +81,6 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
         if (isMounted && foundReport) {
           setReport(foundReport);
           
-          // Fetch username from userId
           if (foundReport.originalData?.userId) {
             await fetchUserDetails(foundReport.originalData.userId);
           } else if (foundReport.username) {
@@ -107,10 +106,10 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
     fetchReportDetails();
 
     return () => {
-      isMounted = false; // Set to false when component unmounts
+      isMounted = false; 
       
       if (unsubscribe) {
-        unsubscribe(); // Unsubscribe from real-time listener
+        unsubscribe(); 
       }
     };
   }, [reportId]);
@@ -213,7 +212,6 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* HeaderRow with proper padding */}
       <View style={styles.headerRowContainer}>
         <HeaderRow 
           title="Report Details" 
@@ -226,7 +224,6 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Card - Simplified Info */}
         <View style={styles.headerCard}>
           <View style={styles.userStatusRow}>
             <View style={styles.userInfo}>
@@ -245,7 +242,6 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* Content Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Content Details</Text>
@@ -288,7 +284,6 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* Reports Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Reports ({report.reporters?.length || 0})</Text>
@@ -340,7 +335,6 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
           )}
         </View>
 
-        {/* Only show Admin Actions if NOT reviewed */}
         {!isReviewed && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -377,7 +371,6 @@ const AdminPostDetailScreen = ({ route, navigation }) => {
           </View>
         )}
 
-        {/* Loading Overlay */}
         {actionLoading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#709775" />
@@ -394,7 +387,6 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: "#131313" 
   },
-  // Header Row Container with proper padding
   headerRowContainer: {
     paddingHorizontal: scale(16),
     marginTop: scale(20),
@@ -433,7 +425,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: scale(14)
   },
-  // Header Card
   headerCard: {
     backgroundColor: "#1E1E1E",
     borderRadius: scale(16),
@@ -482,7 +473,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     letterSpacing: 0.5,
   },
-  // Sections
   section: {
     marginBottom: scale(24),
   },
@@ -495,7 +485,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#FFFFFF",
   },
-  // Content Section
   contentCard: {
     backgroundColor: "#1E1E1E",
     borderRadius: scale(12),
@@ -544,7 +533,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "500",
   },
-  // Reporter Cards
   reporterCard: {
     backgroundColor: "#1E1E1E",
     borderRadius: scale(12),
@@ -629,7 +617,7 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     color: "#888",
   },
-  // Actions (for pending items)
+
   actionsContainer: {
     gap: scale(16),
   },
@@ -660,7 +648,6 @@ const styles = StyleSheet.create({
   suspendButton: {
     borderColor: "#FF6B6B",
   },
-  // Loading Overlay
   loadingOverlay: {
     position: "absolute",
     top: 0,

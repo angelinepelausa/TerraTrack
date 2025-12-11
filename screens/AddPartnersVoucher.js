@@ -55,7 +55,7 @@ const AddPartnersVoucher = () => {
         setSelectedPartner(partner);
       }
     }
-  }, [existingVoucher, partners]); // Only run when partners array changes
+  }, [existingVoucher, partners]); 
 
   const loadPartners = async () => {
     try {
@@ -170,7 +170,6 @@ const AddPartnersVoucher = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header Row */}
       <View style={styles.headerRow}>
         <Text style={styles.headerText}>
           {existingVoucher ? 'Edit Voucher' : 'Create Voucher'}
@@ -184,7 +183,6 @@ const AddPartnersVoucher = () => {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
-        {/* Partner Selection */}
         <Text style={styles.label}>Select Partner</Text>
         <TouchableOpacity style={styles.dropdownButton} onPress={toggleDropdown}>
           <Text style={styles.dropdownButtonText}>
@@ -199,7 +197,6 @@ const AddPartnersVoucher = () => {
             onPress={() => { 
               setSelectedPartner(partner); 
               setDropdownOpen(false);
-              // Auto-generate code when partner is selected (only for new vouchers)
               if (!existingVoucher) {
                 const generatedCode = voucherRepository.generateVoucherCode(partner.name);
                 setVoucherData(prev => ({ ...prev, voucherCode: generatedCode }));
@@ -210,7 +207,6 @@ const AddPartnersVoucher = () => {
           </TouchableOpacity>
         ))}
 
-        {/* Voucher Details */}
         <Text style={styles.label}>Voucher Title</Text>
         <TextInput
           style={styles.input}
@@ -250,17 +246,15 @@ const AddPartnersVoucher = () => {
           keyboardType="numeric"
         />
 
-        {/* Voucher Code Display */}
         <Text style={styles.label}>Voucher Code</Text>
         <TextInput
           style={styles.input}
           value={voucherData.voucherCode}
           placeholder={existingVoucher ? "Voucher Code" : "Select partner to generate code"}
           placeholderTextColor="#888"
-          editable={!existingVoucher} // Can't edit code for existing vouchers
+          editable={!existingVoucher} 
         />
 
-        {/* Reset Button - Only show for new vouchers */}
         {!existingVoucher && (
           <TouchableOpacity style={styles.resetButton} onPress={resetForm}>
             <Text style={styles.resetButtonText}>Reset Form</Text>
@@ -268,7 +262,6 @@ const AddPartnersVoucher = () => {
         )}
       </ScrollView>
 
-      {/* Save Button */}
       <View style={styles.saveContainer}>
         <TouchableOpacity 
           style={styles.submitButton} 
@@ -300,7 +293,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
-  // Header Row
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -338,7 +330,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16 
   },
   
-  // Dropdown Styles
   dropdownButton: { 
     backgroundColor: '#1E1E1E', 
     padding: 12, 
@@ -357,7 +348,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16 
   },
 
-  // Reset Button
   resetButton: {
     backgroundColor: '#1E1E1E',
     paddingVertical: 12,
@@ -373,7 +363,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Save Container
   saveContainer: { 
     position: 'absolute', 
     bottom: 0, 

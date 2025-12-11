@@ -1,7 +1,6 @@
 import firestore from '@react-native-firebase/firestore';
 
 export const voucherRepository = {
-  // Get all partners for dropdown
   async getAllPartners() {
     try {
       const snapshot = await firestore()
@@ -19,7 +18,6 @@ export const voucherRepository = {
     }
   },
 
-  // Create new voucher
   async createVoucher(voucherData) {
     try {
       const voucherRef = firestore().collection('vouchers').doc();
@@ -42,7 +40,6 @@ export const voucherRepository = {
     }
   },
 
-  // Generate unique voucher code
   generateVoucherCode(partnerName) {
     const partnerInitials = partnerName
       .split(' ')
@@ -55,7 +52,6 @@ export const voucherRepository = {
     return `${partnerInitials}-${randomChars}`;
   },
 
-  // Get all vouchers
   async getAllVouchers() {
     try {
       const snapshot = await firestore()
@@ -73,7 +69,6 @@ export const voucherRepository = {
     }
   },
 
-  // Update voucher
   async updateVoucher(voucherId, voucherData) {
     try {
       await firestore()
@@ -91,7 +86,6 @@ export const voucherRepository = {
     }
   },
 
-  // Delete voucher
   async deleteVoucher(voucherId) {
     try {
       await firestore()
@@ -106,10 +100,8 @@ export const voucherRepository = {
     }
   },
 
-  // Get voucher statistics for partner (SIMPLIFIED - no complex queries)
   async getVoucherStats(partnerId, timeFrame = 'week') {
     try {
-      // Get ALL voucher purchases for this partner and filter in memory
       const allPurchasesSnapshot = await firestore()
         .collection('voucher_purchases')
         .where('partnerId', '==', partnerId)
@@ -120,7 +112,6 @@ export const voucherRepository = {
         ...doc.data()
       }));
 
-      // Calculate date ranges
       const now = new Date();
       let startDate;
       
@@ -138,7 +129,6 @@ export const voucherRepository = {
           startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       }
 
-      // Filter in memory to avoid composite index issues
       const redeemedInTimeFrame = allPurchases.filter(purchase => 
         purchase.status === 'claimed' && 
         purchase.verificationDate && 
@@ -147,7 +137,6 @@ export const voucherRepository = {
 
       const totalRedeemed = redeemedInTimeFrame.length;
 
-      // Get claimed today
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       
@@ -157,12 +146,10 @@ export const voucherRepository = {
         purchase.verificationDate.toDate() >= todayStart
       ).length;
 
-      // Get unclaimed vouchers
       const unclaimedVouchers = allPurchases.filter(purchase => 
         purchase.status === 'unclaimed'
       ).length;
 
-      // Get available vouchers (from vouchers collection)
       const allVouchers = await this.getAllVouchers();
       const partnerVouchers = allVouchers.filter(voucher => 
         voucher.partnerId === partnerId && voucher.status === 'active'
@@ -194,7 +181,6 @@ export const voucherRepository = {
     }
   },
 
-  // Get recent voucher purchases for partner (SIMPLIFIED)
   async getRecentVoucherPurchases(partnerId, limit = 10) {
     try {
       const snapshot = await firestore()
@@ -207,7 +193,6 @@ export const voucherRepository = {
         ...doc.data()
       }));
 
-      // Sort by purchase date in memory
       return allPurchases
         .sort((a, b) => {
           const dateA = a.purchaseDate ? a.purchaseDate.toDate() : new Date(0);
@@ -221,7 +206,6 @@ export const voucherRepository = {
     }
   },
 
-  // Get partner vouchers only
   async getPartnerVouchers(partnerId) {
     try {
       const allVouchers = await this.getAllVouchers();
@@ -232,7 +216,6 @@ export const voucherRepository = {
     }
   },
 
-  // Get claimed vouchers for partner (for detailed view)
   async getClaimedVouchers(partnerId) {
     try {
       const snapshot = await firestore()
@@ -251,7 +234,6 @@ export const voucherRepository = {
     }
   },
 
-  // Get unclaimed vouchers for partner
   async getUnclaimedVouchers(partnerId) {
     try {
       const snapshot = await firestore()

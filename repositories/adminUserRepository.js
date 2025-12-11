@@ -1,6 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
 
-// --- Helper: fetch username and avatar for a user ---
 const populateUserData = async (userId) => {
   let username = "Unknown User";
   let avatar = null;
@@ -26,7 +25,6 @@ const populateUserData = async (userId) => {
 };
 
 export const adminUserRepository = {
-  // Get basic user data
   async getUserBasicData(userId) {
     try {
       const userDoc = await firestore().collection('users').doc(userId).get();
@@ -47,7 +45,6 @@ export const adminUserRepository = {
     }
   },
 
-  // Get user preferences
   async getUserPreferences(userId) {
     try {
       const prefsDoc = await firestore()
@@ -64,7 +61,6 @@ export const adminUserRepository = {
     }
   },
 
-  // Get user stats
   async getUserStats(userId) {
     try {
       const statsDoc = await firestore()
@@ -228,7 +224,7 @@ export const adminUserRepository = {
     }
   },
 
-  // Suspend user with duration (NO suspend count increment)
+  // Suspend user with duration
   async suspendUser(userId, durationDays) {
     try {
       const userDoc = await firestore().collection('users').doc(userId).get();
@@ -245,10 +241,10 @@ export const adminUserRepository = {
       const endTime = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000));
       const suspensionEnd = firestore.Timestamp.fromDate(endTime);
 
-      // Update user data (keep current suspend count)
+      // Update user data
       await firestore().collection('users').doc(userId).update({
         status: 'suspended',
-        suspendedCount: currentSuspendCount, // Keep the same count
+        suspendedCount: currentSuspendCount,
         suspensionStart: suspensionStart,
         suspensionEnd: suspensionEnd,
         suspensionReason: `Admin suspension: ${durationDays} day(s)`,
@@ -276,7 +272,7 @@ export const adminUserRepository = {
     }
   },
 
-  // Ban user (NO suspend count increment)
+  // Ban user
   async banUser(userId) {
     try {
       const userDoc = await firestore().collection('users').doc(userId).get();
@@ -287,10 +283,10 @@ export const adminUserRepository = {
       const userData = userDoc.data();
       const currentSuspendCount = userData.suspendedCount || 0;
 
-      // Update user data (keep current suspend count)
+      // Update user data
       await firestore().collection('users').doc(userId).update({
         status: 'banned',
-        suspendedCount: currentSuspendCount, // Keep the same count
+        suspendedCount: currentSuspendCount,
         suspensionReason: 'Permanent ban by admin',
         lastActionAt: firestore.FieldValue.serverTimestamp()
       });

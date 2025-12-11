@@ -3,12 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { scale } from "../utils/scaling";
 
 const ReportCard = ({ item, onPress }) => {
-  // Get status color
   const getStatusColor = () => {
     if (item.status === "reviewed") {
-      return "#709775"; // Professional green for reviewed
+      return "#709775"; 
     }
-    return "#D32F2F"; // Professional red for pending
+    return "#D32F2F"; 
   };
 
   // Get status text
@@ -32,7 +31,6 @@ const ReportCard = ({ item, onPress }) => {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.cardContent}>
-        {/* Top Row: User Info & Status */}
         <View style={styles.headerRow}>
           <Text style={styles.username} numberOfLines={1}>
             {item.username || "Unknown User"}
@@ -45,7 +43,6 @@ const ReportCard = ({ item, onPress }) => {
           </View>
         </View>
 
-        {/* Middle Row: Report Details */}
         <View style={styles.detailsRow}>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>CATEGORY</Text>
@@ -64,7 +61,6 @@ const ReportCard = ({ item, onPress }) => {
           </View>
         </View>
 
-        {/* Bottom Row: Timestamp */}
         <View style={styles.footerRow}>
           <Text style={styles.timestampText}>
             {item.createdAt

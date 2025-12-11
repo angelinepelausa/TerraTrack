@@ -36,7 +36,7 @@ export const useChartData = (userId, selectedYear, selectedCategory, userData) =
           });
         }
 
-        // Determine display type based on meaningful data count
+        // Determine display type based on data count
         const dataPointCount = filteredData.length;
         let newDisplayType = 'no-data';
         

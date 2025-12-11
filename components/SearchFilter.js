@@ -4,7 +4,6 @@ import { View, TextInput, TouchableOpacity, Image, StyleSheet } from "react-nati
 const SearchFilter = ({ searchValue, onSearchChange, onFilterPress, placeholder = "Search" }) => {
   return (
     <View style={styles.searchRow}>
-      {/* Search bar */}
       <View style={styles.searchBar}>
         <Image
           source={require("../assets/images/Search.png")}
@@ -19,7 +18,6 @@ const SearchFilter = ({ searchValue, onSearchChange, onFilterPress, placeholder 
         />
       </View>
 
-      {/* Filter button */}
       <TouchableOpacity style={styles.filterButton} onPress={onFilterPress}>
         <View style={styles.filterCircle}>
           <Image

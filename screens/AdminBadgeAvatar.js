@@ -10,7 +10,7 @@ import SearchRow from "../components/SearchRow";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 const { width } = Dimensions.get("window");
-const ITEM_WIDTH = (width - 48) / 2; // 16 padding * 2 + 16 margin between items
+const ITEM_WIDTH = (width - 48) / 2; 
 
 const AdminBadgeAvatarScreen = () => {
   const navigation = useNavigation();

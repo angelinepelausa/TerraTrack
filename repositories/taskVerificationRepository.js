@@ -69,7 +69,6 @@ submitVerificationResult: async (verifierUid, ownerUid, taskId, date, result, no
 
     const safeNotes = notes || '';
 
-    // 1. Update owner's verifications
     const ownerVerificationsRef = firestore()
       .collection("users")
       .doc(ownerUid)
@@ -84,9 +83,8 @@ submitVerificationResult: async (verifierUid, ownerUid, taskId, date, result, no
 
     const ownerData = ownerVerificationsDoc.data();
 
-    // 🔥 owner tasks are keyed directly by taskId
     if (!ownerData[taskId]) {
-      console.warn(`❌ Owner doc has no key ${taskId}. Available:`, Object.keys(ownerData));
+      console.warn(`Owner doc has no key ${taskId}. Available:`, Object.keys(ownerData));
       return { success: false, error: "Task not found in owner's verifications" };
     }
 
@@ -100,9 +98,8 @@ submitVerificationResult: async (verifierUid, ownerUid, taskId, date, result, no
       }
     }, { merge: true });
 
-    console.log("✅ Owner's task updated");
+    console.log("Owner's task updated");
 
-    // 2. Update verifier's assigned_verifications
     const verifierAssignedQuery = await firestore()
       .collection("users")
       .doc(verifierUid)
@@ -139,9 +136,9 @@ submitVerificationResult: async (verifierUid, ownerUid, taskId, date, result, no
 
     if (foundInVerifierCollection) {
       await batch.commit();
-      console.log("✅ Verifier's task updated");
+      console.log("Verifier's task updated");
     } else {
-      console.warn(`❌ Task ${taskId} not found in verifier's assigned_verifications`);
+      console.warn(`Task ${taskId} not found in verifier's assigned_verifications`);
     }
 
     return { success: true };

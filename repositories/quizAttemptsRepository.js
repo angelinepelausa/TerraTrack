@@ -54,7 +54,6 @@ export const saveQuizAttempt = async ({
   };
 
   if (!querySnapshot.empty) {
-    // ✅ Prevent retries for weekly quizzes
     if (type === 'weekly') {
       throw new Error("You have already completed this week's quiz.");
     }

@@ -18,7 +18,6 @@ const Leaderboard = ({
   currentUserId = null,
   loading = false,
   showTitle = true,
-  // REMOVE refresh props since parent handles them
 }) => {
   const navigation = useNavigation();
 

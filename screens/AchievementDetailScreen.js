@@ -26,7 +26,7 @@ const AchievementDetailScreen = ({ route, navigation }) => {
     try {
       setLoading(true);
 
-      // Fetch user stats - handle case where document doesn't exist
+      // Fetch user stats 
       const statsDoc = await firestore()
         .collection('users')
         .doc(user.uid)
@@ -128,16 +128,12 @@ const AchievementDetailScreen = ({ route, navigation }) => {
         </View>
         
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Simplified Current Achievement Card for New User */}
           <View style={styles.currentCard}>
             <Image source={{ uri: currentBadge.imageurl }} style={styles.image} />
             <Text style={styles.title}>{currentBadge.name}</Text>
-            
-            {/* No category tag for New User */}
-            
+      
             <Text style={styles.description}>{currentBadge.description}</Text>
-            
-            {/* Special message for New User badge */}
+
             <View style={styles.welcomeSection}>
               <Text style={styles.welcomeTitle}>Welcome to TerraTrack!</Text>
               <Text style={styles.welcomeMessage}>
@@ -154,13 +150,10 @@ const AchievementDetailScreen = ({ route, navigation }) => {
             </View>
           </View>
 
-          {/* No next tier section for New User */}
         </ScrollView>
       </View>
     );
   }
-
-  // Regular badges (existing logic)
   const userValue =
     currentBadge.category.toLowerCase() === 'tasks'
       ? safeStats.taskFinished
@@ -171,14 +164,12 @@ const AchievementDetailScreen = ({ route, navigation }) => {
       : 0;
 
   const isCurrentBadgeClaimed = unlockedBadges[currentBadge.id];
-  
-  // FIX: Don't show surplus - cap at targetNumber for claimed badges
+
   const displayValue = isCurrentBadgeClaimed ? currentBadge.targetNumber : Math.min(userValue, currentBadge.targetNumber);
   const progress = Math.min(displayValue / currentBadge.targetNumber, 1);
   const progressText = `${displayValue}/${currentBadge.targetNumber}`;
   const progressPercentage = Math.round(progress * 100);
 
-  // FIX: Calculate remaining for next badge properly
   let remainingForNext = 0;
   let nextBadgeDisplayValue = userValue;
   
@@ -209,7 +200,6 @@ const AchievementDetailScreen = ({ route, navigation }) => {
       </View>
       
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Current Achievement Card */}
         <View style={styles.currentCard}>
           <Image source={{ uri: currentBadge.imageurl }} style={styles.image} />
           <Text style={styles.title}>{currentBadge.name}</Text>
@@ -228,7 +218,6 @@ const AchievementDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* Next Achievement Section */}
         {nextBadge ? (
           <View style={styles.nextSection}>
             <Text style={styles.nextSectionTitle}>Continue Your Journey</Text>

@@ -78,7 +78,6 @@ const BuyAvatar = ({ visible, avatar, onClose, onPurchaseSuccess }) => {
         transaction.set(userPurchasesRef, { list }, { merge: true });
       });
 
-      // 🚫 REMOVED THE SUCCESS ALERT HERE
       if (onPurchaseSuccess) onPurchaseSuccess();
       setShowConfirmation(false);
     } catch (err) {
@@ -98,29 +97,23 @@ const BuyAvatar = ({ visible, avatar, onClose, onPurchaseSuccess }) => {
         <View style={styles.overlay}>
           <View style={styles.modalContainer}>
 
-            {/* Close X */}
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeText}>✕</Text>
             </TouchableOpacity>
 
-            {/* Avatar Image */}
             <View style={styles.avatarWrapper}>
               <Image source={{ uri: avatar.imageurl }} style={styles.avatarImage} />
             </View>
 
-            {/* Avatar Name */}
             <Text style={styles.avatarName}>{avatar.name}</Text>
 
-            {/* Description */}
             <Text style={styles.description}>{avatar.description}</Text>
 
-            {/* Price */}
             <View style={styles.coinBox}>
               <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
               <Text style={styles.coinText}>{avatar.terracoin}</Text>
             </View>
 
-            {/* Purchase Button */}
             <TouchableOpacity 
               style={[
                 styles.purchaseButton, 
@@ -138,7 +131,6 @@ const BuyAvatar = ({ visible, avatar, onClose, onPurchaseSuccess }) => {
         </View>
       </Modal>
 
-      {/* Premium Confirmation Modal */}
       <Modal visible={showConfirmation} transparent={true} animationType="fade">
         <View style={styles.confirmationOverlay}>
           <View style={styles.confirmationContainer}>

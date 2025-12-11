@@ -1,7 +1,7 @@
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 
-// --- CONSTANTS ---
+// CONSTANTS
 const TRANSPORT_EMISSION_FACTORS = {
   'Diesel Car': 0.157,
   'Hybrid Car': 0.1078,
@@ -47,7 +47,6 @@ const MEAL_EMISSIONS = {
 // Electricity constants
 const GRID_EMISSION_FACTOR = 0.7288; // kg CO₂/kWh
 
-// --- MAIN CALCULATION ---
 export const calculateCarbonFootprint = (answers) => {
   let transportEmissionMonthly = 0;
 
@@ -109,7 +108,6 @@ export const calculateCarbonFootprint = (answers) => {
   };
 };
 
-// --- SAVE TO FIRESTORE ---
 export const saveCarbonFootprint = async (answers) => {
   try {
     const user = auth().currentUser;

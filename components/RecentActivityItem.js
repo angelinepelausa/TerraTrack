@@ -15,7 +15,6 @@ const RecentActivityItem = ({ activity, currentUserId }) => {
     }
   };
 
-  // Calculate relative time - FIXED: Handle Firestore timestamp properly
   const getTimeAgo = (timestamp) => {
     if (!timestamp) return "Recently";
     
@@ -23,7 +22,7 @@ const RecentActivityItem = ({ activity, currentUserId }) => {
     
     // Handle Firestore timestamp objects
     if (timestamp && typeof timestamp.toDate === 'function') {
-      // It's a Firestore timestamp - convert to Date
+      // It's a Firestore timestamp 
       date = timestamp.toDate();
     } else if (timestamp && timestamp.seconds) {
       // It's a Firestore timestamp with seconds property
@@ -48,10 +47,9 @@ const RecentActivityItem = ({ activity, currentUserId }) => {
     }
     
     const now = new Date();
-    const diff = Math.floor((now - date) / 1000); // in seconds
+    const diff = Math.floor((now - date) / 1000); 
 
-    // If difference is negative or extremely large, return "Recently"
-    if (diff < 0 || diff > 315360000) { // More than 10 years
+    if (diff < 0 || diff > 315360000) { 
       return "Recently";
     }
 
@@ -69,7 +67,6 @@ const RecentActivityItem = ({ activity, currentUserId }) => {
       return `${days} day${days !== 1 ? "s" : ""} ago`;
     }
     
-    // For older dates, show actual date
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric',
