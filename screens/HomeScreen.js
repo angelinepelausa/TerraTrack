@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Image, 
-  Dimensions, 
-  ActivityIndicator, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Dimensions,
+  ActivityIndicator,
   Alert,
   Modal,
   BackHandler
@@ -24,10 +24,12 @@ import BadgePopup from '../components/BadgePopup';
 import ReferralRewardPopup from '../components/ReferralRewardPopup';
 import { badgesRepository } from '../repositories/badgesRepository';
 
+
 const { width, height } = Dimensions.get('window');
 const PADDING = scale(20);
 const GAP = scale(20);
 const CARD_WIDTH = (width - PADDING * 2 - GAP) / 2;
+
 
 // Function to get current week's Monday date (quiz starts on Monday)
 const getCurrentQuizWeek = () => {
@@ -38,44 +40,47 @@ const getCurrentQuizWeek = () => {
   return monday.toISOString().split('T')[0]; // Returns YYYY-MM-DD
 };
 
+
 // Walkthrough Component with precise positioning
-const WalkthroughOverlay = ({ 
-  visible, 
-  currentStep, 
-  onNext, 
-  onSkip, 
-  onComplete, 
-  getStepInfo 
+const WalkthroughOverlay = ({
+  visible,
+  currentStep,
+  onNext,
+  onSkip,
+  onComplete,
+  getStepInfo
 }) => {
   if (!visible) return null;
 
+
   const stepInfo = getStepInfo(currentStep);
   if (!stepInfo) return null;
+
 
   return (
     <Modal transparent visible={visible} animationType="fade">
       <View style={styles.walkthroughContainer}>
         {/* Light overlay for background */}
         <View style={styles.lightOverlay} />
-        
+       
         {/* Highlight mask with cutout */}
         <View style={styles.maskContainer}>
           {/* Top overlay */}
           {stepInfo.highlightStyle.top > 0 && (
-            <View style={[styles.overlaySection, { 
-              height: stepInfo.highlightStyle.top 
+            <View style={[styles.overlaySection, {
+              height: stepInfo.highlightStyle.top
             }]} />
           )}
-          
+         
           {/* Middle section with highlight cutout */}
           <View style={styles.middleSection}>
             {/* Left overlay */}
             {stepInfo.highlightStyle.left > 0 && (
-              <View style={[styles.overlaySection, { 
-                width: stepInfo.highlightStyle.left 
+              <View style={[styles.overlaySection, {
+                width: stepInfo.highlightStyle.left
               }]} />
             )}
-            
+           
             {/* Highlight area */}
             <View style={[
               styles.highlightArea,
@@ -86,41 +91,42 @@ const WalkthroughOverlay = ({
             ]}>
               <View style={styles.highlightBorder} />
             </View>
-            
+           
             {/* Right overlay */}
             {stepInfo.highlightStyle.right !== undefined && (
-              <View style={[styles.overlaySection, { 
-                flex: 1 
+              <View style={[styles.overlaySection, {
+                flex: 1
               }]} />
             )}
           </View>
-          
+         
           {/* Bottom overlay */}
           {stepInfo.highlightStyle.bottom !== undefined && (
-            <View style={[styles.overlaySection, { 
-              flex: 1 
+            <View style={[styles.overlaySection, {
+              flex: 1
             }]} />
           )}
         </View>
+
 
         {/* Tooltip - Ensure it's always above the overlay */}
         <View style={[styles.tooltip, stepInfo.tooltipStyle]}>
           <Text style={styles.tooltipTitle}>{stepInfo.title}</Text>
           <Text style={styles.tooltipDescription}>{stepInfo.description}</Text>
-          
+         
           {/* Navigation Buttons - Ensure they're always clickable */}
           <View style={styles.walkthroughButtons}>
             {currentStep < 6 ? (
               <>
-                <TouchableOpacity 
-                  style={styles.skipButton} 
+                <TouchableOpacity
+                  style={styles.skipButton}
                   onPress={onSkip}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.skipButtonText}>Skip</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.nextButton} 
+                <TouchableOpacity
+                  style={styles.nextButton}
                   onPress={onNext}
                   activeOpacity={0.7}
                 >
@@ -128,8 +134,8 @@ const WalkthroughOverlay = ({
                 </TouchableOpacity>
               </>
             ) : (
-              <TouchableOpacity 
-                style={styles.completeButton} 
+              <TouchableOpacity
+                style={styles.completeButton}
                 onPress={onComplete}
                 activeOpacity={0.7}
               >
@@ -143,6 +149,7 @@ const WalkthroughOverlay = ({
   );
 };
 
+
 const HomeScreen = ({ navigation, route }) => {
   const [terraCoins, setTerraCoins] = useState(0);
   const [communityProgress, setCommunityProgress] = useState(null);
@@ -150,31 +157,37 @@ const HomeScreen = ({ navigation, route }) => {
   const [error, setError] = useState(null);
   const [weeklyQuizAttempted, setWeeklyQuizAttempted] = useState(false);
   const { user } = useAuth();
-  
+ 
   // STATE FOR USERNAME
   const [username, setUsername] = useState('User');
+
 
   // Walkthrough states
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [hasCheckedWalkthrough, setHasCheckedWalkthrough] = useState(false);
 
+
   // states for monthly footprint popup
   const [showPopup, setShowPopup] = useState(false);
   const [lastMonthResult, setLastMonthResult] = useState(null);
+
 
   // STATES FOR SUSPENSION POPUP
   const [showSuspensionPopup, setShowSuspensionPopup] = useState(false);
   const [userStatus, setUserStatus] = useState(null);
   const [userData, setUserData] = useState(null);
 
+
   // STATE FOR WEEKLY QUIZ CONFIRMATION
   const [showQuizConfirmation, setShowQuizConfirmation] = useState(false);
+
 
   // BADGE POPUP STATES
   const [showBadgePopup, setShowBadgePopup] = useState(false);
   const [welcomeBadge, setWelcomeBadge] = useState(null);
   const [hasCheckedBadge, setHasCheckedBadge] = useState(false);
+
 
   // NEW STATES FOR REFERRAL REWARDS
   const [showReferralRewards, setShowReferralRewards] = useState(false);
@@ -182,8 +195,10 @@ const HomeScreen = ({ navigation, route }) => {
   const [hasCheckedReferralRewards, setHasCheckedReferralRewards] = useState(false);
   const [showClaimSuccessPopup, setShowClaimSuccessPopup] = useState(false); // NEW STATE
 
+
   // STATE FOR EXIT POPUP
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
+
 
   // Add this useEffect with your other useEffects
 useEffect(() => {
@@ -196,13 +211,16 @@ useEffect(() => {
     return false; // Allow default back behavior for other screens
   };
 
+
   const backHandler = BackHandler.addEventListener(
     'hardwareBackPress',
     backAction
   );
 
+
   return () => backHandler.remove();
 }, [navigation]);
+
 
   // NEW EFFECT: Fetch username from user data
   useEffect(() => {
@@ -213,9 +231,9 @@ useEffect(() => {
           if (userDoc.exists) {
             const userData = userDoc.data();
             // Use displayName, username, or email as fallback
-            const name = userData?.displayName || 
-                        userData?.username || 
-                        userData?.email?.split('@')[0] || 
+            const name = userData?.displayName ||
+                        userData?.username ||
+                        userData?.email?.split('@')[0] ||
                         'User';
             setUsername(name);
           }
@@ -225,8 +243,10 @@ useEffect(() => {
       }
     };
 
+
     fetchUsername();
   }, [user?.uid]);
+
 
   // Check if user has seen walkthrough before - UPDATED LOGIC
   useEffect(() => {
@@ -235,13 +255,15 @@ useEffect(() => {
         if (user?.uid && !hasCheckedWalkthrough) {
           const userDoc = await firestore().collection('users').doc(user.uid).get();
           const userData = userDoc.data();
-          
+         
           // Check if user just completed onboarding (has onboardingCompleted flag)
-          const justCompletedOnboarding = userData?.onboardingCompleted && 
+          const justCompletedOnboarding = userData?.onboardingCompleted &&
                                         !userData?.hasSeenHomeWalkthrough;
+
 
           // Check if coming from calculator with showWalkthrough flag
           const fromCalculatorWithWalkthrough = route.params?.showWalkthrough;
+
 
           if (justCompletedOnboarding || fromCalculatorWithWalkthrough) {
             console.log('🔄 Showing home screen walkthrough for new user');
@@ -250,13 +272,13 @@ useEffect(() => {
               setShowWalkthrough(true);
               setCurrentStep(0);
             }, 1500);
-            
+           
             // Mark as seen in database
             await firestore().collection('users').doc(user.uid).update({
               hasSeenHomeWalkthrough: true
             });
           }
-          
+         
           setHasCheckedWalkthrough(true);
         }
       } catch (error) {
@@ -265,8 +287,10 @@ useEffect(() => {
       }
     };
 
+
     checkFirstTimeUser();
   }, [user?.uid, hasCheckedWalkthrough, route.params]);
+
 
   // Clear route params after processing to prevent re-triggering
   useEffect(() => {
@@ -276,36 +300,38 @@ useEffect(() => {
     }
   }, [route.params, navigation]);
 
+
   // SINGLE FUNCTION TO HANDLE THE COMPLETE FLOW
   const handleAfterWalkthrough = async () => {
     try {
       console.log('🔄 Starting post-walkthrough flow...');
-      
+     
       // Step 1: Check and show badge popup
       await checkAndShowWelcomeBadge();
-      
+     
       // If badge popup was shown, we'll check referral rewards AFTER badge closes
       // The check for referral rewards happens in the badge popup's onClose handler
-      
+     
     } catch (error) {
       console.error('Error in post-walkthrough flow:', error);
     }
   };
 
+
   // NEW FUNCTION: Check and show welcome badge
   const checkAndShowWelcomeBadge = async () => {
     try {
       console.log('🔍 Checking for welcome badge...');
-      
+     
       // Check if user has the welcome badge unlocked
       const unlockedBadges = await badgesRepository.getUnlockedBadgesForUser(user.uid);
       const welcomeBadgeId = "8HxNEC8FmZoszwYMRWbM";
-      
+     
       if (unlockedBadges[welcomeBadgeId]) {
         console.log('✅ User has welcome badge, fetching badge details...');
         // Get badge details from badges collection
         const badgeDetails = await badgesRepository.getBadgeById(welcomeBadgeId);
-        
+       
         if (badgeDetails) {
           // Check if we should show the popup (only show once)
           const hasSeenBadgePopup = await firestore()
@@ -313,12 +339,12 @@ useEffect(() => {
             .doc(user.uid)
             .get()
             .then(doc => doc.data()?.hasSeenWelcomeBadgePopup);
-          
+         
           if (!hasSeenBadgePopup) {
             console.log('🎉 Showing welcome badge popup!');
             setWelcomeBadge(badgeDetails);
             setShowBadgePopup(true);
-            
+           
             // Mark as seen in database
             await firestore().collection('users').doc(user.uid).update({
               hasSeenWelcomeBadgePopup: true
@@ -334,7 +360,7 @@ useEffect(() => {
         console.log('❌ No welcome badge found, checking referral rewards...');
         await checkReferralRewards();
       }
-      
+     
       setHasCheckedBadge(true);
     } catch (error) {
       console.error('Error checking welcome badge:', error);
@@ -342,14 +368,15 @@ useEffect(() => {
     }
   };
 
+
   // NEW FUNCTION: Check referral rewards
   const checkReferralRewards = async () => {
     try {
       if (user?.uid && !hasCheckedReferralRewards) {
         console.log('🔍 Checking for referral rewards...');
-        
+       
         const { shouldShow, alreadyClaimed } = await shouldShowReferralRewards(user.uid);
-        
+       
         if (shouldShow && !alreadyClaimed) {
           console.log('🎉 User is eligible for referral rewards!');
           // Show referral rewards popup
@@ -359,7 +386,7 @@ useEffect(() => {
         } else {
           console.log('❌ Not eligible for referral rewards or already claimed');
         }
-        
+       
         setHasCheckedReferralRewards(true);
       }
     } catch (error) {
@@ -367,6 +394,7 @@ useEffect(() => {
       setHasCheckedReferralRewards(true);
     }
   };
+
 
   // NEW FUNCTION: Handle badge popup close
   const handleBadgePopupClose = () => {
@@ -376,11 +404,13 @@ useEffect(() => {
     checkReferralRewards();
   };
 
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
+
 
         const progress = await getCommunityProgress();
         if (progress) {
@@ -388,6 +418,7 @@ useEffect(() => {
         } else {
           setError('No community progress data found.');
         }
+
 
         // Check if weekly quiz is already attempted (using Monday as start)
         if (user) {
@@ -403,8 +434,10 @@ useEffect(() => {
       }
     };
 
+
     fetchData();
   }, [user]);
+
 
   useEffect(() => {
     if (user?.uid) {
@@ -412,6 +445,7 @@ useEffect(() => {
       checkMonthlyFootprint();
       checkSuspensionStatus();
     }
+
 
     // Cleanup subscription on unmount
     return () => {
@@ -425,22 +459,23 @@ useEffect(() => {
     };
   }, [user?.uid]);
 
+
   // NEW FUNCTION: Handle claiming referral rewards
   const handleClaimReferralRewards = async () => {
     try {
       setIsClaimingReferralRewards(true);
-      
+     
       const result = await addReferralRewards(user.uid);
-      
+     
       if (result.success) {
         console.log('✅ Referral rewards claimed successfully');
         // Update local state to reflect new coins/points
         // The real-time subscription will update this automatically
         setShowReferralRewards(false);
-        
+       
         // Show success confirmation popup instead of Alert.alert
         setShowClaimSuccessPopup(true);
-        
+       
       } else {
         // Show error using ConfirmationPopup
         setShowClaimSuccessPopup(false);
@@ -464,16 +499,18 @@ useEffect(() => {
     }
   };
 
+
   // NEW FUNCTION: Handle success popup close
   const handleSuccessPopupClose = () => {
     setShowClaimSuccessPopup(false);
   };
 
+
   // Calculate precise positions based on your layout
   const TOP_BAR_HEIGHT = vScale(90);
   const CONTENT_TOP = TOP_BAR_HEIGHT;
   const CARD_HEIGHT = vScale(160);
-  
+ 
   // First row of cards starts right after top bar
   const FIRST_ROW_TOP = CONTENT_TOP + PADDING;
   // Second row starts after first row + gap
@@ -483,19 +520,20 @@ useEffect(() => {
   // Community box starts after shop box + gap
   const COMMUNITY_BOX_TOP = SHOP_BOX_TOP + vScale(90) + GAP;
 
+
   // Walkthrough step information with precise positioning
   const getStepInfo = (step) => {
     const steps = [
       {
         title: 'Weekly Quiz',
         description: 'Take our weekly quiz to test your environmental knowledge and earn Terra Coins! Complete it every week for new questions and rewards.',
-        highlightStyle: { 
+        highlightStyle: {
           top: FIRST_ROW_TOP,
-          left: PADDING, 
-          width: CARD_WIDTH, 
-          height: CARD_HEIGHT 
+          left: PADDING,
+          width: CARD_WIDTH,
+          height: CARD_HEIGHT
         },
-        tooltipStyle: { 
+        tooltipStyle: {
           top: FIRST_ROW_TOP + CARD_HEIGHT + 20,
           left: PADDING,
           right: PADDING
@@ -504,13 +542,13 @@ useEffect(() => {
       {
         title: 'Achievements',
         description: 'Complete various achievements to earn rewards and track your environmental progress! Unlock badges and special rewards.',
-        highlightStyle: { 
+        highlightStyle: {
           top: FIRST_ROW_TOP,
-          left: PADDING + CARD_WIDTH + GAP, 
-          width: CARD_WIDTH, 
-          height: CARD_HEIGHT 
+          left: PADDING + CARD_WIDTH + GAP,
+          width: CARD_WIDTH,
+          height: CARD_HEIGHT
         },
-        tooltipStyle: { 
+        tooltipStyle: {
           top: FIRST_ROW_TOP + CARD_HEIGHT + 20,
           left: PADDING,
           right: PADDING
@@ -519,13 +557,13 @@ useEffect(() => {
       {
         title: 'Read & Learn',
         description: 'Access educational content about sustainability and environmental protection. Learn while earning Terra Coins!',
-        highlightStyle: { 
+        highlightStyle: {
           top: SECOND_ROW_TOP,
-          left: PADDING, 
-          width: CARD_WIDTH, 
-          height: CARD_HEIGHT 
+          left: PADDING,
+          width: CARD_WIDTH,
+          height: CARD_HEIGHT
         },
-        tooltipStyle: { 
+        tooltipStyle: {
           top: SECOND_ROW_TOP + CARD_HEIGHT + 20,
           left: PADDING,
           right: PADDING
@@ -534,13 +572,13 @@ useEffect(() => {
       {
         title: 'Invite Friends',
         description: 'Invite friends to join TerraTrack and earn bonus coins! Grow our community and multiply your environmental impact.',
-        highlightStyle: { 
+        highlightStyle: {
           top: SECOND_ROW_TOP,
-          left: PADDING + CARD_WIDTH + GAP, 
-          width: CARD_WIDTH, 
-          height: CARD_HEIGHT 
+          left: PADDING + CARD_WIDTH + GAP,
+          width: CARD_WIDTH,
+          height: CARD_HEIGHT
         },
-        tooltipStyle: { 
+        tooltipStyle: {
           top: SECOND_ROW_TOP + CARD_HEIGHT + 20,
           left: PADDING,
           right: PADDING
@@ -549,14 +587,14 @@ useEffect(() => {
       {
         title: 'Terra Shop',
         description: 'Spend your Terra Coins on exclusive avatars, rewards, and partner offers! Customize your experience and support eco-friendly brands.',
-        highlightStyle: { 
+        highlightStyle: {
           top: SHOP_BOX_TOP,
-          left: PADDING, 
+          left: PADDING,
           right: PADDING,
           width: width - (PADDING * 2),
           height: vScale(90)
         },
-        tooltipStyle: { 
+        tooltipStyle: {
           top: SHOP_BOX_TOP + vScale(90) + 20,
           left: PADDING,
           right: PADDING
@@ -565,14 +603,14 @@ useEffect(() => {
       {
         title: 'Community Progress',
         description: 'See how our community is working together to achieve environmental goals! Track collective impact and milestones.',
-        highlightStyle: { 
+        highlightStyle: {
           top: COMMUNITY_BOX_TOP,
-          left: PADDING, 
+          left: PADDING,
           right: PADDING,
           width: width - (PADDING * 2),
           height: vScale(140)
         },
-        tooltipStyle: { 
+        tooltipStyle: {
           top: height * 0.4,
           left: PADDING,
           right: PADDING
@@ -581,23 +619,24 @@ useEffect(() => {
       {
         title: 'Navigation',
         description: 'Use the bottom navigation to access all app sections: Home, Routine, Leaderboards, and your Profile.',
-        highlightStyle: { 
+        highlightStyle: {
           top: height - 80, // Bottom navigation area
-          left: 0, 
+          left: 0,
           right: 0,
           width: width,
           height: 80
         },
-        tooltipStyle: { 
+        tooltipStyle: {
           bottom: height * 0.4, // Position above the navigation area
           left: PADDING,
           right: PADDING
         }
       }
     ];
-    
+   
     return steps[step];
   };
+
 
   // Walkthrough navigation handlers
   const handleNextStep = () => {
@@ -608,12 +647,14 @@ useEffect(() => {
     }
   };
 
+
   const handleSkipWalkthrough = () => {
     setShowWalkthrough(false);
     setCurrentStep(0);
     // Start the post-walkthrough flow
     handleAfterWalkthrough();
   };
+
 
   const handleCompleteWalkthrough = () => {
     setShowWalkthrough(false);
@@ -622,9 +663,11 @@ useEffect(() => {
     handleAfterWalkthrough();
   };
 
+
   // REAL-TIME TerraCoins subscription
   const setupRealtimeTerraCoins = () => {
     if (!user?.uid) return;
+
 
     const unsubscribe = firestore()
       .collection('users')
@@ -634,17 +677,17 @@ useEffect(() => {
           if (doc.exists) {
             const userData = doc.data();
             setTerraCoins(userData.terraCoins || 0);
-            
+           
             // Also update username from user data
             if (userData?.displayName || userData?.username) {
               const name = userData.displayName || userData.username || user.email?.split('@')[0] || 'User';
               setUsername(name);
             }
-            
+           
             // Also update user data for suspension check
             setUserData(userData);
             setUserStatus(userData.status);
-            
+           
             // Show suspension popup if user is suspended or banned
             if (userData.status === 'suspended' || userData.status === 'banned') {
               setShowSuspensionPopup(true);
@@ -661,8 +704,10 @@ useEffect(() => {
         }
       );
 
+
     return unsubscribe;
   };
+
 
   // Fallback function if real-time fails
   const fetchTerraCoinsFallback = async () => {
@@ -676,6 +721,7 @@ useEffect(() => {
     }
   };
 
+
   // NEW FUNCTION: Check user suspension status
   const checkSuspensionStatus = async () => {
     try {
@@ -684,7 +730,7 @@ useEffect(() => {
         const userData = doc.data();
         setUserData(userData);
         setUserStatus(userData.status);
-        
+       
         // Show suspension popup if user is suspended or banned
         if (userData.status === 'suspended' || userData.status === 'banned') {
           setShowSuspensionPopup(true);
@@ -698,10 +744,12 @@ useEffect(() => {
     }
   };
 
+
   // 🔥 Monthly footprint check
   const checkMonthlyFootprint = async () => {
     try {
       console.log("👀 Running checkMonthlyFootprint for", user.uid);
+
 
       const now = new Date();
       const currentDay = now.getDate();
@@ -709,8 +757,10 @@ useEffect(() => {
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const currentMonthKey = `${year}-${month}`;
 
+
       const lastMonthDate = new Date(year, now.getMonth() - 1, 1);
       const lastMonthKey = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
 
       // Get current month footprint
       const currentDoc = await firestore()
@@ -720,13 +770,16 @@ useEffect(() => {
         .doc(currentMonthKey)
         .get({ source: 'server' });
 
+
       // Check if current month is missing or empty
       const currentData = currentDoc.exists ? currentDoc.data() : null;
       const hasCurrentFootprint = currentData && currentData.results && Object.keys(currentData.results).length > 0;
 
+
       // Show popup if today is the 1st OR footprint is missing/empty
       if (currentDay === 1 || !hasCurrentFootprint) {
         console.log(`📌 Showing popup for ${currentMonthKey}`);
+
 
         const lastMonthDoc = await firestore()
           .collection('users')
@@ -735,10 +788,12 @@ useEffect(() => {
           .doc(lastMonthKey)
           .get({ source: 'server' });
 
+
         if (lastMonthDoc.exists && lastMonthDoc.data().results) {
           console.log("📌 Found last month's result", lastMonthDoc.data());
           setLastMonthResult(lastMonthDoc.data().results);
         }
+
 
         setShowPopup(true);
       } else {
@@ -748,6 +803,7 @@ useEffect(() => {
       console.error('Error checking monthly footprint:', error);
     }
   };
+
 
   // NEW FUNCTION: Handle Weekly Quiz Press with Confirmation
   const handleWeeklyQuizPress = () => {
@@ -760,9 +816,11 @@ useEffect(() => {
       return;
     }
 
+
     // Show confirmation popup before proceeding to quiz
     setShowQuizConfirmation(true);
   };
+
 
   // NEW FUNCTION: Navigate to Weekly Quiz
   const navigateToWeeklyQuiz = () => {
@@ -770,11 +828,13 @@ useEffect(() => {
     navigation.navigate('WeeklyQuizScreen');
   };
 
+
   const handleCardPress = (item) => {
     if (item.title === 'Weekly Quiz') {
       handleWeeklyQuizPress();
       return;
     }
+
 
     if (item.attempted) {
       Alert.alert(
@@ -785,6 +845,7 @@ useEffect(() => {
       return;
     }
 
+
     if (item.title === 'Read') {
       navigation.navigate('EducationalScreen');
     } else if (item.title === 'Invite') {
@@ -793,6 +854,7 @@ useEffect(() => {
       navigation.navigate('AchievementsScreen');
     }
   };
+
 
   const features = [
     {
@@ -823,6 +885,7 @@ useEffect(() => {
     },
   ];
 
+
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -831,8 +894,10 @@ useEffect(() => {
     );
   }
 
+
   return (
     <View style={styles.container}>
+
 
       {/* EXIT CONFIRMATION POPUP */}
       <ConfirmationPopup
@@ -850,12 +915,14 @@ useEffect(() => {
         onCancel={() => setShowExitConfirmation(false)}
       />
 
+
       {/* REFERRAL REWARDS POPUP - Shows ONLY after badge popup is closed */}
       <ReferralRewardPopup
         visible={showReferralRewards}
         onClaim={handleClaimReferralRewards}
         isClaiming={isClaimingReferralRewards}
       />
+
 
       {/* SUCCESS CONFIRMATION POPUP - Shows after claiming rewards */}
       <ConfirmationPopup
@@ -868,12 +935,14 @@ useEffect(() => {
         onConfirm={handleSuccessPopupClose}
       />
 
+
       {/* BADGE POPUP - Shows first after walkthrough */}
       <BadgePopup
         visible={showBadgePopup}
         badge={welcomeBadge}
         onClose={handleBadgePopupClose} // This triggers referral check AFTER badge closes
       />
+
 
       {/* WALKTHROUGH OVERLAY */}
       <WalkthroughOverlay
@@ -884,6 +953,7 @@ useEffect(() => {
         onComplete={handleCompleteWalkthrough}
         getStepInfo={getStepInfo}
       />
+
 
       {/* SUSPENSION POPUP - BLOCKING MODAL */}
       <SuspensionPopup
@@ -898,6 +968,7 @@ useEffect(() => {
         }}
       />
 
+
       {/* WEEKLY QUIZ CONFIRMATION POPUP */}
       <ConfirmationPopup
         visible={showQuizConfirmation}
@@ -911,6 +982,7 @@ useEffect(() => {
         onCancel={() => setShowQuizConfirmation(false)}
       />
 
+
       {/* HOMESCREEN CONTENT - DISABLED WHEN SUSPENDED/BANNED */}
       <View style={[
         styles.contentContainer,
@@ -921,12 +993,13 @@ useEffect(() => {
           <View style={styles.greetingContainer}>
             <Text style={styles.greetingText}>Hello, {username}!</Text>
           </View>
-          
+         
           <View style={styles.coinBox}>
             <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
             <Text style={styles.coinText}>{terraCoins}</Text>
           </View>
         </View>
+
 
         <View style={styles.content}>
           {error && (
@@ -934,6 +1007,7 @@ useEffect(() => {
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
+
 
           <View style={styles.grid}>
             {features.map((item, index) => (
@@ -955,12 +1029,14 @@ useEffect(() => {
             ))}
           </View>
 
+
           <TouchableOpacity style={styles.shopBox} onPress={() => navigation.navigate('ShopScreen')}>
             <Text style={styles.shopText}>
               Buy exclusive avatars and rewards from our partners from the Terra Shop!
             </Text>
             <Image source={require('../assets/images/TerraShop.png')} style={styles.shopImage} />
           </TouchableOpacity>
+
 
           {communityProgress && (
             <TouchableOpacity
@@ -982,6 +1058,7 @@ useEffect(() => {
           )}
         </View>
 
+
         {/* 🔥 Monthly Carbon Footprint Popup */}
         <Modal visible={showPopup} transparent animationType="fade">
           <View style={styles.modalOverlay}>
@@ -993,10 +1070,12 @@ useEffect(() => {
                   : "Let's calculate your footprint to see where you stand."}
               </Text>
 
+
               <TouchableOpacity
                 style={styles.modalButton}
                 onPress={() => {
                   setShowPopup(false);
+
 
                   // Normalize last month result
                   const normalizedLastMonth = lastMonthResult
@@ -1007,6 +1086,7 @@ useEffect(() => {
                         dietEmissionAnnual: lastMonthResult.dietEmissionAnnual || 0,
                       }
                     : null;
+
 
                   navigation.navigate('Calculator', {
                     ...(normalizedLastMonth ? { compareWithLastMonth: normalizedLastMonth } : {}),
@@ -1023,6 +1103,7 @@ useEffect(() => {
   );
 };
 
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
   contentContainer: { flex: 1 },
@@ -1030,6 +1111,7 @@ const styles = StyleSheet.create({
   loadingContainer: { justifyContent: 'center', alignItems: 'center' },
   errorBanner: { backgroundColor: 'red', padding: 10, borderRadius: 5, marginBottom: 10 },
   errorText: { color: '#fff', textAlign: 'center' },
+
 
   topBar: {
     height: vScale(90),
@@ -1063,6 +1145,7 @@ const styles = StyleSheet.create({
   },
   coinImage: { width: scale(20), height: scale(20), marginRight: scale(5), resizeMode: 'contain' },
   coinText: { color: '#131313', fontWeight: 'bold', fontSize: scale(12) },
+
 
   content: { flex: 1, padding: PADDING },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
@@ -1104,6 +1187,7 @@ const styles = StyleSheet.create({
   earnText: { color: '#fff', fontSize: scale(11), marginRight: scale(5) },
   earnCoin: { width: scale(16), height: scale(16), resizeMode: 'contain' },
 
+
   shopBox: {
     height: vScale(90),
     backgroundColor: '#415D43',
@@ -1116,6 +1200,7 @@ const styles = StyleSheet.create({
   },
   shopText: { color: '#CCCCCC', fontSize: scale(13), flex: 1, marginRight: scale(5), fontWeight: 'bold' },
   shopImage: { width: scale(40), height: scale(40), resizeMode: 'contain' },
+
 
   communityBox: {
     height: vScale(140),
@@ -1132,6 +1217,7 @@ const styles = StyleSheet.create({
     color: '#131313',
   },
   communityTitle: { fontWeight: 'bold', fontSize: scale(15), marginBottom: vScale(4), color: '#415D43' },
+
 
   // 🔥 Popup styles
   modalOverlay: {
@@ -1156,6 +1242,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   modalButtonText: { color: '#fff', fontWeight: 'bold' },
+
 
  // Walkthrough Styles - UPDATED
   walkthroughContainer: {
@@ -1258,4 +1345,6 @@ const styles = StyleSheet.create({
   },
 });
 
+
 export default HomeScreen;
+

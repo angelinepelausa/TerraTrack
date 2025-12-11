@@ -8,22 +8,28 @@ import { scale, vScale } from '../utils/scaling';
 import { useAuth } from '../context/AuthContext';
 import firestore from '@react-native-firebase/firestore';
 
+
 const { height } = Dimensions.get('window');
+
 
 const VerifyTaskScreen = ({ route, navigation }) => {
   const { task, onVerificationComplete } = route.params;
   const { user } = useAuth();
 
+
   const [decision, setDecision] = useState('');
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [loading, setLoading] = useState(false);
 
+
   // --- Helpers ---------------------------------------------------------------
   const today = () => new Date().toISOString().split('T')[0];
+
 
   const extractIds = (t) => {
     let ownerUid = t.ownerId || t.userId || null;
     let taskId = t.taskId || null;
+
 
     const composite = (t.id || t.docId || '').toString();
     if ((!ownerUid || !taskId) && composite.includes('_')) {
@@ -34,21 +40,24 @@ const VerifyTaskScreen = ({ route, navigation }) => {
       taskId   = taskId   || right;
     }
 
+
     if (!ownerUid || !taskId) {
       throw new Error('Missing ownerUid/taskId. Provide ownerId & taskId or an id like "ownerUid_taskId".');
     }
     const compositeKey = `${ownerUid}_${taskId}`;
-    
+   
     // Get the submitted date from the task or use today as fallback
     const submittedDate = t.submittedDate || today();
-    
+   
     return { ownerUid, taskId, compositeKey, submittedDate };
   };
+
 
   const updateOwnerVerification = async ({ ownerUid, taskId, submittedDate }, status, notes, verifierUid) => {
     const ref = firestore()
       .collection('users').doc(ownerUid)
       .collection('verifications').doc(submittedDate);
+
 
     const updatePayload = {
       [`${taskId}.status`]: status,
@@ -59,14 +68,17 @@ const VerifyTaskScreen = ({ route, navigation }) => {
       updatePayload[`${taskId}.detailsForRejection`] = notes;
     }
 
+
     // Use set with merge instead of update to handle non-existent documents
     await ref.set(updatePayload, { merge: true });
   };
+
 
   const updateGlobalSubmitted = async (compositeKey, status, notes, verifierUid, submittedDate) => {
     const ref = firestore()
       .collection('tasks_verification').doc(submittedDate)
       .collection('submitted').doc(compositeKey);
+
 
     const updatePayload = {
       status,
@@ -76,18 +88,21 @@ const VerifyTaskScreen = ({ route, navigation }) => {
     if (status === 'rejected') {
       updatePayload.detailsForRejection = notes;
     }
-    
+   
     // Use set with merge instead of update
     await ref.set(updatePayload, { merge: true });
   };
+
 
   const updateVerifierAssigned = async (verifierUid, compositeKey, status) => {
     const coll = firestore()
       .collection('users').doc(verifierUid)
       .collection('assigned_verifications');
 
+
     const snap = await coll.get();
     if (snap.empty) return;
+
 
     // Check all documents, not just today's
     for (const d of snap.docs) {
@@ -102,18 +117,22 @@ const VerifyTaskScreen = ({ route, navigation }) => {
     }
   };
 
+
   // --- update all other assigned verifiers too --------------------------
   const updateAllAssignedVerifiers = async (compositeKey, status, notes, verifierUid) => {
     const usersSnap = await firestore().collection('users').get();
     const userIds = usersSnap.docs.map(d => d.id);
+
 
     for (const uid of userIds) {
       const coll = firestore()
         .collection('users').doc(uid)
         .collection('assigned_verifications');
 
+
       const snap = await coll.get();
       if (snap.empty) continue;
+
 
       // Check all documents for this user
       for (const d of snap.docs) {
@@ -134,9 +153,11 @@ const VerifyTaskScreen = ({ route, navigation }) => {
     }
   };
 
+
   // --- Main submit -----------------------------------------------------------
   const handleSubmit = async () => {
     if (!user) return;
+
 
     if (!decision) {
       Alert.alert('Validation', 'Please choose Approve or Reject.');
@@ -147,16 +168,19 @@ const VerifyTaskScreen = ({ route, navigation }) => {
       return;
     }
 
+
     setLoading(true);
     try {
       // Get submittedDate from the extracted IDs
       const { ownerUid, taskId, compositeKey, submittedDate } = extractIds(task);
       const status = decision;
 
+
       await updateOwnerVerification({ ownerUid, taskId, submittedDate }, status, rejectionNotes.trim(), user.uid);
       await updateGlobalSubmitted(compositeKey, status, rejectionNotes.trim(), user.uid, submittedDate);
       await updateVerifierAssigned(user.uid, compositeKey, status);
       await updateAllAssignedVerifiers(compositeKey, status, rejectionNotes.trim(), user.uid);
+
 
       Alert.alert(
         'Success',
@@ -171,15 +195,19 @@ const VerifyTaskScreen = ({ route, navigation }) => {
     }
   };
 
+
   const imageHeight = decision === 'rejected' ? height * 0.35 : height * 0.45;
+
 
   return (
     <View style={styles.container}>
       <View style={styles.header}><Text style={styles.title}>Verify Task</Text></View>
 
+
       <View style={styles.content}>
         <Image source={{ uri: task.photoUrl }} style={[styles.taskImage, { height: imageHeight }]} resizeMode="contain" />
         <Text style={styles.taskTitle}>{task.title}</Text>
+
 
         <Text style={styles.sectionTitle}>Verification Decision</Text>
         <View style={styles.buttonRow}>
@@ -199,6 +227,7 @@ const VerifyTaskScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
 
+
         {decision === 'rejected' && (
           <TextInput
             style={styles.notes}
@@ -210,6 +239,7 @@ const VerifyTaskScreen = ({ route, navigation }) => {
             numberOfLines={3}
           />
         )}
+
 
         <TouchableOpacity
           style={[
@@ -225,6 +255,7 @@ const VerifyTaskScreen = ({ route, navigation }) => {
     </View>
   );
 };
+
 
 // --- Styles ------------------------------------------------------------------
 const styles = StyleSheet.create({
@@ -254,4 +285,6 @@ const styles = StyleSheet.create({
   submitText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: scale(16) },
 });
 
+
 export default VerifyTaskScreen;
+
