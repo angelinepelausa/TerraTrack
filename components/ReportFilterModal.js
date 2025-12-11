@@ -3,7 +3,6 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, LayoutAnimation, Platform, UIManager 
 } from "react-native";
 
-// Enable LayoutAnimation on Android
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -72,7 +71,6 @@ const ReportFilterModal = ({ visible, onClose, onApply }) => {
           <Text style={styles.header}>Filter Reports</Text>
           <ScrollView showsVerticalScrollIndicator={false}>
 
-            {/* Categories */}
             <TouchableOpacity
               onPress={() => {
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -99,7 +97,6 @@ const ReportFilterModal = ({ visible, onClose, onApply }) => {
               </View>
             )}
 
-            {/* Status */}
             <TouchableOpacity
               onPress={() => setStatusExpanded(prev => !prev)}
               style={styles.collapsibleHeader}
@@ -123,7 +120,6 @@ const ReportFilterModal = ({ visible, onClose, onApply }) => {
               </View>
             )}
 
-            {/* Sort Order */}
             <TouchableOpacity
               onPress={() => setSortExpanded(prev => !prev)}
               style={styles.collapsibleHeader}
@@ -147,7 +143,6 @@ const ReportFilterModal = ({ visible, onClose, onApply }) => {
               </View>
             )}
 
-            {/* Actions */}
             <View style={styles.actions}>
               <TouchableOpacity style={styles.applyButton} onPress={applyFilter}>
                 <Text style={styles.applyButtonText}>Apply</Text>

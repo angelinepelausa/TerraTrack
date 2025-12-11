@@ -1,6 +1,6 @@
 // components/CurrentProgressTab.js
-import React, { useEffect, useState } from "react";
-import { View, Text, Image } from "react-native";
+import React from "react";
+import { View, Text, Image, ScrollView } from "react-native";
 import { scale, vScale } from "../utils/scaling";
 import ProgressBar from "./ProgressBar";
 import RecentActivityItem from "./RecentActivityItem";
@@ -23,56 +23,70 @@ const CurrentProgressTab = ({ progressData, userContribution, recentActivity, ge
   };
 
   return (
-    <View style={styles.section}>
-      <View style={styles.rowHeader}>
-        {image && <Image source={{ uri: image }} style={styles.circularImage} />}
-        <Text style={styles.rowTitle}>{title}</Text>
-      </View>
-      <Text style={styles.description}>{description}</Text>
-      <Text style={styles.timeLeft}>{getTimeMessage()}</Text>
-
-      <View style={styles.infoCard}>
-        <Text style={styles.progressTitle}>
-          Finish {current} / {goal} {pluralize(goal, "task", "tasks")}
-        </Text>
-        <View style={{ marginTop: vScale(8), width: "90%", alignSelf: "center" }}>
-          <ProgressBar
-            progress={progressPercentage}
-            style={{
-              height: vScale(10),
-              borderRadius: vScale(5),
-              backgroundColor: "#CCCCCC",
-              filledColor: "#415D43",
-            }}
-          />
+    <ScrollView 
+      style={styles.scrollContainer}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scrollContent}
+    >
+      <View style={styles.section}>
+        <View style={styles.rowHeader}>
+          {image && <Image source={{ uri: image }} style={styles.circularImage} />}
+          <Text style={styles.rowTitle}>{title}</Text>
         </View>
-        <View style={{ marginTop: vScale(12) }}>
-          <Text style={{ fontWeight: "bold", color: "#415D43", alignSelf: "center" }}>
-            Your Contribution: {userContribution} {pluralize(userContribution, "task", "tasks")}
+        <Text style={styles.description}>{description}</Text>
+        <Text style={styles.timeLeft}>{getTimeMessage()}</Text>
+
+        <View style={styles.infoCard}>
+          <Text style={styles.progressTitle}>
+            Finish {current} / {goal} {pluralize(goal, "task", "tasks")}
           </Text>
+          <View style={{ marginTop: vScale(8), width: "90%", alignSelf: "center" }}>
+            <ProgressBar
+              progress={progressPercentage}
+              style={{
+                height: vScale(10),
+                borderRadius: vScale(5),
+                backgroundColor: "#CCCCCC",
+                filledColor: "#415D43",
+              }}
+            />
+          </View>
+          <View style={{ marginTop: vScale(12) }}>
+            <Text style={{ fontWeight: "bold", color: "#415D43", alignSelf: "center" }}>
+              Your Contribution: {userContribution} {pluralize(userContribution, "task", "tasks")}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ marginTop: scale(16) }}>
+          <Text style={[styles.sectionTitle, { fontSize: scale(16) }]}>Recent Contributors</Text>
+          {recentActivity.length === 0 ? (
+            <Text style={styles.emptyText}>No recent activity</Text>
+          ) : (
+            recentActivity.map((item) => <RecentActivityItem key={item.id} activity={item} />)
+          )}
         </View>
       </View>
-
-      <View style={{ marginTop: scale(16) }}>
-        <Text style={[styles.sectionTitle, { fontSize: scale(16) }]}>Recent Contributors</Text>
-        {recentActivity.length === 0 ? (
-          <Text style={styles.emptyText}>No recent activity</Text>
-        ) : (
-          recentActivity.map((item) => <RecentActivityItem key={item.id} activity={item} />)
-        )}
-      </View>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = {
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   section: { 
-    padding: scale(16) 
+    padding: scale(16),
+    flex: 1,
   },
   centeredSection: { 
     padding: scale(16), 
     alignItems: "center", 
-    justifyContent: "center" 
+    justifyContent: "center",
+    flex: 1,
   },
   rowHeader: { 
     flexDirection: "row", 

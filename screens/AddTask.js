@@ -1,4 +1,3 @@
-// screens/AddTask.js
 import React, { useState } from 'react';
 import {
   View,
@@ -114,7 +113,6 @@ const AddTask = () => {
 
   return (
     <View style={styles.container}>
-      {/* Fixed Header using HeaderRow component */}
       <View style={styles.headerWrapper}>
         <HeaderRow
           title={existingTask ? 'Edit Task' : 'Add Task'}
@@ -122,7 +120,6 @@ const AddTask = () => {
         />
       </View>
 
-      {/* Scrollable Content */}
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

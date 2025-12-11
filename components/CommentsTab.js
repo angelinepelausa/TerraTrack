@@ -14,7 +14,6 @@ import {
 import { scale } from "../utils/scaling";
 import CommentItem from "./CommentItem";
 
-// ✅ Extracted input into its own component
 const CommentInput = ({
   commentText,
   setCommentText,
@@ -60,13 +59,12 @@ const CommentsTab = ({
   onDeleteComment,
   onDeleteReply,
   currentUserId,
-  refreshData, // ✅ Add refreshData prop
+  refreshData, 
 }) => {
   const [commentText, setCommentText] = useState("");
   const [postingComment, setPostingComment] = useState(false);
-  const [refreshing, setRefreshing] = useState(false); // ✅ Add refreshing state
+  const [refreshing, setRefreshing] = useState(false);
 
-  // ✅ Handle pull-to-refresh
   const handleRefresh = async () => {
     if (!refreshData) return;
     
@@ -98,13 +96,12 @@ const CommentsTab = ({
       <FlatList
         data={comments}
         keyExtractor={(item) => item.id}
-        // ✅ Add RefreshControl for pull-to-refresh
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            colors={["#709775"]} // Android
-            tintColor="#709775" // iOS
+            colors={["#709775"]} 
+            tintColor="#709775"
             title="Refreshing comments..."
             titleColor="#CCCCCC"
           />
@@ -139,7 +136,6 @@ const CommentsTab = ({
             )}
           </View>
         )}
-        // ✅ Show loading indicator at the bottom when refreshing
         ListFooterComponent={
           refreshing ? (
             <View style={styles.footerLoader}>

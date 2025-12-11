@@ -1,4 +1,3 @@
-// screens/SettingsScreen.js
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -6,7 +5,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Image,
   ScrollView,
@@ -16,6 +14,7 @@ import firestore from "@react-native-firebase/firestore";
 import AvatarPicker from "../components/AvatarPicker";
 import { avatarsRepository } from "../repositories/avatarsRepository";
 import HeaderRow from "../components/HeaderRow";
+import ConfirmationPopup from "../components/ConfirmationPopup";
 
 const SettingsScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
@@ -28,6 +27,12 @@ const SettingsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState(null);
+  
+  // Confirmation Popup States
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupTitle, setPopupTitle] = useState("");
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState("success");
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -49,6 +54,7 @@ const SettingsScreen = ({ navigation }) => {
         }
       } catch (error) {
         console.error("Error fetching user:", error);
+        showErrorPopup("Error", "Failed to load user data. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -65,13 +71,27 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
+  const showSuccessPopup = (title, message) => {
+    setPopupTitle(title);
+    setPopupMessage(message);
+    setPopupType("success");
+    setShowPopup(true);
+  };
+
+  const showErrorPopup = (title, message) => {
+    setPopupTitle(title);
+    setPopupMessage(message);
+    setPopupType("error");
+    setShowPopup(true);
+  };
+
   const handleSave = async () => {
     if (!username.trim()) {
-      Alert.alert("Validation", "Username cannot be empty.");
+      showErrorPopup("Validation", "Username cannot be empty.");
       return;
     }
     if (password && password !== confirmPassword) {
-      Alert.alert("Validation", "Passwords do not match.");
+      showErrorPopup("Validation", "Passwords do not match.");
       return;
     }
 
@@ -89,12 +109,12 @@ const SettingsScreen = ({ navigation }) => {
         await user.updatePassword(password);
       }
 
-      Alert.alert("Success", "Profile updated successfully.");
+      showSuccessPopup("Success", "Profile updated successfully.");
       setPassword("");
       setConfirmPassword("");
     } catch (err) {
       console.error("Error saving profile:", err);
-      Alert.alert("Error", err.message || "Something went wrong.");
+      showErrorPopup("Error", err.message || "Something went wrong.");
     } finally {
       setSaving(false);
     }
@@ -106,9 +126,10 @@ const SettingsScreen = ({ navigation }) => {
       setAvatarId(avatar.id);
       fetchAvatarUrl(avatar.id);
       setAvatarModalVisible(false);
+      showSuccessPopup("Success", "Avatar updated successfully.");
     } catch (err) {
       console.error("Error selecting avatar:", err);
-      Alert.alert("Error", "Could not update avatar.");
+      showErrorPopup("Error", "Could not update avatar.");
     }
   };
 
@@ -118,7 +139,7 @@ const SettingsScreen = ({ navigation }) => {
       navigation.replace("LoginScreen");
     } catch (err) {
       console.error("Error logging out:", err);
-      Alert.alert("Error", "Failed to log out.");
+      showErrorPopup("Error", "Failed to log out.");
     }
   };
 
@@ -136,6 +157,16 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/* Confirmation Popup */}
+      <ConfirmationPopup
+        visible={showPopup}
+        onConfirm={() => setShowPopup(false)}
+        title={popupTitle}
+        message={popupMessage}
+        confirmText="OK"
+        type={popupType}
+      />
+
       {/* Header Row with Back Button */}
       <HeaderRow 
         title="Edit Profile" 

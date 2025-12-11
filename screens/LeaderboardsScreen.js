@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, View, RefreshControl } from 'react-native';
+import { ActivityIndicator, View, ScrollView, RefreshControl } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import Leaderboard from '../components/Leaderboard';
@@ -68,35 +68,49 @@ const LeaderboardsScreen = () => {
   }, [loadData]);
 
   return (
-    <View style={{ flex: 1 }}>
-      {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#709775" />
-        </View>
-      ) : (
-        <Leaderboard
-          leaderboard={leaderboard}
-          currentUserRank={currentUserRank}
-          currentUserId={user?.uid}
-          loading={loading}
-          // Pass refresh props to Leaderboard component
-          onRefresh={onRefresh}
+    <ScrollView 
+      style={{ flex: 1 }}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ flexGrow: 1 }}
+      refreshControl={
+        <RefreshControl
           refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#CCCCCC"
+          colors={["#415D43"]}
         />
-      )}
+      }
+    >
+      <View style={{ flex: 1 }}>
+        {loading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+            <ActivityIndicator size="large" color="#709775" />
+          </View>
+        ) : (
+          <Leaderboard
+            leaderboard={leaderboard}
+            currentUserRank={currentUserRank}
+            currentUserId={user?.uid}
+            loading={loading}
+            // Remove refresh props since parent handles refresh
+            onRefresh={null}
+            refreshing={false}
+          />
+        )}
 
-      {showRewardPopup && rewardData && (
-        <RewardPopup
-          visible={showRewardPopup}
-          rewards={{
-            coins: rewardData.terraCoins,
-            points: rewardData.terraPoints,
-          }}
-          onClose={() => setShowRewardPopup(false)}
-          navigation={navigation}
-        />
-      )}
-    </View>
+        {showRewardPopup && rewardData && (
+          <RewardPopup
+            visible={showRewardPopup}
+            rewards={{
+              coins: rewardData.terraCoins,
+              points: rewardData.terraPoints,
+            }}
+            onClose={() => setShowRewardPopup(false)}
+            navigation={navigation}
+          />
+        )}
+      </View>
+    </ScrollView>
   );
 };
 

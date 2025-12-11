@@ -1,4 +1,3 @@
-// hooks/useCommunityProgress.js
 import { useState, useEffect, useRef } from "react";
 import auth from "@react-native-firebase/auth";
 import {
@@ -16,7 +15,6 @@ import {
   getCurrentYearQuarter,
 } from "../repositories/communityProgressRepository";
 
-// Helper function for proper pluralization
 const pluralize = (count, singular, plural) => {
   return count === 1 ? singular : plural;
 };

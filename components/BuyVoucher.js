@@ -124,7 +124,6 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
         throw new Error(result.error || "Failed to purchase voucher");
       }
 
-      // 🚫 REMOVED THE SUCCESS ALERT HERE
       if (onPurchaseSuccess) onPurchaseSuccess();
       setShowConfirmation(false);
     } catch (err) {
@@ -143,12 +142,10 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
       <Modal visible={visible} transparent={true} animationType="fade">
         <View style={styles.overlay}>
           <View style={styles.modalContainer}>
-            {/* Close X */}
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeText}>✕</Text>
             </TouchableOpacity>
 
-            {/* Store Logo */}
             <View style={styles.storeWrapper}>
               {voucher.partnerLogo ? (
                 <Image source={{ uri: voucher.partnerLogo }} style={styles.storeImage} />
@@ -159,16 +156,12 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
               )}
             </View>
 
-            {/* Store Name */}
             <Text style={styles.storeName}>{voucher.partnerName}</Text>
 
-            {/* Voucher Title */}
             <Text style={styles.voucherTitle}>{voucher.title}</Text>
 
-            {/* Description */}
             <Text style={styles.description}>{voucher.description}</Text>
 
-            {/* Store Details */}
             {partnerDetails && (
               <View style={styles.storeDetails}>
                 <Text style={styles.detailsTitle}>Store Information</Text>
@@ -193,13 +186,11 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
               </View>
             )}
 
-            {/* Voucher Code Preview */}
             <View style={styles.codePreview}>
               <Text style={styles.codeLabel}>Voucher Code:</Text>
               <Text style={styles.codeText}>{voucher.voucherCode}</Text>
             </View>
 
-            {/* Price - Only show if not purchased */}
             {!isPurchased && (
               <View style={styles.coinBox}>
                 <Image source={require('../assets/images/TerraCoin.png')} style={styles.coinImage} />
@@ -207,7 +198,6 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
               </View>
             )}
 
-            {/* Action Button - Changes based on purchase status */}
             <TouchableOpacity 
               style={[
                 styles.actionButton, 
@@ -231,7 +221,6 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
         </View>
       </Modal>
 
-      {/* Confirmation Modal - Only show for purchases */}
       {!isPurchased && (
         <Modal visible={showConfirmation} transparent={true} animationType="fade">
           <View style={styles.confirmationOverlay}>
@@ -256,7 +245,6 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
                 <Text style={styles.confirmationVoucherTitle}>{voucher.title}</Text>
                 <Text style={styles.confirmationDescription}>{voucher.description}</Text>
                 
-                {/* Store Details in Confirmation */}
                 {partnerDetails && (
                   <View style={styles.confirmationStoreDetails}>
                     <Text style={styles.confirmationDetailsTitle}>Store Information</Text>
@@ -275,19 +263,16 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
                   </View>
                 )}
                 
-                {/* Voucher Code */}
                 <View style={styles.confirmationCode}>
                   <Text style={styles.confirmationCodeLabel}>Voucher Code:</Text>
                   <Text style={styles.confirmationCodeText}>{voucher.voucherCode}</Text>
                 </View>
                 
-                {/* Price */}
                 <View style={styles.priceContainer}>
                   <Image source={require('../assets/images/TerraCoin.png')} style={styles.confirmationCoin} />
                   <Text style={styles.confirmationPrice}>{voucher.terraCoinCost}</Text>
                 </View>
 
-                {/* Balance Info */}
                 <View style={styles.balanceInfo}>
                   <Text style={styles.balanceLabel}>Your balance: </Text>
                   <View style={styles.balanceAmount}>

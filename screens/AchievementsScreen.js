@@ -51,7 +51,6 @@ const AchievementsScreen = ({ navigation }) => {
         .doc('stats')
         .get();
 
-      // 🌟 FIX: Always guarantee ALL fields exist
       const statsData = {
         educationalMaterialsRead: statsDoc.data()?.educationalMaterialsRead ?? 0,
         weeklyQuizFinished: statsDoc.data()?.weeklyQuizFinished ?? 0,
@@ -78,7 +77,6 @@ const AchievementsScreen = ({ navigation }) => {
       const claimedBadges = [];
 
       Object.keys(categories).forEach((cat) => {
-        // 🌟 FIX: Safe lookup with fallback
         let userValue = 0;
 
         if (cat === 'tasks') {
@@ -91,12 +89,10 @@ const AchievementsScreen = ({ navigation }) => {
 
         const categoryBadges = categories[cat];
 
-        // Collect claimed badges
         categoryBadges.forEach((b) => {
           if (unlocked[b.id]) claimedBadges.push({ ...b, category: cat });
         });
 
-        // Current tier = first badge not yet claimed
         const currentBadge = categoryBadges.find((b) => !unlocked[b.id]);
         if (currentBadge) currentTierBadges.push({ ...currentBadge, category: cat });
       });
@@ -115,7 +111,6 @@ const AchievementsScreen = ({ navigation }) => {
       setClaimedBadge(badge);
       setShowCongratsModal(true);
 
-      // Animate modal
       scaleAnim.setValue(0);
       opacityAnim.setValue(0);
       Animated.parallel([
@@ -142,7 +137,6 @@ const AchievementsScreen = ({ navigation }) => {
 const renderAchievement = ({ item }) => {
   if (!stats) return null;
 
-  // 🌟 FIXED: Guaranteed safe category mapping
   let userValue = 0;
   if (item.category === 'tasks') {
     userValue = stats.taskFinished ?? 0;
@@ -155,7 +149,6 @@ const renderAchievement = ({ item }) => {
   const isClaimed = unlockedBadges[item.id];
   const isNewUserBadge = item.category.toLowerCase() === 'new user';
 
-  // For New User badges, don't show progress bar
   if (isNewUserBadge) {
     return (
       <TouchableOpacity
@@ -168,7 +161,6 @@ const renderAchievement = ({ item }) => {
         <View style={styles.achievementDetails}>
           <Text style={styles.achievementTitle}>{item.name}</Text>
           
-          {/* Always show as claimed for New User badges */}
           <View style={styles.claimedContainer}>
             <Ionicons name="checkmark-circle" size={20} color="#415D43" />
             <Text style={styles.claimedText}>Achievement Unlocked</Text>
@@ -178,7 +170,6 @@ const renderAchievement = ({ item }) => {
     );
   }
 
-  // Regular badges with progress bar
   const displayValue = isClaimed ? item.targetNumber : Math.min(userValue, item.targetNumber);
   const progress = Math.min(displayValue / item.targetNumber, 1);
   const progressText = `${displayValue}/${item.targetNumber}`;

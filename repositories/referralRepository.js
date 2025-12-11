@@ -1,18 +1,15 @@
-// repositories/referralRepository.js
 import firestore from '@react-native-firebase/firestore';
 
 const REFERRAL_COLLECTION = 'referral';
 const CONFIG_DOC = 'config';
 
 export const referralRepository = {
-  // Get referral settings
   getSettings: async () => {
     try {
       const docRef = firestore().collection(REFERRAL_COLLECTION).doc(CONFIG_DOC);
       const docSnap = await docRef.get();
 
       if (!docSnap.exists) {
-        // If config doesn't exist, create default
         const defaultSettings = {
           referee: { terraCoins: 0, terraPoints: 0 },
           referrer: { terraCoins: 0, terraPoints: 0 },
@@ -32,7 +29,6 @@ export const referralRepository = {
     }
   },
 
-  // Update referral settings
   updateSettings: async (settings) => {
     try {
       const docRef = firestore().collection(REFERRAL_COLLECTION).doc(CONFIG_DOC);

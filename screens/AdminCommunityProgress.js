@@ -25,7 +25,7 @@ import {
   getUpcomingQuarters,
   deleteCommunityProgress,
 } from '../repositories/communityProgressRepository';
-import { populateUserData } from '../repositories/userRepository'; // Import the helper function
+import { populateUserData } from '../repositories/userRepository';
 
 // Components
 import HeaderRow from '../components/HeaderRow';
@@ -165,7 +165,6 @@ const AdminCommunityProgress = () => {
             </View>
           </View>
 
-          {/* Simplified Rewards Dropdown with Images */}
           {rewards && (
             <View style={styles.rewardsDropdownContainer}>
               <TouchableOpacity 
@@ -215,7 +214,6 @@ const AdminCommunityProgress = () => {
   const renderUpcomingQuarters = () => {
     return (
       <View style={styles.upcomingSection}>
-        {/* Removed the header with "Upcoming Quarters" text */}
         
         {upcomingQuarters.length === 0 ? (
           <View style={styles.emptyUpcoming}>
@@ -372,7 +370,6 @@ const AdminCommunityProgress = () => {
         {activeTab === 'leaderboard' && renderLeaderboard()}
       </ScrollView>
 
-      {/* Floating Add Button - Only visible on upcoming tab */}
       {activeTab === 'upcoming' && (
         <TouchableOpacity
           style={styles.floatingAddButton}
@@ -398,7 +395,6 @@ const QuarterDetailsModal = ({ visible, quarter, onEdit, onDelete, onClose }) =>
 
   if (!quarter) return null;
 
-  // Check if quarter is upcoming (start date is in the future)
   const isUpcoming = quarter.startDate ? new Date(quarter.startDate) > new Date() : false;
   const status = isUpcoming ? 'Inactive' : (quarter.processed ? 'Completed' : 'Active');
 
@@ -483,7 +479,6 @@ const QuarterDetailsModal = ({ visible, quarter, onEdit, onDelete, onClose }) =>
               </View>
             </View>
 
-            {/* Simplified Rewards Section in Modal matching Current Tab style */}
             {quarter.rewards && (
               <View style={styles.modalRewardsSection}>
                 <TouchableOpacity 
@@ -565,7 +560,6 @@ const styles = StyleSheet.create({
     paddingBottom: scale(30),
   },
 
-  // Floating Add Button
   floatingAddButton: {
     position: 'absolute',
     bottom: scale(30),
@@ -587,7 +581,6 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
 
-  // Tabs
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#1E1E1E',
@@ -615,7 +608,6 @@ const styles = StyleSheet.create({
     color: '#fff' 
   },
 
-  // Sections
   section: { 
     padding: scale(16) 
   },
@@ -640,7 +632,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Title
   title: {
     fontSize: scale(20),
     color: '#709775',
@@ -650,7 +641,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Image Styles
   image: {
     width: '100%',
     height: scale(180),
@@ -659,7 +649,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 
-  // Modal Image Styles
   modalImage: {
     width: '100%',
     height: scale(200),
@@ -668,13 +657,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 
-  // Quarter Image
   quarterImage: {
     width: '100%',
     height: scale(140),
   },
 
-  // Cards
   infoCard: { 
     backgroundColor: '#1E1E1E', 
     borderRadius: scale(12), 
@@ -746,18 +733,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Status Styles
   inactiveStatus: {
-    color: '#FFA500', // Orange for inactive
+    color: '#FFA500', 
   },
   activeStatus: {
-    color: '#4CAF50', // Green for active
+    color: '#4CAF50', 
   },
   completedStatus: {
-    color: '#709775', // Teal for completed
+    color: '#709775', 
   },
 
-  // Simplified Rewards Dropdown with Images (USED IN BOTH CURRENT AND MODAL)
   rewardsDropdownContainer: {
     backgroundColor: '#2A2A2A',
     borderRadius: scale(12),
@@ -817,7 +802,6 @@ const styles = StyleSheet.create({
     minWidth: scale(30),
   },
 
-  // Upcoming Quarters Grid
   upcomingGrid: {
     gap: scale(16),
   },
@@ -876,7 +860,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Buttons (old add button removed)
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -899,7 +882,6 @@ const styles = StyleSheet.create({
     paddingVertical: scale(40),
   },
 
-  // Modal - EXPANDED with smaller text
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.9)',
@@ -954,8 +936,7 @@ const styles = StyleSheet.create({
     marginTop: scale(8),
     gap: scale(12),
   },
-  
-  // Modal Rewards Section - NOW MATCHES CURRENT TAB STYLE
+
   modalRewardsSection: {
     backgroundColor: '#2A2A2A',
     borderRadius: scale(12),
@@ -1072,7 +1053,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Leaderboard
   podium: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -1152,7 +1132,6 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
   },
 
-  // Empty states
   emptyText: { 
     color: '#888', 
     textAlign: 'center', 

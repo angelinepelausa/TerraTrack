@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons'; // ✅ import Ionicons
+import Ionicons from 'react-native-vector-icons/Ionicons'; 
 
 const CARD_HEIGHT = 120;
 const IMAGE_SIZE = 100;

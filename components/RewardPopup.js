@@ -1,4 +1,3 @@
-// components/RewardPopup.js - SIMPLIFIED
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Modal } from 'react-native';
 

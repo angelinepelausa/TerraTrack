@@ -1,13 +1,11 @@
-// repositories/communityProgressRepository.js
 import firestore from '@react-native-firebase/firestore';
-import { addUserRewards, populateUserData } from './userRepository'; // Import from userRepository
+import { addUserRewards, populateUserData } from './userRepository';
 import auth from '@react-native-firebase/auth';
 
-// Utility to get the current year-quarter like "2025-Q3"
 export const getCurrentYearQuarter = () => {
   const now = new Date();
   const year = now.getFullYear();
-  const month = now.getMonth(); // 0-indexed
+  const month = now.getMonth(); 
   let quarter = 'Q1';
 
   if (month >= 0 && month <= 2) quarter = 'Q1';
@@ -18,7 +16,6 @@ export const getCurrentYearQuarter = () => {
   return `${year}-${quarter}`;
 };
 
-// --- Get community progress ---
 export const getCommunityProgress = async (yearQuarter = null) => {
   try {
     const docId = yearQuarter || getCurrentYearQuarter();
@@ -35,7 +32,6 @@ export const getCommunityProgress = async (yearQuarter = null) => {
   }
 };
 
-// --- Add a new quarter's community progress ---
 export const addCommunityProgress = async (payload) => {
   try {
     const { yearQuarter, title, description, goal, rewards, image } = payload;
@@ -77,14 +73,12 @@ export const addCommunityProgress = async (payload) => {
   }
 };
 
-// --- Get leaderboard sorted by contributions or final leaderboard if processed ---
 export const getCommunityLeaderboard = async (yearQuarter = null) => {
   try {
     const data = await getCommunityProgress(yearQuarter);
     if (!data) return [];
 
     if (data.processed && data.finalLeaderboard && data.finalLeaderboard.length > 0) {
-      // Final leaderboard already has populated data
       return data.finalLeaderboard;
     }
 
@@ -94,16 +88,14 @@ export const getCommunityLeaderboard = async (yearQuarter = null) => {
     // Convert contributors map to array and populate user data
     const contributorsArray = await Promise.all(
       Object.entries(contributorsMap).map(async ([userId, points]) => {
-        // Use the populateUserData from userRepository
         const { username, avatar } = await populateUserData(userId);
         
         return {
           id: userId,
-          userId: userId, // Keep both id and userId for compatibility
+          userId: userId, 
           username: username || userId,
           avatar: avatar || null,
           terraPoints: points || 0,
-          // Add rank and reward later
         };
       })
     );
@@ -129,13 +121,11 @@ export const getCommunityLeaderboard = async (yearQuarter = null) => {
   }
 };
 
-// --- Get a user's rank in the community leaderboard ---
 export const getUserCommunityRank = async (userId, yearQuarter = null) => {
   const leaderboard = await getCommunityLeaderboard(yearQuarter);
   return leaderboard.find((u) => u.id === userId) || null;
 };
 
-// --- Process end-of-quarter rewards ---
 export const processQuarterEnd = async () => {
   try {
     const currentQuarter = getCurrentYearQuarter();
@@ -162,7 +152,6 @@ export const processQuarterEnd = async () => {
   }
 };
 
-// --- Helper: get next quarter ---
 export const getNextQuarter = (yearQuarter) => {
   const [yearStr, quarter] = yearQuarter.split('-');
   let year = parseInt(yearStr, 10);
@@ -181,7 +170,6 @@ export const getNextQuarter = (yearQuarter) => {
   return `${year}-${nextQuarter}`;
 };
 
-// --- Get all upcoming quarters ---
 export const getUpcomingQuarters = async () => {
   try {
     const now = new Date();
@@ -200,7 +188,6 @@ export const getUpcomingQuarters = async () => {
   }
 };
 
-// --- Delete a community progress quarter ---
 export const deleteCommunityProgress = async (yearQuarter) => {
   try {
     await firestore().collection('community_progress').doc(yearQuarter).delete();
@@ -211,12 +198,10 @@ export const deleteCommunityProgress = async (yearQuarter) => {
   }
 };
 
-// --- Update community progress ---
 export const updateCommunityProgress = async (originalYearQuarter, payload) => {
   try {
     const { yearQuarter, ...updateData } = payload;
 
-    // Get existing data first
     const existingDoc = await firestore()
       .collection('community_progress')
       .doc(originalYearQuarter)
@@ -228,11 +213,9 @@ export const updateCommunityProgress = async (originalYearQuarter, payload) => {
     
     const existingData = existingDoc.data();
     
-    // Create merged data - preserve critical fields that aren't being updated
     const mergedData = {
       ...existingData,
       ...updateData,
-      // Always preserve these fields if not explicitly provided
       startDate: updateData.startDate || existingData.startDate,
       endDate: updateData.endDate || existingData.endDate,
       current: updateData.current !== undefined ? updateData.current : existingData.current,
@@ -243,19 +226,16 @@ export const updateCommunityProgress = async (originalYearQuarter, payload) => {
     };
     
     if (originalYearQuarter !== yearQuarter) {
-      // Create new document with merged data
       await firestore()
         .collection('community_progress')
         .doc(yearQuarter)
         .set(mergedData);
       
-      // Delete old document
       await firestore()
         .collection('community_progress')
         .doc(originalYearQuarter)
         .delete();
     } else {
-      // Update existing document
       await firestore()
         .collection('community_progress')
         .doc(yearQuarter)
@@ -269,7 +249,6 @@ export const updateCommunityProgress = async (originalYearQuarter, payload) => {
   }
 };
 
-// --- User contribution ---
 export const getUserContribution = async () => {
   try {
     const currentUser = auth().currentUser;
@@ -286,7 +265,6 @@ export const getUserContribution = async () => {
   }
 };
 
-// --- Recent activity ---
 export const getRecentActivity = async (limit = 3) => {
   try {
     const currentQuarter = getCurrentYearQuarter();
@@ -317,7 +295,6 @@ export const getRecentActivity = async (limit = 3) => {
   }
 };
 
-// --- Helper: get reply likes count ---
 const getReplyLikesCount = async (commentId, replyId, progressId = null) => {
   const currentQuarter = progressId || getCurrentYearQuarter();
   const likesSnapshot = await firestore()
@@ -333,7 +310,6 @@ const getReplyLikesCount = async (commentId, replyId, progressId = null) => {
   return likesSnapshot.size;
 };
 
-// --- Get replies for comment ---
 export const getRepliesForComment = async (progressId, commentId, parentReplyId = null) => {
   try {
     const snapshot = await firestore()
@@ -375,7 +351,6 @@ export const getRepliesForComment = async (progressId, commentId, parentReplyId 
   }
 };
 
-// --- Get comments with replies and likes ---
 export const getComments = async (limit = 20) => {
   try {
     const currentQuarter = getCurrentYearQuarter();
@@ -415,7 +390,6 @@ export const getComments = async (limit = 20) => {
   }
 };
 
-// --- Post comment ---
 export const postComment = async (commentText) => {
   try {
     const currentUser = auth().currentUser;
@@ -452,7 +426,6 @@ export const postComment = async (commentText) => {
   }
 };
 
-// --- Helper to get likes count for comment ---
 const getLikesCount = async (commentId, progressId = null) => {
   const currentQuarter = progressId || getCurrentYearQuarter();
   const likesSnapshot = await firestore()
@@ -466,7 +439,6 @@ const getLikesCount = async (commentId, progressId = null) => {
   return likesSnapshot.size;
 };
 
-// --- Like/Unlike comment ---
 export const likeComment = async (commentId, progressId = null) => {
   try {
     const currentUser = auth().currentUser;
@@ -496,7 +468,6 @@ export const likeComment = async (commentId, progressId = null) => {
   }
 };
 
-// --- Like/Unlike reply ---
 export const likeReply = async (commentId, replyId, progressId = null) => {
   try {
     const currentUser = auth().currentUser;
@@ -530,7 +501,6 @@ export const likeReply = async (commentId, replyId, progressId = null) => {
   }
 };
 
-// --- Reply to comment or another reply ---
 export const replyToComment = async (commentId, replyText, parentReplyId = null) => {
   try {
     const currentUser = auth().currentUser;
@@ -570,7 +540,6 @@ export const replyToComment = async (commentId, replyText, parentReplyId = null)
   }
 };
 
-// --- Delete comment ---
 export const deleteComment = async (commentId) => {
   try {
     const currentUser = auth().currentUser;
@@ -607,7 +576,6 @@ export const deleteComment = async (commentId) => {
   }
 };
 
-// --- Delete reply ---
 export const deleteReply = async (commentId, replyId) => {
   try {
     const currentUser = auth().currentUser;
@@ -637,7 +605,6 @@ export const deleteReply = async (commentId, replyId) => {
   }
 };
 
-// --- Record activity ---
 export const recordActivity = async (activityData) => {
   try {
     const currentUser = auth().currentUser;

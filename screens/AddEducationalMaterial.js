@@ -1,4 +1,3 @@
-// screens/AddEducationalMaterial.js
 import React, { useState } from 'react';
 import {
   View,
@@ -15,7 +14,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { uploadImageToCloudinary } from '../services/cloudinary';
 import { educationalContentRepository } from '../repositories/educationalContentRepository';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import HeaderRow from '../components/HeaderRow'; // ✅ using the reusable header
+import HeaderRow from '../components/HeaderRow'; 
 
 const AddEducationalMaterial = () => {
   const navigation = useNavigation();
@@ -118,7 +117,6 @@ const AddEducationalMaterial = () => {
 
   return (
     <View style={styles.container}>
-      {/* ✅ Replaced fixed header with reusable HeaderRow */}
       <View style={styles.fixedHeader}>
         <HeaderRow
           title={existingContent ? 'Edit Educational Material' : 'Add Educational Material'}
@@ -126,7 +124,6 @@ const AddEducationalMaterial = () => {
         />
       </View>
 
-      {/* Scrollable Content */}
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.label}>Title</Text>
         <TextInput
@@ -233,7 +230,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 16, // ✅ matches scroll padding
+    paddingHorizontal: 16, 
     paddingTop: 30,
     paddingBottom: 12,
     backgroundColor: '#131313',
@@ -241,7 +238,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     paddingBottom: 40,
-    paddingTop: 90, // space for header
+    paddingTop: 90,
     paddingHorizontal: 16,
   },
   label: { color: '#fff', marginTop: 12, marginBottom: 6, fontWeight: '600' },

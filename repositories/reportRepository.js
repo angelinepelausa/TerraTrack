@@ -2,7 +2,6 @@ import firestore from "@react-native-firebase/firestore";
 
 const reportsCollection = firestore().collection("reports"); 
 
-// NEW: user reports live under users/{userId}/reports/{itemId} 
 const userReportsCollection = (userId) => firestore().collection("users").doc(userId).collection("reports"); 
 
 const getYearQuarter = () => { 
@@ -15,7 +14,6 @@ const getYearQuarter = () => {
 export const reportRepository = {
   submitReport: async (itemId, itemType, userId, category, subType, parentCommentId = null) => {
     try {
-      // Prevent duplicate reports from same user
       const existing = await reportsCollection
         .where("itemId", "==", itemId)
         .where("userId", "==", userId)
@@ -24,7 +22,6 @@ export const reportRepository = {
         throw new Error("You have already reported this item.");
       }
 
-      // 1. Add to users/{userId}/reports/{itemId} to hide immediately
       await userReportsCollection(userId).doc(itemId).set({
         hidden: true,
         reported: true,
@@ -34,7 +31,6 @@ export const reportRepository = {
         userId,
       });
 
-      // 2. Add to global reports collection
       await reportsCollection.add({
         itemId,
         itemType,
@@ -45,7 +41,6 @@ export const reportRepository = {
         parentCommentId: parentCommentId || null,
       });
 
-      // 3. Increment report count on the item itself
       try {
         const itemRef = getItemRef(itemId, itemType, parentCommentId);
         const snapshot = await itemRef.get();
@@ -55,12 +50,10 @@ export const reportRepository = {
           console.log(`Updating reports: ${currentReports} -> ${newReports} for ${itemType} ${itemId}`);
           await itemRef.update({ totalReports: newReports });
 
-          // If >= 3 reports, hide globally + add to forReview
           if (newReports >= 3) {
             console.log(`Item reached 3 reports, adding to forReview: ${itemId}`);
             await itemRef.update({ hidden: true });
             
-            // NEW: Get the 3 reporters for this item
             const reportsSnapshot = await reportsCollection
               .where("itemId", "==", itemId)
               .orderBy("timestamp", "asc")
@@ -93,9 +86,8 @@ export const reportRepository = {
               createdAt: firestore.FieldValue.serverTimestamp(),
               originalData: snapshot.data(),
               quarter: getYearQuarter(),
-              status: "pending", // CHANGED: reviewed: false → status: "pending"
+              status: "pending", 
               actionTaken: null,
-              // NEW: Include the 3 reporters
               reporters: reporters
             });
             
@@ -107,7 +99,6 @@ export const reportRepository = {
       } catch (error) {
         console.error("Error updating report count:", error);
         console.error("Error details:", error.message, error.code);
-        // Don't throw here – the user report was already successful
       }
       return true;
     } catch (error) {
@@ -131,7 +122,6 @@ export const reportRepository = {
   }, 
 }; 
 
-// Fixed helper to get the correct item reference 
 const getItemRef = (itemId, itemType, parentCommentId = null) => { 
   const quarterDoc = getYearQuarter(); 
   if (itemType === "comment") { 

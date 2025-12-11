@@ -3,7 +3,6 @@ import firestore from '@react-native-firebase/firestore';
 const badgesCollection = firestore().collection('badges');
 
 export const badgesRepository = {
-  // Add a new badge
   addBadge: async (badgeData) => {
     try {
       const docRef = await badgesCollection.add(badgeData);
@@ -14,7 +13,6 @@ export const badgesRepository = {
     }
   },
 
-  // Update an existing badge by ID
   updateBadge: async (id, badgeData) => {
     try {
       await badgesCollection.doc(id).update(badgeData);
@@ -24,7 +22,6 @@ export const badgesRepository = {
     }
   },
 
-  // Get all badges
   getAllBadges: async () => {
     try {
       const snapshot = await badgesCollection.get();
@@ -35,7 +32,6 @@ export const badgesRepository = {
     }
   },
 
-  // Get badge by ID
   getBadgeById: async (badgeId) => {
     try {
       const badgeDoc = await badgesCollection.doc(badgeId).get();
@@ -51,7 +47,6 @@ export const badgesRepository = {
     }
   },
 
-  // Delete a badge by ID
   deleteBadge: async (id) => {
     try {
       await badgesCollection.doc(id).delete();
@@ -67,16 +62,13 @@ export const badgesRepository = {
       const badges = allBadges.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       return badges
         .filter(b => b.category.toLowerCase() === category.toLowerCase())
-        .sort((a, b) => a.targetNumber - b.targetNumber); // sort by targetNumber ascending
+        .sort((a, b) => a.targetNumber - b.targetNumber); 
     } catch (err) {
       console.error('Error fetching badges by category:', err);
       throw err;
     }
   },
 
-  // --- New functions for unlocked badges ---
-  
-  // Unlock a badge for a user
   unlockBadgeForUser: async (userId, badgeId) => {
     try {
       await firestore()
@@ -93,7 +85,7 @@ export const badgesRepository = {
     }
   },
 
-  // Get all unlocked badges for a user
+
   getUnlockedBadgesForUser: async (userId) => {
     try {
       const snapshot = await firestore()

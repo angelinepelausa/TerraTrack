@@ -13,7 +13,6 @@ const TaskCard = ({ task, onPress, onAdd }) => {
 
   return (
     <View style={styles.card}>
-      {/* ✅ Task image */}
       {task.imageUrl ? (
         <Image source={{ uri: task.imageUrl }} style={styles.taskImage} />
       ) : null}

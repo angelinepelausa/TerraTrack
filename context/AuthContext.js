@@ -1,4 +1,3 @@
-// AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';

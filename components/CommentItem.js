@@ -18,7 +18,6 @@ import { reportService } from "../services/reportService";
 import { reportRepository } from "../repositories/reportRepository";
 import ConfirmationPopup from "./ConfirmationPopup";
 
-// 🔥 Utility to compute year-quarter string
 const getYearQuarter = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -26,9 +25,6 @@ const getYearQuarter = () => {
   return `${year}-Q${quarter}`;
 };
 
-// ======================
-// ReplyItem Component
-// ======================
 const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId }) => {
   const replyUsername = reply.username || "Anonymous";
   const replyFirstLetter = replyUsername.charAt(0).toUpperCase();
@@ -98,7 +94,6 @@ const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId 
         commentId
       );
       
-      // Immediately hide the reply after reporting
       setIsHiddenForUser(true);
       
       Alert.alert("Report Submitted", "Thank you for reporting this reply. It has been hidden.");
@@ -133,7 +128,6 @@ const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId 
             onPress={handleDeleteReply}
             style={{ marginLeft: "auto" }}
           >
-            {/* ✅ Changed to trash icon and made smaller */}
             <Ionicons name="trash-outline" size={scale(14)} color="#FF6B6B" />
           </TouchableOpacity>
         ) : (
@@ -167,7 +161,6 @@ const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId 
         onSelectCategory={handleReportReply}
       />
 
-      {/* ✅ Confirmation Popup for Reply Delete */}
       <ConfirmationPopup
         visible={showDeleteConfirmation}
         title="Delete Reply"
@@ -183,9 +176,6 @@ const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId 
   );
 };
 
-// ======================
-// CommentItem Component
-// ======================
 const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
   const [showReplies, setShowReplies] = useState(false);
   const [replyText, setReplyText] = useState("");
@@ -280,7 +270,6 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
         subType
       );
       
-      // Immediately hide the comment after reporting
       setIsHiddenForUser(true);
       
       Alert.alert("Report Submitted", "Your report has been submitted successfully.");
@@ -315,7 +304,6 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
             onPress={handleDeleteComment}
             style={{ marginLeft: "auto" }}
           >
-            {/* ✅ Changed to trash icon and made smaller */}
             <Ionicons name="trash-outline" size={scale(16)} color="#FF6B6B" />
           </TouchableOpacity>
         ) : (
@@ -421,7 +409,6 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
         onSelectCategory={handleReportComment}
       />
 
-      {/* ✅ Confirmation Popup for Comment Delete */}
       <ConfirmationPopup
         visible={showDeleteConfirmation}
         title="Delete Comment"
@@ -437,9 +424,6 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
   );
 };
 
-// ======================
-// Styles
-// ======================
 const styles = {
   commentContainer: {
     backgroundColor: "#1E1E1E",

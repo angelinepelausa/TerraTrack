@@ -24,7 +24,6 @@ const AdminEducationalMaterials = () => {
     let unsubscribe = null;
 
     if (isFocused) {
-      // Set up real-time listener
       setLoading(true);
       unsubscribe = educationalContentRepository.subscribeToContent(
         (contentData) => {
@@ -34,7 +33,6 @@ const AdminEducationalMaterials = () => {
       );
     }
 
-    // Cleanup function
     return () => {
       if (unsubscribe) {
         unsubscribe();
@@ -54,7 +52,6 @@ const AdminEducationalMaterials = () => {
           onPress: async () => {
             try {
               await educationalContentRepository.deleteContent(id);
-              // No need to manually update state - real-time listener will handle it
             } catch (err) {
               console.error("Error deleting content:", err);
               Alert.alert("Error", "Failed to delete content. Please try again.");

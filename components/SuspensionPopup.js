@@ -80,7 +80,6 @@ const SuspensionPopup = ({ userId, userData, visible, onClose }) => {
     );
   }
 
-  // Banned Popup (status = banned)
   if (status === 'banned') {
     return (
       <Modal visible={visible} transparent animationType="fade">

@@ -75,14 +75,12 @@ export const purchasesRepository = {
         return { success: false, error: "User not authenticated" };
       }
       
-      // 1. Add to user's purchases collection
       const userPurchasesRef = firestore()
         .collection("users")
         .doc(userId)
         .collection("purchases")
         .doc("vouchers");
 
-      // 2. Create global voucher purchase record for partners
       const globalPurchaseRef = firestore()
         .collection("voucher_purchases")
         .doc();
@@ -109,10 +107,8 @@ export const purchasesRepository = {
         verifiedBy: null
       };
 
-      // Use batch write for both operations
       const batch = firestore().batch();
       
-      // Update user's local purchases
       batch.set(userPurchasesRef, {
         list: firestore.FieldValue.arrayUnion({
           ...voucherData,
@@ -122,7 +118,6 @@ export const purchasesRepository = {
         })
       }, { merge: true });
       
-      // Create global record
       batch.set(globalPurchaseRef, globalPurchaseData);
       
       await batch.commit();
@@ -134,7 +129,6 @@ export const purchasesRepository = {
     }
   },
 
-  // Get vouchers for partners to see
   getPartnerVouchers: async (partnerId) => {
     try {
       const snapshot = await firestore()
@@ -155,7 +149,6 @@ export const purchasesRepository = {
     }
   },
 
-  // Partner verifies a voucher
   verifyVoucher: async (purchaseId, partnerId, verifiedBy) => {
     try {
       const voucherRef = firestore()
@@ -176,7 +169,6 @@ export const purchasesRepository = {
     }
   },
 
-  // Get single voucher purchase by ID
   getVoucherPurchase: async (purchaseId) => {
     try {
       const doc = await firestore()

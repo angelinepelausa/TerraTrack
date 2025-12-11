@@ -14,7 +14,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
 const rankOptions = ["top1", "top2", "top3", "top4to10", "top11plus"];
 
-// Helper function to get current quarter
 const getCurrentQuarter = () => {
   const now = new Date();
   const month = now.getMonth();
@@ -26,7 +25,6 @@ const getCurrentQuarter = () => {
   else return { year, quarter: 'Q4' };
 };
 
-// Generate years array (current year to +20 years)
 const generateYears = () => {
   const currentYear = new Date().getFullYear();
   const years = [];
@@ -58,12 +56,10 @@ const AddCommunityProgress = ({ navigation, route }) => {
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0, width: 0 });
   const years = generateYears();
 
-  // Check existing quarters and set initial year
   useEffect(() => {
     checkExistingQuartersAndSetYear();
   }, []);
 
-  // Check if we're editing an existing quarter
   useEffect(() => {
     if (route.params?.quarterData) {
       const quarterData = route.params.quarterData;
@@ -88,7 +84,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
     }
   }, [route.params?.quarterData]);
 
-  // Check existing quarters when year changes
   useEffect(() => {
     if (!isEditing) {
       checkExistingQuarters();
@@ -100,7 +95,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
       const current = getCurrentQuarter();
       let foundAvailableYear = false;
       
-      // Check current year first
       const currentYearQuarters = {};
       for (const q of quarters) {
         const yearQuarter = `${current.year}-${q}`;
@@ -112,11 +106,9 @@ const AddCommunityProgress = ({ navigation, route }) => {
         }
       }
       
-      // If all quarters exist in current year, check next year
       const allQuartersExist = quarters.every(q => currentYearQuarters[q]);
       
       if (allQuartersExist) {
-        // Check next year
         const nextYear = current.year + 1;
         const nextYearQuarters = {};
         
@@ -130,21 +122,17 @@ const AddCommunityProgress = ({ navigation, route }) => {
           }
         }
         
-        // Set to next year and its existing quarters
         setYear(nextYear.toString());
         setExistingQuarters(nextYearQuarters);
         
-        // Find first available quarter in next year
         const availableQuarter = quarters.find(q => !nextYearQuarters[q]);
         if (availableQuarter) {
           setQuarter(availableQuarter);
         }
       } else {
-        // Use current year and its existing quarters
         setYear(current.year.toString());
         setExistingQuarters(currentYearQuarters);
-        
-        // Find first available quarter in current year
+
         const availableQuarter = quarters.find(q => !currentYearQuarters[q]);
         if (availableQuarter) {
           setQuarter(availableQuarter);
@@ -152,7 +140,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error checking existing quarters:', error);
-      // Fallback to current year and quarter
       const current = getCurrentQuarter();
       setYear(current.year.toString());
       setQuarter(current.quarter);
@@ -184,23 +171,18 @@ const AddCommunityProgress = ({ navigation, route }) => {
     const currentYear = current.year;
     const currentQuarter = current.quarter;
     
-    // Convert quarter to number for comparison
     const quarterNum = { 'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4 };
     const selectedQuarterNum = quarterNum[q];
     const currentQuarterNum = quarterNum[currentQuarter];
     
-    // Disable if:
-    // 1. Year is in the past compared to current year, OR
-    // 2. Same year but quarter is in the past compared to current quarter
     if (parseInt(year) < currentYear) {
-      return true; // Past year
+      return true; 
     }
     
     if (parseInt(year) === currentYear && selectedQuarterNum < currentQuarterNum) {
-      return true; // Past quarter in current year
+      return true; 
     }
-    
-    // 3. Quarter already exists in database
+
     if (existingQuarters[q]) {
       return true;
     }
@@ -333,7 +315,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      {/* Fixed Header using HeaderRow component */}
       <View style={styles.headerContainer}>
         <HeaderRow
           title={isEditing ? 'Edit Community Progress' : 'Add Community Progress'}
@@ -341,7 +322,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
         />
       </View>
 
-      {/* Scrollable Content */}
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -460,7 +440,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Year Dropdown Modal */}
       <Modal
         visible={showYearDropdown}
         transparent={true}
@@ -528,7 +507,7 @@ const styles = StyleSheet.create({
   
   scrollContent: { 
     padding: 20, 
-    paddingTop: 90,  // Adjusted for header height
+    paddingTop: 90,  
     paddingBottom: 40 
   },
 
@@ -573,7 +552,6 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 
-  // Year Dropdown Styles
   dropdownButton: {
     backgroundColor: '#2A2A2A',
     paddingVertical: 12,
@@ -590,7 +568,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -632,7 +609,6 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  // Quarter Styles
   quarterButton: { 
     paddingVertical: 8, 
     paddingHorizontal: 14, 

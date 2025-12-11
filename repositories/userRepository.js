@@ -1,7 +1,6 @@
 import firestore from '@react-native-firebase/firestore';
 import { avatarsRepository } from './avatarsRepository';
 
-// --- Helper: fetch username and avatar for a user ---
 export const populateUserData = async (userId) => {
   let username = "Unknown User";
   let avatar = null;
@@ -26,7 +25,6 @@ export const populateUserData = async (userId) => {
   return { username, avatar };
 };
 
-// Generate a 6-character referral code
 const generateReferralCode = () => {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let referralCode = '';
@@ -39,10 +37,8 @@ const generateReferralCode = () => {
   return referralCode;
 };
 
-// Create a new user document
 export const createUserDocument = async (userData) => {
   try {
-    // Validate required fields
     if (!userData.userId || !userData.email || !userData.username) {
       console.error('Missing required fields in createUserDocument:', userData);
       return { success: false, error: 'Missing required user data' };
@@ -63,9 +59,7 @@ export const createUserDocument = async (userData) => {
         createdAt: firestore.FieldValue.serverTimestamp(),
         status: "Active",
         avatar: defaultAvatarId,
-        referredBy: null, // Will be set if user entered a referral code
-        // REMOVED: hasSeenReferralRewards and referralRewardsClaimed
-        // They will be created when needed, like walkthrough and badge
+        referredBy: null, 
       });
 
     return { success: true, referralCode };
@@ -75,7 +69,6 @@ export const createUserDocument = async (userData) => {
   }
 };
 
-// Add TerraCoins and TerraPoints to a user
 export const addUserRewards = async (userId, coinsEarned, pointsEarned) => {
   try {
     await firestore()
@@ -93,7 +86,6 @@ export const addUserRewards = async (userId, coinsEarned, pointsEarned) => {
   }
 };
 
-// Deduct TerraCoins from a user (for purchases)
 export const deductTerraCoins = async (userId, amount) => {
   try {
     const userRef = firestore().collection("users").doc(userId);
@@ -129,7 +121,6 @@ export const getUserTerraCoins = async (userId) => {
     const terraCoins = userData.terraCoins ?? 0;
     const terraPoints = userData.terraPoints ?? 0;
 
-    // Populate username and avatar safely
     const { username, avatar } = await populateUserData(userId);
 
     return { 
@@ -145,7 +136,6 @@ export const getUserTerraCoins = async (userId) => {
   }
 };
 
-// Get user's referral code
 export const getUserReferralCode = async (userId) => {
   try {
     const userDoc = await firestore()
@@ -171,7 +161,6 @@ export const getUserReferralCode = async (userId) => {
   }
 };
 
-// Get users by filter (status, date range)
 export const getUsersByFilter = async (filter = {}) => {
   try {
     let query = firestore().collection("users");
@@ -188,7 +177,6 @@ export const getUsersByFilter = async (filter = {}) => {
 
     const snapshot = await query.get();
 
-    // Populate username and avatar for each user
     return Promise.all(snapshot.docs.map(async (doc) => {
       const data = doc.data();
       const { username, avatar } = await populateUserData(doc.id);
@@ -200,9 +188,6 @@ export const getUsersByFilter = async (filter = {}) => {
   }
 };
 
-// --- NEW FUNCTIONS FOR REFERRAL REWARDS ---
-
-// Check if user should see referral rewards popup
 export const shouldShowReferralRewards = async (userId) => {
   try {
     const userDoc = await firestore().collection('users').doc(userId).get();
@@ -213,10 +198,6 @@ export const shouldShowReferralRewards = async (userId) => {
     
     const userData = userDoc.data();
     
-    // Conditions to show popup:
-    // 1. User has referredBy field (was invited)
-    // 2. Has not seen the popup yet (field doesn't exist or is false)
-    // 3. Has not claimed rewards yet (field doesn't exist or is false)
     const hasSeen = userData.hasSeenReferralRewards || false;
     const alreadyClaimed = userData.referralRewardsClaimed || false;
     
@@ -233,47 +214,38 @@ export const shouldShowReferralRewards = async (userId) => {
   }
 };
 
-// Add referral rewards to user account
 export const addReferralRewards = async (userId) => {
   try {
     const userRef = firestore().collection('users').doc(userId);
     
-    // First check if rewards were already claimed
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
       return { success: false, error: 'User not found' };
     }
     
     const userData = userDoc.data();
-    
-    // Check if already claimed
+
     const alreadyClaimed = userData.referralRewardsClaimed || false;
     if (alreadyClaimed) {
       return { success: false, error: 'Referral rewards already claimed' };
     }
-    
-    // Check if user was referred (has referredBy field)
+
     if (!userData.referredBy) {
       return { success: false, error: 'User was not referred' };
     }
-    
-    // Update in a transaction to ensure atomicity
+
     await firestore().runTransaction(async (transaction) => {
-      // Get latest user data
       const freshDoc = await transaction.get(userRef);
       const freshData = freshDoc.data();
-      
-      // Double-check not already claimed
+
       const freshClaimed = freshData.referralRewardsClaimed || false;
       if (freshClaimed) {
         throw new Error('Rewards already claimed');
       }
       
-      // Add rewards (15 Terra Coins + 50 Terra Points)
       const newCoins = (freshData.terraCoins || 0) + 15;
       const newPoints = (freshData.terraPoints || 0) + 50;
       
-      // Update user document - create fields if they don't exist
       transaction.update(userRef, {
         terraCoins: newCoins,
         terraPoints: newPoints,
@@ -289,7 +261,6 @@ export const addReferralRewards = async (userId) => {
   }
 };
 
-// Mark referral rewards as seen (without claiming)
 export const markReferralRewardsAsSeen = async (userId) => {
   try {
     await firestore()

@@ -9,7 +9,6 @@ export const useLeaderboardStats = (userId) => {
   const [bestRankStreak, setBestRankStreak] = useState(0);
 
   useEffect(() => {
-    // Reset all states when userId changes
     setHistoryLoading(true);
     setHistoryTotalResults(0);
     setBestRank(null);
@@ -81,7 +80,6 @@ export const useLeaderboardStats = (userId) => {
       }
     } catch (err) {
       console.error('Error fetching leaderboard stats:', err);
-      // Check if error is permission denied
       if (err.code === 'permission-denied' || err.message.includes('permission-denied')) {
         console.log('Permission denied for leaderboard access');
       }
@@ -149,7 +147,6 @@ export const useLeaderboardStats = (userId) => {
         }
       } catch (err) {
         console.error('Error processing document', doc.id, ':', err);
-        // Skip this document if there's a permission error
         if (err.code === 'permission-denied' || err.message.includes('permission-denied')) {
           console.log('Permission denied for document:', doc.id, 'skipping...');
           continue;

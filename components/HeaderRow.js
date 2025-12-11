@@ -1,4 +1,3 @@
-// components/HeaderRow.js
 import React from "react";
 import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
 
