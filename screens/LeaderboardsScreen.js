@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { ActivityIndicator, View, RefreshControl } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import Leaderboard from '../components/Leaderboard';
@@ -13,49 +13,59 @@ const LeaderboardsScreen = () => {
   const [leaderboard, setLeaderboard] = useState([]);
   const [currentUserRank, setCurrentUserRank] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showRewardPopup, setShowRewardPopup] = useState(false);
   const [rewardData, setRewardData] = useState(null);
 
-  useEffect(() => {
-    const loadLeaderboard = async () => {
-      if (!user?.uid) return;
+  const loadData = useCallback(async (isManualRefresh = false) => {
+    if (!user?.uid) return;
 
+    if (!isManualRefresh) {
       setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
 
-      try {
-        // Fetch leaderboard + user rank in parallel
-        const [topUsers, userRank] = await Promise.all([
-          getLeaderboard(10),
-          getUserRank(user.uid),
-        ]);
-        setLeaderboard(topUsers);
-        setCurrentUserRank(userRank);
+    try {
+      // Fetch leaderboard + user rank in parallel
+      const [topUsers, userRank] = await Promise.all([
+        getLeaderboard(10),
+        getUserRank(user.uid),
+      ]);
+      setLeaderboard(topUsers);
+      setCurrentUserRank(userRank);
 
-        // Only check rewards if user has a rank
-        if (userRank) {
-          const reward = await getUserLastReward(user.uid);
+      // Only check rewards if user has a rank
+      if (userRank) {
+        const reward = await getUserLastReward(user.uid);
 
-          if (reward && (reward.terraCoins > 0 || reward.terraPoints > 0)) {
-            const rewardKey = `rewardShown_${user.uid}_${reward.cycleDate}`;
-            const alreadyShown = await AsyncStorage.getItem(rewardKey);
+        if (reward && (reward.terraCoins > 0 || reward.terraPoints > 0)) {
+          const rewardKey = `rewardShown_${user.uid}_${reward.cycleDate}`;
+          const alreadyShown = await AsyncStorage.getItem(rewardKey);
 
-            // Show popup only if not shown before for this user & cycle
-            if (!alreadyShown) {
-              setRewardData(reward);
-              setShowRewardPopup(true);
-              await AsyncStorage.setItem(rewardKey, 'true');
-            }
+          // Show popup only if not shown before for this user & cycle
+          if (!alreadyShown) {
+            setRewardData(reward);
+            setShowRewardPopup(true);
+            await AsyncStorage.setItem(rewardKey, 'true');
           }
         }
-      } catch (error) {
-        console.error('Error loading leaderboard/reward:', error);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    loadLeaderboard();
+    } catch (error) {
+      console.error('Error loading leaderboard/reward:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [user?.uid]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const onRefresh = useCallback(() => {
+    loadData(true);
+  }, [loadData]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -69,6 +79,9 @@ const LeaderboardsScreen = () => {
           currentUserRank={currentUserRank}
           currentUserId={user?.uid}
           loading={loading}
+          // Pass refresh props to Leaderboard component
+          onRefresh={onRefresh}
+          refreshing={refreshing}
         />
       )}
 
