@@ -8,7 +8,8 @@ import {
   Dimensions, 
   ActivityIndicator, 
   Alert,
-  Modal
+  Modal,
+  BackHandler
 } from 'react-native';
 import { getCommunityProgress } from '../repositories/communityProgressRepository';
 import { getUserTerraCoins, addReferralRewards, shouldShowReferralRewards } from '../repositories/userRepository';
@@ -150,7 +151,7 @@ const HomeScreen = ({ navigation, route }) => {
   const [weeklyQuizAttempted, setWeeklyQuizAttempted] = useState(false);
   const { user } = useAuth();
   
-  // NEW STATE FOR USERNAME
+  // STATE FOR USERNAME
   const [username, setUsername] = useState('User');
 
   // Walkthrough states
@@ -158,16 +159,16 @@ const HomeScreen = ({ navigation, route }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [hasCheckedWalkthrough, setHasCheckedWalkthrough] = useState(false);
 
-  // new states for monthly footprint popup
+  // states for monthly footprint popup
   const [showPopup, setShowPopup] = useState(false);
   const [lastMonthResult, setLastMonthResult] = useState(null);
 
-  // NEW STATES FOR SUSPENSION POPUP
+  // STATES FOR SUSPENSION POPUP
   const [showSuspensionPopup, setShowSuspensionPopup] = useState(false);
   const [userStatus, setUserStatus] = useState(null);
   const [userData, setUserData] = useState(null);
 
-  // NEW STATE FOR WEEKLY QUIZ CONFIRMATION
+  // STATE FOR WEEKLY QUIZ CONFIRMATION
   const [showQuizConfirmation, setShowQuizConfirmation] = useState(false);
 
   // BADGE POPUP STATES
@@ -180,6 +181,28 @@ const HomeScreen = ({ navigation, route }) => {
   const [isClaimingReferralRewards, setIsClaimingReferralRewards] = useState(false);
   const [hasCheckedReferralRewards, setHasCheckedReferralRewards] = useState(false);
   const [showClaimSuccessPopup, setShowClaimSuccessPopup] = useState(false); // NEW STATE
+
+  // STATE FOR EXIT POPUP
+  const [showExitConfirmation, setShowExitConfirmation] = useState(false);
+
+  // Add this useEffect with your other useEffects
+useEffect(() => {
+  const backAction = () => {
+    // Only handle back button on HomeScreen
+    if (navigation.isFocused()) {
+      setShowExitConfirmation(true);
+      return true; // Prevent default back behavior
+    }
+    return false; // Allow default back behavior for other screens
+  };
+
+  const backHandler = BackHandler.addEventListener(
+    'hardwareBackPress',
+    backAction
+  );
+
+  return () => backHandler.remove();
+}, [navigation]);
 
   // NEW EFFECT: Fetch username from user data
   useEffect(() => {
@@ -810,6 +833,23 @@ const HomeScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
+
+      {/* EXIT CONFIRMATION POPUP */}
+      <ConfirmationPopup
+        visible={showExitConfirmation}
+        title="Exit TerraTrack?"
+        message="Are you sure you want to exit the app?"
+        confirmText="Exit"
+        cancelText="Cancel"
+        showCancel={true}
+        type="success" // Using success type (green) since your popup only has success/error
+        onConfirm={() => {
+          setShowExitConfirmation(false);
+          BackHandler.exitApp();
+        }}
+        onCancel={() => setShowExitConfirmation(false)}
+      />
+
       {/* REFERRAL REWARDS POPUP - Shows ONLY after badge popup is closed */}
       <ReferralRewardPopup
         visible={showReferralRewards}

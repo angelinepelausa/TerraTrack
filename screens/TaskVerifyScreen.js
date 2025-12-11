@@ -30,63 +30,71 @@ const TaskVerifyScreen = ({ navigation }) => {
     }
   };
 
-  // Function to get TODAY'S date in the correct format
-  const getTodaysDate = () => {
-    // Use Philippine time (UTC+8) if needed, or use local time
-    const now = new Date();
-    // For Philippine time: const phTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
-    // return phTime.toISOString().split('T')[0];
-    return now.toISOString().split('T')[0];
-  };
-
-  // NEW: Get ALL submitted tasks from user's verifications collection (not just latest distribution)
-  const getMySubmittedTasks = async (userId) => {
+  // Function to get the latest distribution run ID
+  const getLatestDistributionRun = async () => {
     try {
-      const userRef = firestore().collection('users').doc(userId);
-      const verificationsSnap = await userRef.collection('verifications').get();
-      
-      const submittedTasks = [];
-      
-      if (!verificationsSnap.empty) {
-        for (const doc of verificationsSnap.docs) {
-          const date = doc.id; // Date is the document ID
-          const data = doc.data();
-          
-          if (data && typeof data === 'object') {
-            Object.keys(data).forEach(taskId => {
-              const taskData = data[taskId];
-              if (taskData && taskData.status === 'pending') {
-                submittedTasks.push({
-                  id: taskId,
-                  ...taskData,
-                  submittedDate: date,
-                  taskId: taskId
-                });
-              }
-            });
-          }
-        }
+      const distributionSnap = await firestore()
+        .collection('distribution')
+        .orderBy('completedAt', 'desc')
+        .limit(1)
+        .get();
+
+      if (distributionSnap.empty) {
+        console.log("No distribution runs found");
+        return null;
       }
-      
-      console.log(`Found ${submittedTasks.length} submitted tasks for user ${userId}`);
-      return submittedTasks;
+
+      const latestDistribution = distributionSnap.docs[0].data();
+      console.log("Latest distribution:", latestDistribution.runId, "date:", latestDistribution.date);
+      return {
+        runId: latestDistribution.runId,
+        date: latestDistribution.date
+      };
     } catch (error) {
-      console.error("Error fetching submitted tasks:", error);
-      return [];
+      console.error("Error fetching latest distribution:", error);
+      return null;
     }
   };
 
-  // NEW: Get ALL assigned verification tasks (not just latest distribution)
-  const getMyAssignedTasks = async (userId) => {
+  // Function to get assigned verification tasks from latest distribution date, date-1, and date+1
+  const getLatestAssignedVerificationTasks = async (userId) => {
     try {
+      const latestDistribution = await getLatestDistributionRun();
+      if (!latestDistribution) {
+        return [];
+      }
+
+      // Calculate the date range: previous day, current day, and next day
+      const latestDate = new Date(latestDistribution.date);
+      
+      const previousDate = new Date(latestDate);
+      previousDate.setDate(previousDate.getDate() - 1);
+      const previousDateStr = previousDate.toISOString().split('T')[0];
+      
+      const nextDate = new Date(latestDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = nextDate.toISOString().split('T')[0];
+
       const userRef = firestore().collection('users').doc(userId);
       const assignedVerificationsSnap = await userRef.collection('assigned_verifications').get();
       
-      const assignedTasks = [];
+      if (assignedVerificationsSnap.empty) {
+        return [];
+      }
+
+      const latestTasks = [];
       
-      if (!assignedVerificationsSnap.empty) {
-        for (const doc of assignedVerificationsSnap.docs) {
-          const docId = doc.id; // Format: date_runId
+      // Dates to check: previous day, current distribution day, next day
+      const datesToCheck = [previousDateStr, latestDistribution.date, nextDateStr];
+      console.log("Looking for assigned tasks from dates:", datesToCheck);
+
+      // Process documents that match any of the date patterns (date_runId)
+      for (const doc of assignedVerificationsSnap.docs) {
+        // Check if document starts with any of our target dates
+        const docId = doc.id;
+        const docDate = docId.split('_')[0]; // Extract date part from "date_runId"
+        
+        if (datesToCheck.includes(docDate)) {
           const data = doc.data();
           
           if (data && typeof data === 'object') {
@@ -96,7 +104,7 @@ const TaskVerifyScreen = ({ navigation }) => {
                 // Extract ownerId and taskId from composite key (format: ownerId_taskId)
                 const [ownerId, taskId] = compositeKey.split('_');
                 
-                assignedTasks.push({
+                latestTasks.push({
                   id: compositeKey,
                   ...taskData,
                   docId: docId,
@@ -108,46 +116,124 @@ const TaskVerifyScreen = ({ navigation }) => {
           }
         }
       }
-      
-      console.log(`Found ${assignedTasks.length} assigned tasks for user ${userId}`);
-      return assignedTasks;
+
+      console.log(`Found ${latestTasks.length} assigned tasks from latest distribution window`);
+      return latestTasks;
     } catch (error) {
-      console.error("Error fetching assigned tasks:", error);
+      console.error("Error fetching assigned verification tasks:", error);
       return [];
     }
   };
 
-  // NEW: Alternative method - check global tasks_verification collection
-  const getGlobalSubmittedTasks = async (userId) => {
+  // Function to get submitted tasks from latest distribution date, date-1, and date+1
+  const getLatestSubmittedTasks = async (userId) => {
     try {
-      const today = getTodaysDate();
-      const globalRef = firestore()
-        .collection('tasks_verification')
-        .doc(today)
-        .collection('submitted');
+      const latestDistribution = await getLatestDistributionRun();
+      if (!latestDistribution) {
+        return [];
+      }
+
+      // Calculate the date range: previous day, current day, and next day
+      const latestDate = new Date(latestDistribution.date);
       
-      // Query for tasks submitted by this user with pending status
-      const querySnap = await globalRef
-        .where('userId', '==', userId)
-        .where('status', '==', 'pending')
-        .get();
+      const previousDate = new Date(latestDate);
+      previousDate.setDate(previousDate.getDate() - 1);
+      const previousDateStr = previousDate.toISOString().split('T')[0];
       
-      const submittedTasks = [];
+      const nextDate = new Date(latestDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = nextDate.toISOString().split('T')[0];
+
+      const userRef = firestore().collection('users').doc(userId);
+      const latestTasks = [];
+
+      // Fetch from three dates: previous day, current day, and next day
+      const datesToCheck = [previousDateStr, latestDistribution.date, nextDateStr];
       
-      if (!querySnap.empty) {
-        querySnap.forEach(doc => {
-          const taskData = doc.data();
-          if (taskData) {
-            submittedTasks.push({
-              id: doc.id,
-              ...taskData,
-              submittedDate: today
+      for (const date of datesToCheck) {
+        const verificationsRef = userRef.collection('verifications').doc(date);
+        const verificationSnap = await verificationsRef.get();
+        
+        if (verificationSnap.exists) {
+          const data = verificationSnap.data();
+          
+          if (data && typeof data === 'object') {
+            Object.keys(data).forEach(taskId => {
+              const taskData = data[taskId];
+              if (taskData && taskData.status === 'pending') {
+                latestTasks.push({
+                  id: taskId,
+                  ...taskData,
+                  submittedDate: date,
+                  taskId: taskId
+                });
+              }
             });
           }
-        });
+        }
       }
+
+      console.log(`Found ${latestTasks.length} submitted tasks from dates: ${datesToCheck.join(', ')}`);
+      return latestTasks;
+    } catch (error) {
+      console.error("Error fetching submitted tasks:", error);
+      return [];
+    }
+  };
+
+  // NEW: Alternative method - check global tasks_verification collection for latest dates
+  const getGlobalSubmittedTasks = async (userId) => {
+    try {
+      const latestDistribution = await getLatestDistributionRun();
+      if (!latestDistribution) {
+        return [];
+      }
+
+      // Calculate the date range: previous day, current day, and next day
+      const latestDate = new Date(latestDistribution.date);
       
-      console.log(`Found ${submittedTasks.length} global submitted tasks for user ${userId} on ${today}`);
+      const previousDate = new Date(latestDate);
+      previousDate.setDate(previousDate.getDate() - 1);
+      const previousDateStr = previousDate.toISOString().split('T')[0];
+      
+      const nextDate = new Date(latestDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = nextDate.toISOString().split('T')[0];
+
+      const datesToCheck = [previousDateStr, latestDistribution.date, nextDateStr];
+      const submittedTasks = [];
+
+      for (const date of datesToCheck) {
+        try {
+          const globalRef = firestore()
+            .collection('tasks_verification')
+            .doc(date)
+            .collection('submitted');
+          
+          // Query for tasks submitted by this user with pending status
+          const querySnap = await globalRef
+            .where('userId', '==', userId)
+            .where('status', '==', 'pending')
+            .get();
+          
+          if (!querySnap.empty) {
+            querySnap.forEach(doc => {
+              const taskData = doc.data();
+              if (taskData) {
+                submittedTasks.push({
+                  id: doc.id,
+                  ...taskData,
+                  submittedDate: date
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.log(`No data for date ${date} or collection doesn't exist`);
+        }
+      }
+
+      console.log(`Found ${submittedTasks.length} global submitted tasks for user ${userId} from dates: ${datesToCheck.join(', ')}`);
       return submittedTasks;
     } catch (error) {
       console.error("Error fetching global submitted tasks:", error);
@@ -158,15 +244,15 @@ const TaskVerifyScreen = ({ navigation }) => {
   const loadTasks = async () => {
     setLoading(true);
     try {
-      // Try multiple approaches to get tasks
-      const [userSubmittedTasks, userAssignedTasks, globalSubmittedTasks] = await Promise.all([
-        getMySubmittedTasks(user.uid),
-        getMyAssignedTasks(user.uid),
+      // Get tasks only from latest distribution window
+      const [submittedTasks, assignedTasks, globalSubmittedTasks] = await Promise.all([
+        getLatestSubmittedTasks(user.uid),
+        getLatestAssignedVerificationTasks(user.uid),
         getGlobalSubmittedTasks(user.uid)
       ]);
       
-      // Combine results from different sources
-      const allSubmittedTasks = [...userSubmittedTasks, ...globalSubmittedTasks];
+      // Combine submitted tasks from different sources
+      const allSubmittedTasks = [...submittedTasks, ...globalSubmittedTasks];
       
       // Remove duplicates by id
       const uniqueSubmittedTasks = Array.from(
@@ -174,33 +260,9 @@ const TaskVerifyScreen = ({ navigation }) => {
       );
       
       setMySubmittedTasks(uniqueSubmittedTasks);
-      setAssignedTasks(userAssignedTasks);
+      setAssignedTasks(assignedTasks);
       
-      console.log(`Final counts - Submitted: ${uniqueSubmittedTasks.length}, Assigned: ${userAssignedTasks.length}`);
-      
-      // DEBUG: Log what we found
-      if (uniqueSubmittedTasks.length === 0 && userAssignedTasks.length === 0) {
-        console.log("DEBUG: No tasks found. Checking collections...");
-        
-        // Debug: List available collections
-        const userRef = firestore().collection('users').doc(user.uid);
-        
-        const [verificationsSnap, assignedSnap] = await Promise.all([
-          userRef.collection('verifications').get(),
-          userRef.collection('assigned_verifications').get()
-        ]);
-        
-        console.log(`User has ${verificationsSnap.size} verification documents`);
-        console.log(`User has ${assignedSnap.size} assigned_verification documents`);
-        
-        verificationsSnap.forEach(doc => {
-          console.log(`Verification doc ${doc.id}:`, Object.keys(doc.data() || {}).length, "tasks");
-        });
-        
-        assignedSnap.forEach(doc => {
-          console.log(`Assigned doc ${doc.id}:`, Object.keys(doc.data() || {}).length, "tasks");
-        });
-      }
+      console.log(`Final counts from latest distribution window - Submitted: ${uniqueSubmittedTasks.length}, Assigned: ${assignedTasks.length}`);
       
     } catch (error) {
       console.error("Error loading tasks:", error);
@@ -292,7 +354,7 @@ const TaskVerifyScreen = ({ navigation }) => {
             assignedTasks.map((task) => (
               <View style={styles.vertaskCard} key={`${task.docId}_${task.id}`}>
                 <Image 
-                  source={{ uri: task.photoUrl || task.photoUrl }} 
+                  source={{ uri: task.photoUrl }} 
                   style={styles.vertaskimg} 
                   defaultSource={require('../assets/images/bus.png')}
                 />
@@ -306,7 +368,7 @@ const TaskVerifyScreen = ({ navigation }) => {
                   onPress={() => navigation.navigate('VerifyTaskScreen', { 
                     task: { 
                       ...task, 
-                      submittedDate: task.submittedDate || getTodaysDate()
+                      submittedDate: task.submittedDate
                     }, 
                     onVerificationComplete: loadTasks 
                   })}
