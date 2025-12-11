@@ -26,26 +26,18 @@ const BadgePopup = ({ visible, badge, onClose }) => {
         <View style={styles.overlay} />
         <View style={styles.popupContainer}>
           <View style={styles.badgeContainer}>
-            {/* You Earned a Badge Text */}
             <Text style={styles.earnedText}>You Earned a Badge!</Text>
-            
-            {/* Badge Image */}
             <Image 
               source={{ uri: badge.imageurl }} 
               style={styles.badgeImage}
             />
-            
-            {/* Badge Name */}
             <Text style={styles.badgeName}>{badge.name}</Text>
-            
-            {/* Congratulation Message */}
             <Text style={styles.congratsText}>Start of Journey!</Text>
             <Text style={styles.badgeMessage}>
               Welcome to TerraTrack! You've taken your first step towards making a positive environmental impact.
             </Text>
           </View>
           
-          {/* Close Button */}
           <TouchableOpacity 
             style={styles.closeButton}
             onPress={onClose}
