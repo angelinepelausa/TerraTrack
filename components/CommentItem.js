@@ -170,7 +170,7 @@ const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId 
       {/* ✅ Confirmation Popup for Reply Delete */}
       <ConfirmationPopup
         visible={showDeleteConfirmation}
-        title="Delete Comment"
+        title="Delete Reply"
         message="Are you sure you want to delete this comment? This action cannot be undone."
         onConfirm={confirmDeleteReply}
         onCancel={() => setShowDeleteConfirmation(false)}
@@ -424,7 +424,7 @@ const CommentItem = ({ comment, onReply, onDeleteComment, onDeleteReply }) => {
       {/* ✅ Confirmation Popup for Comment Delete */}
       <ConfirmationPopup
         visible={showDeleteConfirmation}
-        title="Delete Post"
+        title="Delete Comment"
         message="Are you sure you want to delete this post? This action cannot be undone."
         onConfirm={confirmDeleteComment}
         onCancel={() => setShowDeleteConfirmation(false)}

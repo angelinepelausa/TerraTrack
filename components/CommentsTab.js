@@ -13,7 +13,6 @@ import {
 } from "react-native";
 import { scale } from "../utils/scaling";
 import CommentItem from "./CommentItem";
-import ConfirmationPopup from "./ConfirmationPopup";
 
 // ✅ Extracted input into its own component
 const CommentInput = ({
@@ -65,13 +64,7 @@ const CommentsTab = ({
 }) => {
   const [commentText, setCommentText] = useState("");
   const [postingComment, setPostingComment] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [refreshing, setRefreshing] = useState(false); // ✅ Add refreshing state
-  const [confirmationConfig, setConfirmationConfig] = useState({
-    title: "",
-    message: "",
-    onConfirm: () => {},
-  });
 
   // ✅ Handle pull-to-refresh
   const handleRefresh = async () => {
@@ -98,22 +91,6 @@ const CommentsTab = ({
     } finally {
       setPostingComment(false);
     }
-  };
-
-  const showDeleteConfirmation = (commentId, isReply = false, replyId = null) => {
-    setConfirmationConfig({
-      title: "Delete Comment",
-      message: "Are you sure you want to delete this comment? This action cannot be undone.",
-      onConfirm: () => {
-        if (isReply && replyId) {
-          onDeleteReply(commentId, replyId);
-        } else {
-          onDeleteComment(commentId);
-        }
-        setShowConfirmation(false);
-      },
-    });
-    setShowConfirmation(true);
   };
 
   return (
@@ -146,8 +123,8 @@ const CommentsTab = ({
             onLike={onLikeComment}
             onReply={onReplyToComment}
             onLikeReply={onLikeReply}
-            onDeleteComment={(commentId) => showDeleteConfirmation(commentId)}
-            onDeleteReply={(commentId, replyId) => showDeleteConfirmation(commentId, true, replyId)}
+            onDeleteComment={onDeleteComment}
+            onDeleteReply={onDeleteReply}
             currentUserId={currentUserId}
           />
         )}
@@ -171,19 +148,6 @@ const CommentsTab = ({
             </View>
           ) : null
         }
-      />
-
-      {/* ✅ Use ConfirmationPopup component */}
-      <ConfirmationPopup
-        visible={showConfirmation}
-        title={confirmationConfig.title}
-        message={confirmationConfig.message}
-        onConfirm={confirmationConfig.onConfirm}
-        onCancel={() => setShowConfirmation(false)}
-        confirmText="Delete"
-        cancelText="Cancel"
-        showCancel={true}
-        type="warning"
       />
     </View>
   );

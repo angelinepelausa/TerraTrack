@@ -532,23 +532,24 @@ useEffect(() => {
       }
     }
 
-    // Show loading indicator when verification starts
+    // Don't show loading modal yet - only show after photos are taken
+    const photoUris = {};
+
+    // Take photos only for tasks that require verification
+    for (const task of requiresPhotoTasks) {
+      const uri = await new Promise((resolve) => {
+        launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
+          if (response.didCancel || response.errorCode) resolve(null);
+          else resolve(response.assets?.[0]?.uri || null);
+        });
+      });
+      if (uri) photoUris[task.id] = uri;
+    }
+
+    // NOW show loading modal since user has finished taking photos
     setIsVerifying(true);
 
     try {
-      const photoUris = {};
-
-      // Take photos only for tasks that require verification
-      for (const task of requiresPhotoTasks) {
-        const uri = await new Promise((resolve) => {
-          launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
-            if (response.didCancel || response.errorCode) resolve(null);
-            else resolve(response.assets?.[0]?.uri || null);
-          });
-        });
-        if (uri) photoUris[task.id] = uri;
-      }
-
       const today = new Date().toISOString().split('T')[0];
       const now = new Date();
       const quarter = `Q${Math.floor(now.getMonth() / 3) + 1}`;
@@ -825,14 +826,14 @@ useEffect(() => {
 
       <View style={styles.verifyWrapper}>
         <Button
-          title={isVerifying ? "Verifying..." : "Verify Action"}
+          title="Verify Action"
           style={[
             styles.verifyBtn,
-            { backgroundColor: (selectedTasks.length > 0 && !isVerifying) ? '#415D43' : '#6A6A6A' },
+            { backgroundColor: selectedTasks.length > 0 ? '#415D43' : '#6A6A6A' },
           ]}
           textStyle={styles.verifyText}
           onPress={handleVerifyAction}
-          disabled={isVerifying || selectedTasks.length === 0}
+          disabled={selectedTasks.length === 0}
         />
       </View>
     </View>

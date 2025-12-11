@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import Avatar from '../assets/images/Avatar.png';
 import Crown from '../assets/images/Crown.png';
 
-const Leaderboard = ({
+const CommunityLeaderboard = ({
   leaderboard = [],
   currentUserRank = null,
   currentUserId = null,
@@ -28,7 +28,7 @@ const Leaderboard = ({
       if (b.terraPoints !== a.terraPoints) {
         return b.terraPoints - a.terraPoints;
       }
-      return a.username.localeCompare(b.username);
+      return (a.username || '').localeCompare(b.username || '');
     });
 
     let currentRank = 1;
@@ -71,23 +71,27 @@ const Leaderboard = ({
 
   const RankedAvatar = ({ user, currentUserId, avatarSize, rankCircleSize }) => {
     const isCurrentUser = user.id === currentUserId;
+    // Use avatar URL from community data structure
+    const avatarUrl = user.avatarUrl || user.avatar || null;
+    
     return (
       <TouchableOpacity 
         style={styles.avatarWrapper}
         onPress={() => handleUserPress(user)}
       >
         <Image
-          source={user.avatarUrl ? { uri: user.avatarUrl } : Avatar}
+          source={avatarUrl ? { uri: avatarUrl } : Avatar}
           style={[
             { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 },
             isCurrentUser && { borderWidth: 3, borderColor: '#415D43' },
           ]}
+          defaultSource={Avatar}
         />
         <View
           style={{
             position: 'absolute',
             bottom: 40,
-            left: '30%',
+            left: '45%',
             transform: [{ translateX: -rankCircleSize / 2 }],
             backgroundColor: '#415D43',
             width: rankCircleSize,
@@ -100,7 +104,7 @@ const Leaderboard = ({
         >
           <Text style={styles.rankText}>{user.rank}</Text>
         </View>
-        <Text style={styles.username}>{user.username}</Text>
+        <Text style={styles.username}>{user.username || 'Unknown User'}</Text>
         <Text style={styles.points}>{user.terraPoints} pts</Text>
       </TouchableOpacity>
     );
@@ -113,7 +117,7 @@ const Leaderboard = ({
       contentContainerStyle={styles.scrollContent}
     >
       <View style={styles.container}>
-        {showTitle && <Text style={styles.title}>Leaderboards</Text>}
+        {showTitle && <Text style={styles.title}>Community Leaderboards</Text>}
 
         <View style={styles.podium}>
           {top3[1] && (
@@ -161,6 +165,7 @@ const Leaderboard = ({
             {rest.map((item) => {
               const isCurrentUser = item.id === currentUserId;
               const highlight = isCurrentUser && item.rank >= 4 && item.rank <= 10;
+              const avatarUrl = item.avatarUrl || item.avatar || null;
 
               return (
                 <TouchableOpacity 
@@ -183,8 +188,9 @@ const Leaderboard = ({
                       {item.rank}
                     </Text>
                     <Image
-                      source={item.avatarUrl ? { uri: item.avatarUrl } : Avatar}
+                      source={avatarUrl ? { uri: avatarUrl } : Avatar}
                       style={styles.listAvatar}
+                      defaultSource={Avatar}
                     />
                     <Text
                       style={[
@@ -192,7 +198,7 @@ const Leaderboard = ({
                         highlight && { color: "#D9D9D9" },
                       ]}
                     >
-                      {item.username}
+                      {item.username || 'Unknown User'}
                     </Text>
                     <Text
                       style={[
@@ -226,11 +232,13 @@ const Leaderboard = ({
                     {currentUserRank.rank}
                   </Text>
                   <Image
-                    source={currentUserRank.avatarUrl ? { uri: currentUserRank.avatarUrl } : Avatar}
+                    source={(currentUserRank.avatarUrl || currentUserRank.avatar) ? 
+                      { uri: currentUserRank.avatarUrl || currentUserRank.avatar } : Avatar}
                     style={styles.listAvatar}
+                    defaultSource={Avatar}
                   />
                   <Text style={[styles.listUsername, { color: "#D9D9D9" }]}>
-                    {currentUserRank.username}
+                    {currentUserRank.username || 'Unknown User'}
                   </Text>
                   <Text style={[styles.listPoints, { color: "#D9D9D9" }]}>
                     {currentUserRank.terraPoints} pts
@@ -293,7 +301,7 @@ const styles = StyleSheet.create({
     height: 35,
     resizeMode: 'contain',
     position: 'absolute',
-    top: -15,
+    top: -5,
     zIndex: 2,
   },
   avatarWrapper: {
@@ -365,4 +373,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Leaderboard;
+export default CommunityLeaderboard;

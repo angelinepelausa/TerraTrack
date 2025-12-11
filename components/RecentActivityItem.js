@@ -6,20 +6,54 @@ import { scale, vScale } from "../utils/scaling";
 const RecentActivityItem = ({ activity, currentUserId }) => {
   const navigation = useNavigation();
 
-  // Navigate based on user - FIXED: use activity.userId instead of activity.id
+  // Navigate based on user
   const handleUserPress = (activity) => {
     if (activity.userId === currentUserId) {
-      navigation.navigate("ProfileScreen", { userId: activity.userId }); // Own profile
+      navigation.navigate("ProfileScreen", { userId: activity.userId });
     } else {
-      navigation.navigate("PublicProfileScreen", { userId: activity.userId }); // Other's profile
+      navigation.navigate("PublicProfileScreen", { userId: activity.userId });
     }
   };
 
-  // Calculate relative time
+  // Calculate relative time - FIXED: Handle Firestore timestamp properly
   const getTimeAgo = (timestamp) => {
-    if (!timestamp) return "";
+    if (!timestamp) return "Recently";
+    
+    let date;
+    
+    // Handle Firestore timestamp objects
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      // It's a Firestore timestamp - convert to Date
+      date = timestamp.toDate();
+    } else if (timestamp && timestamp.seconds) {
+      // It's a Firestore timestamp with seconds property
+      date = new Date(timestamp.seconds * 1000);
+    } else if (timestamp instanceof Date) {
+      // Already a Date object
+      date = timestamp;
+    } else if (typeof timestamp === 'string') {
+      // ISO string
+      date = new Date(timestamp);
+    } else if (typeof timestamp === 'number') {
+      // Unix timestamp in milliseconds
+      date = new Date(timestamp);
+    } else {
+      // Unknown format, return default
+      return "Recently";
+    }
+    
+    // Check if date is valid
+    if (!date || isNaN(date.getTime())) {
+      return "Recently";
+    }
+    
     const now = new Date();
-    const diff = Math.floor((now - timestamp) / 1000); // in seconds
+    const diff = Math.floor((now - date) / 1000); // in seconds
+
+    // If difference is negative or extremely large, return "Recently"
+    if (diff < 0 || diff > 315360000) { // More than 10 years
+      return "Recently";
+    }
 
     if (diff < 60) return `${diff} sec${diff !== 1 ? "s" : ""} ago`;
     if (diff < 3600) {
@@ -30,8 +64,17 @@ const RecentActivityItem = ({ activity, currentUserId }) => {
       const hours = Math.floor(diff / 3600);
       return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
     }
-    const days = Math.floor(diff / 86400);
-    return `${days} day${days !== 1 ? "s" : ""} ago`;
+    if (diff < 604800) {
+      const days = Math.floor(diff / 86400);
+      return `${days} day${days !== 1 ? "s" : ""} ago`;
+    }
+    
+    // For older dates, show actual date
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
   };
 
   const timeAgo = getTimeAgo(activity.timestamp);
