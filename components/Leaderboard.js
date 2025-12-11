@@ -6,7 +6,8 @@ import {
   StyleSheet, 
   ActivityIndicator, 
   TouchableOpacity,
-  ScrollView 
+  ScrollView,
+  RefreshControl  // Added RefreshControl import
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Avatar from '../assets/images/Avatar.png';
@@ -18,6 +19,9 @@ const Leaderboard = ({
   currentUserId = null,
   loading = false,
   showTitle = true,
+  // Added these two new props for pull-to-refresh
+  onRefresh = null,
+  refreshing = false,
 }) => {
   const navigation = useNavigation();
 
@@ -87,7 +91,7 @@ const Leaderboard = ({
           style={{
             position: 'absolute',
             bottom: 40,
-            left: '30%',
+            left: '40%',
             transform: [{ translateX: -rankCircleSize / 2 }],
             backgroundColor: '#415D43',
             width: rankCircleSize,
@@ -111,6 +115,17 @@ const Leaderboard = ({
       style={styles.scrollContainer}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
+      // Added RefreshControl for pull-to-refresh functionality
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#CCCCCC"
+            colors={["#415D43"]}
+          />
+        ) : undefined
+      }
     >
       <View style={styles.container}>
         {showTitle && <Text style={styles.title}>Leaderboards</Text>}
