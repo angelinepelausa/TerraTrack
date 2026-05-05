@@ -1,4 +1,3 @@
-// screens/EditOnboardingScreen.js
 import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
@@ -17,8 +16,6 @@ const EditOnboardingScreen = ({ navigation }) => {
   const [answers, setAnswers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
-  
-  // States for ConfirmationPopup
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -26,8 +23,6 @@ const EditOnboardingScreen = ({ navigation }) => {
   const MULTI_SELECT_QUESTIONS = [0, 2, 3];
   const isMultiSelect = MULTI_SELECT_QUESTIONS.includes(currentStep);
   const currentAnswer = answers[currentStep] || (isMultiSelect ? [] : null);
-
-  // Load existing preferences
   useEffect(() => {
     const loadExistingPreferences = async () => {
       try {
@@ -35,8 +30,6 @@ const EditOnboardingScreen = ({ navigation }) => {
           const userDoc = await firestore().collection('users').doc(user.uid).get();
           if (userDoc.exists) {
             const userData = userDoc.data();
-            
-            // Map Firestore fields back to question indices
             const existingAnswers = {};
             if (userData.transportationOptions) existingAnswers[0] = userData.transportationOptions;
             if (userData.commuteDistance) existingAnswers[1] = userData.commuteDistance;
@@ -103,7 +96,7 @@ const EditOnboardingScreen = ({ navigation }) => {
 
   const handleConfirmSave = () => {
     setShowSaveConfirmation(false);
-    navigation.goBack(); // Return to SettingsScreen
+    navigation.goBack();
   };
 
   const handleNext = () => {
@@ -115,7 +108,6 @@ const EditOnboardingScreen = ({ navigation }) => {
     }
 
     if (currentStep === onboardingQuestions.length - 1) {
-      // Last step - show save confirmation
       handleSavePreferences();
     } else {
       setCurrentStep(prev => prev + 1);
@@ -160,7 +152,6 @@ const EditOnboardingScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header Row with Back Button */}
       <HeaderRow 
         title="Edit Preferences" 
         onBackPress={handleBack} 
@@ -203,7 +194,6 @@ const EditOnboardingScreen = ({ navigation }) => {
         answers={answers}
       />
 
-      {/* Error ConfirmationPopup */}
       <ConfirmationPopup
         visible={showErrorPopup}
         title="Error"
@@ -214,7 +204,6 @@ const EditOnboardingScreen = ({ navigation }) => {
         showCancel={false}
       />
 
-      {/* Success ConfirmationPopup */}
       <ConfirmationPopup
         visible={showSaveConfirmation}
         onConfirm={handleConfirmSave}

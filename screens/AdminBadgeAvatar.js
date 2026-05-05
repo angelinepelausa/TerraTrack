@@ -79,7 +79,6 @@ const AdminBadgeAvatarScreen = () => {
     </TouchableOpacity>
   );
 
-  // --- Badges ---
   const fetchBadges = async () => {
     setLoading(true);
     try {
@@ -133,7 +132,6 @@ const AdminBadgeAvatarScreen = () => {
     </TouchableOpacity>
   );
 
-  // --- Add Button ---
   const handleAddPress = () => {
     if (activeTab === "avatars") {
       navigation.navigate("AddAvatar", { onSaved: fetchAvatars });

@@ -71,13 +71,10 @@ const VoucherStatsScreen = () => {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Voucher Analytics</Text>
         <Text style={styles.subtitle}>Track your voucher performance</Text>
       </View>
-
-      {/* Stats Grid */}
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
           <Ionicons name="ticket" size={scale(24)} color="#709775" />
@@ -103,8 +100,6 @@ const VoucherStatsScreen = () => {
           <Text style={styles.statLabel}>Unclaimed</Text>
         </View>
       </View>
-
-      {/* Monthly Performance Goal */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Monthly Performance Goal</Text>
         <View style={styles.goalCard}>
@@ -114,8 +109,7 @@ const VoucherStatsScreen = () => {
               {monthlyGoal.current} / {monthlyGoal.target} vouchers
             </Text>
           </View>
-          
-          {/* Spacing between header and progress bar */}
+
           <View style={styles.progressSpacing} />
           
           <View style={styles.progressBar}>
@@ -129,13 +123,12 @@ const VoucherStatsScreen = () => {
               ]} 
             />
           </View>
-          
-          {/* Spacing between progress bar and text */}
+
           <View style={styles.progressSpacing} />
           
           <Text style={styles.progressText}>
             {calculateProgress().toFixed(0)}% completed
-            {calculateProgress() >= 100 && ' 🎉 Goal achieved!'}
+            {calculateProgress() >= 100 && 'Goal achieved!'}
           </Text>
         </View>
       </View>

@@ -1,16 +1,16 @@
 import { avatarsRepository } from './avatarsRepository';
 import { purchasesRepository } from './purchasesRepository';
-import { addUserRewards, deductUserCoins } from './userRepository'; // deductUserCoins is a new fn you add
+import { addUserRewards, deductUserCoins } from './userRepository';
 
 export const buyAvatar = async (userId, avatarId) => {
   try {
     const avatar = await avatarsRepository.getAvatarById(avatarId);
     if (!avatar) return { success: false, error: 'Avatar not found' };
 
-    const { terraCoins } = await getUserTerraCoins(userId); // from userRepository
+    const { terraCoins } = await getUserTerraCoins(userId);
     if (terraCoins < avatar.terracoin) return { success: false, error: 'Not enough TerraCoins' };
 
-    await deductUserCoins(userId, avatar.terracoin); // userRepository handles coins
+    await deductUserCoins(userId, avatar.terracoin);
     await purchasesRepository.addAvatarPurchase(userId, avatarId);
 
     return { success: true };

@@ -77,7 +77,6 @@ const PublicProfileScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.screen}>
-      {/* Header inside its own container with matching padding */}
       <View style={styles.headerContainer}>
         <HeaderRow
           title="User Profile"

@@ -10,7 +10,6 @@ export const statsService = {
   toMonthlyChartData(docs, category = "Total") {
     if (!docs || docs.length === 0) return { labels: [], datasets: [{ data: [] }] };
 
-    // Sort by doc.id (YYYY-MM)
     const sorted = docs.sort((a, b) => a.id.localeCompare(b.id));
 
     const labels = [];
@@ -29,7 +28,7 @@ export const statsService = {
       if (category === "Diet") value = results.dietEmissionMonthly || 0;
       else if (category === "Transport") value = results.transportEmissionMonthly || 0;
       else if (category === "Energy") value = results.electricityEmissionMonthly || 0;
-      else value = results.totalMonthly || 0; // fallback to total
+      else value = results.totalMonthly || 0;
 
       values.push(value);
     });

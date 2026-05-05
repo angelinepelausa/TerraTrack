@@ -1,21 +1,18 @@
-// screens/ResultsScreen.js
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
 
-const PH_AVERAGE = 2.9; // tonnes annual average
-const MAX_BAR_HEIGHT = vScale(210); // instead of SCREEN_HEIGHT * 0.25
+const PH_AVERAGE = 2.9;
+const MAX_BAR_HEIGHT = vScale(210); 
 
 const ResultsScreen = ({ route, navigation }) => {
   const { results, compareWithLastMonth, showWalkthrough } = route.params;
 
-  // Convert kilograms → tonnes
   const totalAnnualTonnes = results.totalAnnual / 1000;
   const transportTonnes = results.transportEmissionAnnual / 1000;
   const electricityTonnes = results.electricityEmissionAnnual / 1000;
   const dietTonnes = results.dietEmissionAnnual / 1000;
 
-  // Decide comparison value (last month OR PH average)
   const comparisonValue = compareWithLastMonth && compareWithLastMonth.totalAnnual
     ? compareWithLastMonth.totalAnnual / 1000
     : PH_AVERAGE;
@@ -24,10 +21,8 @@ const ResultsScreen = ({ route, navigation }) => {
     ? 'Last Month'
     : 'Philippines Average';
 
-  // Find largest footprint value for scaling
   const maxValue = Math.max(totalAnnualTonnes, comparisonValue);
 
-  // Scale function to keep bars proportional
   const scaleHeight = (value) => (value / maxValue) * MAX_BAR_HEIGHT;
 
   return (
@@ -39,22 +34,20 @@ const ResultsScreen = ({ route, navigation }) => {
           : 'See how you compare with the Philippine average!'}
       </Text>
 
-      {/* Chart container */}
+
       <View style={styles.chartContainer}>
-        {/* Your Carbon Footprint Bar */}
+
         <View style={styles.barWrapper}>
           <View style={[styles.bar, { height: scaleHeight(totalAnnualTonnes) }]}>
-            {/* Transport Section */}
+
             <View style={[styles.section, { flex: transportTonnes, backgroundColor: '#264d36' }]}>
               <Text style={styles.segmentLabel}>Transport</Text>
             </View>
 
-            {/* Electricity Section */}
             <View style={[styles.section, { flex: electricityTonnes, backgroundColor: '#4d6b54' }]}>
               <Text style={styles.segmentLabel}>Electricity</Text>
             </View>
 
-            {/* Diet Section */}
             <View style={[styles.section, { flex: dietTonnes, backgroundColor: '#709775' }]}>
               <Text style={styles.segmentLabel}>Diet</Text>
             </View>
@@ -64,7 +57,6 @@ const ResultsScreen = ({ route, navigation }) => {
           <Text style={styles.xLabel}>Your Carbon Footprint</Text>
         </View>
 
-        {/* Comparison Bar */}
         <View style={styles.barWrapper}>
           <View style={{ alignItems: 'center' }}>
             {!compareWithLastMonth && (
@@ -89,22 +81,18 @@ const ResultsScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      {/* Info */}
       <Text style={styles.info}>
         {compareWithLastMonth
           ? 'Track your progress month by month with TerraTrack.'
           : 'Find out how to maximize your environmental impact with TerraTrack\'s features.'}
       </Text>
 
-      {/* Continue Button */}
       <TouchableOpacity
         style={styles.continueButton}
         onPress={() => {
           if (showWalkthrough) {
-            // First time user - go to HomeScreen with walkthrough
             navigation.navigate('HomeScreen', { showWalkthrough: true });
           } else {
-            // Returning user - just go to HomeScreen
             navigation.navigate('HomeScreen');
           }
         }}

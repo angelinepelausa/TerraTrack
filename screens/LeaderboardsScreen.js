@@ -27,7 +27,6 @@ const LeaderboardsScreen = () => {
     }
 
     try {
-      // Fetch leaderboard + user rank in parallel
       const [topUsers, userRank] = await Promise.all([
         getLeaderboard(10),
         getUserRank(user.uid),
@@ -35,7 +34,6 @@ const LeaderboardsScreen = () => {
       setLeaderboard(topUsers);
       setCurrentUserRank(userRank);
 
-      // Only check rewards if user has a rank
       if (userRank) {
         const reward = await getUserLastReward(user.uid);
 
@@ -43,7 +41,6 @@ const LeaderboardsScreen = () => {
           const rewardKey = `rewardShown_${user.uid}_${reward.cycleDate}`;
           const alreadyShown = await AsyncStorage.getItem(rewardKey);
 
-          // Show popup only if not shown before for this user & cycle
           if (!alreadyShown) {
             setRewardData(reward);
             setShowRewardPopup(true);
@@ -92,7 +89,6 @@ const LeaderboardsScreen = () => {
             currentUserRank={currentUserRank}
             currentUserId={user?.uid}
             loading={loading}
-            // Remove refresh props since parent handles refresh
             onRefresh={null}
             refreshing={false}
           />

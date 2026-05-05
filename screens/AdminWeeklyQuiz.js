@@ -14,16 +14,14 @@ const AdminWeeklyQuiz = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    // Set up real-time listener
     const unsubscribe = firestore()
       .collection('weekly_quizzes')
-      .orderBy('createdAt', 'desc') // Sort by newest first
+      .orderBy('createdAt', 'desc')
       .onSnapshot({
         next: (snapshot) => {
           const data = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
-            // Convert Firestore timestamps to Date objects if needed
             createdAt: doc.data().createdAt?.toDate() || new Date(),
             expiresAt: doc.data().expiresAt?.toDate() || null,
           }));
@@ -33,16 +31,13 @@ const AdminWeeklyQuiz = () => {
         error: (error) => {
           console.error('Real-time listener error:', error);
           setLoading(false);
-          // Fallback: try to fetch once
           fetchQuizzesOnce();
         }
       });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
-  // Optional: One-time fetch as fallback
   const fetchQuizzesOnce = async () => {
     try {
       const data = await weeklyQuizRepository.getAllQuizzes();
@@ -55,13 +50,9 @@ const AdminWeeklyQuiz = () => {
     }
   };
 
-  // Optional: Refresh when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      // If you want to ensure fresh data when screen is focused
-      // The real-time listener already handles this, but you can add manual refresh if needed
       return () => {
-        // Cleanup if needed
       };
     }, [])
   );
@@ -78,8 +69,6 @@ const AdminWeeklyQuiz = () => {
           onPress: async () => {
             try {
               await weeklyQuizRepository.deleteQuiz(id);
-              // Real-time listener will automatically update UI
-              // No need to manually update state
             } catch (err) {
               console.error(err);
               Alert.alert('Error', 'Failed to delete quiz');
@@ -138,7 +127,6 @@ const AdminWeeklyQuiz = () => {
               onDelete={() => handleDelete(item.id)}
               onPress={() => navigation.navigate('AddWeeklyQuiz', { 
                 quiz: item,
-                // Pass callback for optimistic updates if needed
                 onUpdate: () => {/* Optional callback */} 
               })}
             />

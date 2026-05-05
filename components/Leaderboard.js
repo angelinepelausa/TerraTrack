@@ -111,7 +111,6 @@ const Leaderboard = ({
       style={styles.scrollContainer}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
-      // REMOVE the refreshControl prop
     >
       <View style={styles.container}>
         {showTitle && <Text style={styles.title}>Leaderboards</Text>}

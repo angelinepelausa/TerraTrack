@@ -294,7 +294,6 @@ const AdminLeaderboard = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Tabs */}
         <View style={styles.tabContainer}>
           {["current", "upcoming"].map((tab) => (
             <TouchableOpacity
@@ -309,12 +308,10 @@ const AdminLeaderboard = () => {
           ))}
         </View>
 
-        {/* Tab Content */}
         {activeTab === "current" && renderCurrentTab()}
         {activeTab === "upcoming" && renderUpcomingTab()}
       </ScrollView>
 
-      {/* Rewards Modal */}
       <Modal
         visible={showRewardsModal}
         transparent

@@ -78,7 +78,6 @@ const EducationalQuizScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* 🚫 BACK BUTTON COMPLETELY REMOVED */}
 
       <View style={styles.quizContainer}>
         <Text style={styles.quizTitle}>{content.title}</Text>
@@ -162,12 +161,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // 🚫 REMOVED backBtn and backText styles
   quizContainer: {
     flex: 1,
     justifyContent: 'flex-start', 
     alignItems: 'center',
-    paddingTop: 120, // Adjusted since no back button
+    paddingTop: 120,
   },
   quizTitle: {
     color: '#709775',

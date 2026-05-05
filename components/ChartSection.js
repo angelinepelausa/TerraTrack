@@ -18,15 +18,12 @@ export const ChartSection = ({
   setSelectedYear,
   setSelectedCategory
 }) => {
-  // Compute chart width to fit all data (for bar/line charts)
   const barCount = chartData.labels?.length || 0;
   const minBarWidth = 40;
   const maxBarWidth = 70;
   const availableWidth = width * 0.85;
   const calculatedWidth = Math.max(availableWidth, barCount * minBarWidth);
   const chartWidth = Math.min(calculatedWidth, barCount * maxBarWidth);
-
-  // Chart configuration
   const chartConfig = {
     backgroundColor: '#1c1c1c',
     backgroundGradientFrom: '#1c1c1c',
@@ -53,7 +50,6 @@ export const ChartSection = ({
     barPercentage: barCount <= 6 ? 0.5 : 0.6,
   };
 
-  // Render single data point as text card
   const renderSingleData = () => {
     const data = meaningfulData[0];
     return (
@@ -66,7 +62,6 @@ export const ChartSection = ({
     );
   };
 
-  // Render two data points as comparison cards
   const renderDoubleData = () => {
     return (
       <View style={styles.doubleDataContainer}>
@@ -91,7 +86,6 @@ export const ChartSection = ({
     );
   };
 
-  // Render bar chart
   const renderBarChart = () => (
     <BarChart
       data={chartData}
@@ -110,7 +104,6 @@ export const ChartSection = ({
     />
   );
 
-  // Render line chart
   const renderLineChart = () => (
     <LineChart
       data={chartData}
@@ -132,7 +125,6 @@ export const ChartSection = ({
     />
   );
 
-  // Main render function
   const renderContent = () => {
     switch (displayType) {
       case 'single-text':
@@ -182,7 +174,6 @@ export const ChartSection = ({
   );
 };
 
-// Dropdown Components
 const YearDropdown = ({ selectedYear, years, dropdownOpen, setDropdownOpen, setSelectedYear }) => (
   <View style={styles.dropdownWrapper}>
     <TouchableOpacity
@@ -306,8 +297,6 @@ const styles = {
     borderRadius: 12,
     marginVertical: 8,
   },
-  
-  // Single Data Styles
   singleDataContainer: {
     backgroundColor: '#2A2A2A',
     borderRadius: 12,
@@ -338,8 +327,6 @@ const styles = {
     fontSize: 14,
     fontStyle: 'italic',
   },
-  
-  // Double Data Styles
   doubleDataContainer: {
     width: '100%',
     alignItems: 'center',

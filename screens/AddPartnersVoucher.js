@@ -40,7 +40,6 @@ const AddPartnersVoucher = () => {
 
   useEffect(() => {
     if (existingVoucher && partners.length > 0) {
-      // Auto-fill form with existing voucher data
       setVoucherData({
         title: existingVoucher.title || '',
         description: existingVoucher.description || '',
@@ -49,7 +48,6 @@ const AddPartnersVoucher = () => {
         voucherCode: existingVoucher.voucherCode || ''
       });
       
-      // Find and set the partner
       const partner = partners.find(p => p.id === existingVoucher.partnerId);
       if (partner) {
         setSelectedPartner(partner);
@@ -63,7 +61,6 @@ const AddPartnersVoucher = () => {
       const partnersList = await voucherRepository.getAllPartners();
       setPartners(partnersList);
       
-      // If editing and we have partnerId, find the partner
       if (existingVoucher?.partnerId) {
         const partner = partnersList.find(p => p.id === existingVoucher.partnerId);
         if (partner) {
@@ -311,8 +308,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold", 
     color: "#709775" 
   },
-
-  // Form Styles
   label: { 
     color: '#fff', 
     marginTop: 12, 

@@ -13,7 +13,6 @@ export const useUserFilter = () => {
       try {
         let query = firestore().collection('users');
 
-        // Apply status filter
         if (filters.status && filters.status !== 'All') {
           query = query.where('status', '==', filters.status.toLowerCase());
         }
@@ -24,7 +23,6 @@ export const useUserFilter = () => {
           ...doc.data()
         }));
 
-        // Apply date range filter
         let filteredUsers = usersData;
         if (filters.dateRange.from || filters.dateRange.to) {
           filteredUsers = usersData.filter(user => {

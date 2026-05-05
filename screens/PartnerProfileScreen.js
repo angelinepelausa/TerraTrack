@@ -17,15 +17,14 @@ import { uploadImageToCloudinary } from '../services/cloudinary';
 import auth from '@react-native-firebase/auth';
 import { scale, vScale } from '../utils/scaling';
 
-const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
+const PartnerProfileScreen = ({ navigation }) => {
   const [partnerData, setPartnerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingField, setEditingField] = useState('');
   const [editValue, setEditValue] = useState('');
   const [uploading, setUploading] = useState(false);
-  
-  // Business Hours State
+
   const [businessHoursModal, setBusinessHoursModal] = useState(false);
   const [startHour, setStartHour] = useState('09');
   const [startMinute, setStartMinute] = useState('00');
@@ -34,7 +33,6 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
   const [endMinute, setEndMinute] = useState('00');
   const [endPeriod, setEndPeriod] = useState('PM');
 
-  // Time options - circular arrays
   const hours = ['12', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'];
   const minutes = ['00', '15', '30', '45'];
   const periods = ['AM', 'PM'];
@@ -47,7 +45,7 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
     try {
       const user = auth().currentUser;
       if (!user) {
-        // If no user, navigate to login
+
         navigation.replace('LoginScreen');
         return;
       }
@@ -55,8 +53,7 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
       const partnerResult = await getPartnerData(user.uid);
       if (partnerResult.success) {
         setPartnerData(partnerResult.partner);
-        
-        // Parse existing business hours if available
+
         if (partnerResult.partner.businessHours) {
           parseBusinessHours(partnerResult.partner.businessHours);
         }
@@ -199,7 +196,6 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
   const handleLogout = async () => {
     try {
       await auth().signOut();
-      // Navigate to login screen after successful logout
       navigation.replace('LoginScreen');
     } catch (error) {
       console.error('Logout error:', error);
@@ -218,7 +214,6 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
     );
   };
 
-  // Circular navigation functions
   const getNextItem = (array, current) => {
     const index = array.indexOf(current);
     return array[(index + 1) % array.length];
@@ -233,7 +228,6 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
     <View style={styles.timeSection}>
       <Text style={styles.timeSectionLabel}>{label}</Text>
       <View style={styles.timePickerCompact}>
-        {/* Hour */}
         <View style={styles.timeColumnCompact}>
           <TouchableOpacity 
             style={styles.timeArrow}
@@ -251,8 +245,6 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
         </View>
 
         <Text style={styles.timeSeparator}>:</Text>
-
-        {/* Minute */}
         <View style={styles.timeColumnCompact}>
           <TouchableOpacity 
             style={styles.timeArrow}
@@ -269,7 +261,6 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
           </TouchableOpacity>
         </View>
 
-        {/* Period */}
         <View style={styles.timeColumnCompact}>
           <TouchableOpacity 
             style={styles.timeArrow}
@@ -299,7 +290,6 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header - Simplified */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleImagePick}>
           {partnerData?.logoUrl ? (
@@ -319,7 +309,6 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
         </Text>
       </View>
 
-      {/* Business Profile Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Business Profile</Text>
         
@@ -372,13 +361,11 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
         </TouchableOpacity>
       </View>
 
-      {/* Logout Button */}
       <TouchableOpacity style={styles.logoutButton} onPress={confirmLogout}>
         <Ionicons name="log-out-outline" size={scale(20)} color="#FF6B6B" />
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
 
-      {/* Edit Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -420,7 +407,6 @@ const PartnerProfileScreen = ({ navigation }) => { // Add navigation prop
         </View>
       </Modal>
 
-      {/* Business Hours Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -635,7 +621,6 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-Bold',
     fontSize: scale(14),
   },
-  // Compact Time Picker Styles
   timePickerContainer: {
     marginBottom: vScale(20),
   },

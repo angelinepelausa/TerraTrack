@@ -1,7 +1,6 @@
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 
-// CONSTANTS
 const TRANSPORT_EMISSION_FACTORS = {
   'Diesel Car': 0.157,
   'Hybrid Car': 0.1078,
@@ -37,20 +36,20 @@ const DIET_VALUES = {
   '61–90 meals/month': 70
 };
 
-// Emissions per meal (kg CO₂ per meal)
+// Emissions per meal
 const MEAL_EMISSIONS = {
   meat: 7.8,
   dairy: 1.425,
   fish: 2.68
 };
 
-// Electricity constants
+// Electricity
 const GRID_EMISSION_FACTOR = 0.7288; // kg CO₂/kWh
 
 export const calculateCarbonFootprint = (answers) => {
   let transportEmissionMonthly = 0;
 
-  // Public transportation
+  // Public transpo
   if (answers.publicTransportType) {
     answers.publicTransportType.forEach((type) => {
       const freqKey = `publicTransportFrequency_${type}`;
@@ -90,7 +89,7 @@ export const calculateCarbonFootprint = (answers) => {
     (dairyMeals * MEAL_EMISSIONS.dairy) +
     (fishMeals * MEAL_EMISSIONS.fish);
 
-  // Totals
+  // Total
   const totalMonthly = transportEmissionMonthly + electricityEmissionMonthly + dietEmissionMonthly;
 
   return {

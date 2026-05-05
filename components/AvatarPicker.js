@@ -36,7 +36,6 @@ const AvatarPicker = ({ visible, onClose, onSelect }) => {
       const userDoc = await firestore().collection("users").doc(userId).get();
       setCurrentAvatar(userDoc.data()?.avatar || null);
 
-      // Sort owned avatars first
       const sorted = allAvatars.sort((a, b) => {
         const aOwned = a.type === "free" || purchasedList.includes(a.id);
         const bOwned = b.type === "free" || purchasedList.includes(b.id);
@@ -70,15 +69,15 @@ const AvatarPicker = ({ visible, onClose, onSelect }) => {
           avatar: avatar.id
         });
         setCurrentAvatar(avatar.id);
-        onClose(); // Close the modal after selection
+        onClose(); 
         if (onSelect) {
-          onSelect(avatar); // Only call onSelect if it exists
+          onSelect(avatar); 
         }
       } catch (err) {
         console.error("Error updating avatar:", err);
       }
     } else {
-      setSelectedAvatar(avatar); // Open BuyAvatar modal for unowned avatars
+      setSelectedAvatar(avatar);
     }
   };
 

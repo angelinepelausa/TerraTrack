@@ -27,8 +27,6 @@ const AdminPartnersVoucher = () => {
     setLoading(true);
     try {
       const voucherData = await voucherRepository.getAllVouchers();
-      
-      // Fetch partner logos for each voucher
       const vouchersWithLogos = await Promise.all(
         voucherData.map(async (voucher) => {
           try {
@@ -39,7 +37,7 @@ const AdminPartnersVoucher = () => {
               partnerLogo: partner?.logoUrl || null
             };
           } catch (error) {
-            return voucher; // Return voucher without logo if error
+            return voucher;
           }
         })
       );

@@ -10,7 +10,6 @@ const ReportCard = ({ item, onPress }) => {
     return "#D32F2F"; 
   };
 
-  // Get status text
   const getStatusText = () => {
     if (item.status === "reviewed") {
       return "Reviewed";
@@ -18,12 +17,10 @@ const ReportCard = ({ item, onPress }) => {
     return "Pending Review";
   };
 
-  // Get reporter count if available
   const getReporterCount = () => {
     return item.reporters?.length || 0;
   };
 
-  // Get primary report category
   const getPrimaryCategory = () => {
     return item.reporters?.[0]?.category || "Uncategorized";
   };

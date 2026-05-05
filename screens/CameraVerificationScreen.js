@@ -8,7 +8,7 @@ const CLOUD_NAME = "dgdzmrhc4";
 const UPLOAD_PRESET = "terratrack";
 
 const CameraVerificationScreen = ({ route, navigation }) => {
-  const { task } = route.params; // task includes { id, difficulty }
+  const { task } = route.params;
   const cameraRef = useRef(null);
   const devices = useCameraDevices();
   const device = devices.back;

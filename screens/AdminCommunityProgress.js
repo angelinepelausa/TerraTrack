@@ -18,7 +18,6 @@ import { useNavigation } from '@react-navigation/native';
 import { vScale, scale } from '../utils/scaling';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-// Repositories
 import {
   getCommunityProgress,
   getCommunityLeaderboard,
@@ -27,11 +26,9 @@ import {
 } from '../repositories/communityProgressRepository';
 import { populateUserData } from '../repositories/userRepository';
 
-// Components
 import HeaderRow from '../components/HeaderRow';
 import RankedAvatar from '../components/RankedAvatar';
 
-// Icons
 import Crown from '../assets/images/Crown.png';
 import TerraCoin from '../assets/images/TerraCoin.png';
 import TerraPoint from '../assets/images/TerraPoint.png';

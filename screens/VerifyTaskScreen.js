@@ -1,4 +1,3 @@
-// screens/VerifyTaskScreen.js
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
@@ -21,8 +20,6 @@ const VerifyTaskScreen = ({ route, navigation }) => {
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [loading, setLoading] = useState(false);
 
-
-  // --- Helpers ---------------------------------------------------------------
   const today = () => new Date().toISOString().split('T')[0];
 
 
@@ -46,7 +43,6 @@ const VerifyTaskScreen = ({ route, navigation }) => {
     }
     const compositeKey = `${ownerUid}_${taskId}`;
    
-    // Get the submitted date from the task or use today as fallback
     const submittedDate = t.submittedDate || today();
    
     return { ownerUid, taskId, compositeKey, submittedDate };
@@ -68,8 +64,6 @@ const VerifyTaskScreen = ({ route, navigation }) => {
       updatePayload[`${taskId}.detailsForRejection`] = notes;
     }
 
-
-    // Use set with merge instead of update to handle non-existent documents
     await ref.set(updatePayload, { merge: true });
   };
 
@@ -88,8 +82,7 @@ const VerifyTaskScreen = ({ route, navigation }) => {
     if (status === 'rejected') {
       updatePayload.detailsForRejection = notes;
     }
-   
-    // Use set with merge instead of update
+
     await ref.set(updatePayload, { merge: true });
   };
 
@@ -103,8 +96,6 @@ const VerifyTaskScreen = ({ route, navigation }) => {
     const snap = await coll.get();
     if (snap.empty) return;
 
-
-    // Check all documents, not just today's
     for (const d of snap.docs) {
       const data = d.data() || {};
       if (Object.prototype.hasOwnProperty.call(data, compositeKey)) {
@@ -117,8 +108,6 @@ const VerifyTaskScreen = ({ route, navigation }) => {
     }
   };
 
-
-  // --- update all other assigned verifiers too --------------------------
   const updateAllAssignedVerifiers = async (compositeKey, status, notes, verifierUid) => {
     const usersSnap = await firestore().collection('users').get();
     const userIds = usersSnap.docs.map(d => d.id);
@@ -133,8 +122,6 @@ const VerifyTaskScreen = ({ route, navigation }) => {
       const snap = await coll.get();
       if (snap.empty) continue;
 
-
-      // Check all documents for this user
       for (const d of snap.docs) {
         const data = d.data() || {};
         if (Object.prototype.hasOwnProperty.call(data, compositeKey)) {
@@ -146,15 +133,12 @@ const VerifyTaskScreen = ({ route, navigation }) => {
           if (status === 'rejected') {
             updatePayload[`${compositeKey}.detailsForRejection`] = notes;
           }
-          // Use set with merge instead of update
           await ref.set(updatePayload, { merge: true });
         }
       }
     }
   };
 
-
-  // --- Main submit -----------------------------------------------------------
   const handleSubmit = async () => {
     if (!user) return;
 
@@ -171,7 +155,6 @@ const VerifyTaskScreen = ({ route, navigation }) => {
 
     setLoading(true);
     try {
-      // Get submittedDate from the extracted IDs
       const { ownerUid, taskId, compositeKey, submittedDate } = extractIds(task);
       const status = decision;
 
@@ -256,8 +239,6 @@ const VerifyTaskScreen = ({ route, navigation }) => {
   );
 };
 
-
-// --- Styles ------------------------------------------------------------------
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
   header: {

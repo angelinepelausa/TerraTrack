@@ -29,8 +29,6 @@ const { width } = Dimensions.get('window');
 
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dgdzmrhc4/image/upload';
 const UPLOAD_PRESET = 'terratrack';
-
-// 🔥 Increment total task finished counter for a user
 const incrementTaskFinished = async (uid, count = 1) => {
   try {
     const totalRef = firestore()
@@ -44,21 +42,19 @@ const incrementTaskFinished = async (uid, count = 1) => {
       { merge: true }
     );
 
-    console.log(`✅ Incremented ${count} task(s) for user: ${uid}`);
+    console.log(`Incremented ${count} task(s) for user: ${uid}`);
   } catch (error) {
-    console.error("❌ Error incrementing taskFinished:", error);
+    console.error("Error incrementing taskFinished:", error);
   }
 };
 
-// ✅ FIXED distribution logic - only check recent dates
 export const distributeTasksForVerification = async () => {
   try {
     const today = new Date().toISOString().split("T")[0];
     const runId = Date.now().toString();
 
-    console.log("🔍 Starting distribution - looking for pending tasks...");
+    console.log("Starting distribution - looking for pending tasks...");
 
-    // Get only RECENT dates (last 7 days) to avoid checking old empty collections
     const recentDates = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date();
@@ -66,29 +62,27 @@ export const distributeTasksForVerification = async () => {
       recentDates.push(date.toISOString().split("T")[0]);
     }
 
-    console.log("📅 Checking recent dates:", recentDates);
+    console.log("Checking recent dates:", recentDates);
 
     const tasksVerificationColl = firestore().collection("tasks_verification");
     let allPendingTasks = [];
 
-    // Check only recent days for pending tasks
     for (const date of recentDates) {
       try {
         const submittedColl = tasksVerificationColl.doc(date).collection("submitted");
         const submittedSnap = await submittedColl.get();
         
-        console.log(`📅 Checking day ${date}: ${submittedSnap.size} tasks`);
+        console.log(`Checking day ${date}: ${submittedSnap.size} tasks`);
         
         const dayPendingTasks = submittedSnap.docs
           .map((doc) => {
             const data = doc.data();
-            console.log(`📋 Checking task ${doc.id}:`, { 
+            console.log(`Checking task ${doc.id}:`, { 
               status: data.status, 
               userId: data.userId,
               taskId: data.taskId 
             });
-            
-            // Only include tasks that are still pending
+
             if (data.status === "pending") {
               return {
                 docId: doc.id,
@@ -105,20 +99,20 @@ export const distributeTasksForVerification = async () => {
 
         allPendingTasks = [...allPendingTasks, ...dayPendingTasks];
       } catch (error) {
-        console.log(`⚠️ No data for date ${date} or collection doesn't exist`);
+        console.log(`No data for date ${date} or collection doesn't exist`);
       }
     }
 
-    console.log(`📊 Found ${allPendingTasks.length} pending tasks total`);
+    console.log(`Found ${allPendingTasks.length} pending tasks total`);
 
     if (allPendingTasks.length === 0) {
-      console.log("⚡ No pending tasks for verification");
+      console.log("No pending tasks for verification");
       return;
     }
 
     const submitterIds = [...new Set(allPendingTasks.map((t) => t.userId))];
     if (submitterIds.length === 0) {
-      console.log("⚡ No eligible submitters");
+      console.log("No eligible submitters");
       return;
     }
 
@@ -131,7 +125,6 @@ export const distributeTasksForVerification = async () => {
     let batch = firestore().batch();
     let opCount = 0;
 
-    // First, clear existing assigned verifications for today to avoid duplicates
     const usersSnap = await firestore().collection("users").get();
     
     let clearBatch = firestore().batch();
@@ -143,8 +136,7 @@ export const distributeTasksForVerification = async () => {
         .doc(userDoc.id)
         .collection("assigned_verifications")
         .doc(`${today}_${runId}`);
-      
-      // Clear any existing document for today's run
+
       clearBatch.set(assignedRef, {});
       clearCount++;
       
@@ -216,15 +208,14 @@ export const distributeTasksForVerification = async () => {
       completedAt: firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log("✅ Distribution finished for", today, "run:", runId);
+    console.log("Distribution finished for", today, "run:", runId);
     console.log("Distributed tasks:", allPendingTasks.length);
     console.log("Final load per user:", loadMap);
   } catch (err) {
-    console.error("❌ Distribution error:", err);
+    console.error("Distribution error:", err);
   }
 };
 
-// ✅ NEW: Function to clean up old completed verifications (optional)
 export const cleanupOldVerifications = async (daysToKeep = 7) => {
   try {
     const cutoffDate = new Date();
@@ -235,9 +226,7 @@ export const cleanupOldVerifications = async (daysToKeep = 7) => {
     const allDaysSnap = await tasksVerificationColl.get();
 
     for (const dayDoc of allDaysSnap.docs) {
-      // Delete documents older than daysToKeep
       if (dayDoc.id < cutoffDateStr) {
-        // Delete all submitted tasks for that day
         const submittedColl = tasksVerificationColl.doc(dayDoc.id).collection("submitted");
         const submittedSnap = await submittedColl.get();
         
@@ -247,11 +236,11 @@ export const cleanupOldVerifications = async (daysToKeep = 7) => {
         });
         
         await batch.commit();
-        console.log(`🧹 Cleaned up old verification data for: ${dayDoc.id}`);
+        console.log(`Cleaned up old verification data for: ${dayDoc.id}`);
       }
     }
   } catch (error) {
-    console.error("❌ Error cleaning up old verifications:", error);
+    console.error("Error cleaning up old verifications:", error);
   }
 };
 
@@ -315,9 +304,9 @@ const storeTaskForVerification = async (taskId, taskTitle, photoUrl, userId) => 
       { merge: true }
     );
 
-    console.log("✅ Task stored in both global + user verifications:", taskId);
+    console.log("Task stored in both global + user verifications:", taskId);
   } catch (error) {
-    console.error("❌ Error storing task for verification:", error);
+    console.error("Error storing task for verification:", error);
   }
 };
 
@@ -335,13 +324,9 @@ const RoutineScreen = () => {
   const [verificationTasks, setVerificationTasks] = useState([]);
   const dateRef = useRef(new Date().toISOString().split('T')[0]);
   const distributionRunRef = useRef(false);
-  
-  // NEW STATES FOR CONFIRMATION POPUPS
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
   const [popupTitle, setPopupTitle] = useState('');
-  
-  // NEW STATE FOR LOADING DURING VERIFICATION
   const [isVerifying, setIsVerifying] = useState(false);
 
   const fetchAllTasks = async () => {
@@ -378,7 +363,6 @@ const RoutineScreen = () => {
       setEasyTasks(remainingEasy);
       setHardTasks(remainingHard);
 
-      // Persist same random 3 easy tasks daily
       const verificationsRef = firestore()
         .collection('users')
         .doc(user.uid)
@@ -419,54 +403,46 @@ const RoutineScreen = () => {
 useEffect(() => {
   const checkAndRunDistribution = async () => {
     try {
-      // Get current time in Philippine time (UTC+8)
       const now = new Date();
       const phTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
       const today = phTime.toISOString().split('T')[0];
-      
-      // Check if it's 12:30 AM Philippine time
+
       const hours = phTime.getUTCHours();
       const minutes = phTime.getUTCMinutes();
       
-      console.log(`🕛 Current PH Time: ${hours}:${minutes}, Today: ${today}, DateRef: ${dateRef.current}, DistributionRun: ${distributionRunRef.current}`);
+      console.log(`Current PH Time: ${hours}:${minutes}, Today: ${today}, DateRef: ${dateRef.current}, DistributionRun: ${distributionRunRef.current}`);
       
-      // ✅ FIXED: Run at or after 12:30 AM PH time (not just exactly at 12:30)
       if (hours === 0 && minutes >= 30 && dateRef.current !== today && !distributionRunRef.current) {
         distributionRunRef.current = true;
         dateRef.current = today;
         
-        console.log("🕛 Running task distribution for PH 12:30 AM…");
+        console.log("Running task distribution for PH 12:30 AM…");
         
         try {
           await distributeTasksForVerification();
-          // Optional: Clean up old verification data (keep last 7 days)
           await cleanupOldVerifications(7);
-          await fetchAllTasks(); // Refresh tasks after distribution
-          
-          // Reset distribution flag after 2 minutes to prevent multiple runs
+          await fetchAllTasks();
+
           setTimeout(() => {
             distributionRunRef.current = false;
           }, 2 * 60 * 1000);
         } catch (error) {
-          console.error("❌ Distribution failed:", error);
-          distributionRunRef.current = false; // Reset flag on error
+          console.error("Distribution failed:", error);
+          distributionRunRef.current = false;
         }
       }
-      
-      // Reset distribution flag if date changes but we missed the 12:30 window
+
       if (dateRef.current !== today && distributionRunRef.current) {
         distributionRunRef.current = false;
       }
       
     } catch (error) {
-      console.error("❌ Error in distribution check:", error);
+      console.error("Error in distribution check:", error);
     }
   };
 
-  // Check immediately when component mounts
   checkAndRunDistribution();
 
-  // Set up interval to check every minute
   const interval = setInterval(checkAndRunDistribution, 60 * 1000);
 
   return () => clearInterval(interval);
@@ -532,10 +508,8 @@ useEffect(() => {
       }
     }
 
-    // Don't show loading modal yet - only show after photos are taken
     const photoUris = {};
 
-    // Take photos only for tasks that require verification
     for (const task of requiresPhotoTasks) {
       const uri = await new Promise((resolve) => {
         launchCamera({ mediaType: 'photo', saveToPhotos: true }, (response) => {
@@ -546,7 +520,6 @@ useEffect(() => {
       if (uri) photoUris[task.id] = uri;
     }
 
-    // NOW show loading modal since user has finished taking photos
     setIsVerifying(true);
 
     try {
@@ -570,7 +543,6 @@ useEffect(() => {
 
       const batch = firestore().batch();
 
-      // Process tasks that require photo verification
       for (const task of requiresPhotoTasks) {
         let photoUrl = null;
 
@@ -608,7 +580,6 @@ useEffect(() => {
           { merge: true }
         );
 
-        // Save activity to community_activity subcollection
         const activityId = `${user.uid}_${task.id}_${Date.now()}`;
         const activityRef = firestore()
           .collection('community_progress')
@@ -628,7 +599,6 @@ useEffect(() => {
         });
       }
 
-      // Process tasks that don't require photo verification
       for (const task of noPhotoTasks) {
         batch.set(
           tasksFinishedRef,
@@ -643,7 +613,6 @@ useEffect(() => {
           { merge: true }
         );
 
-        // Save activity to community_activity subcollection
         const activityId = `${user.uid}_${task.id}_${Date.now()}`;
         const activityRef = firestore()
           .collection('community_progress')
@@ -663,7 +632,6 @@ useEffect(() => {
         });
       }
 
-      // Update community progress
       const communityRef = firestore().collection('community_progress').doc(docId);
       batch.set(
         communityRef,
@@ -686,7 +654,6 @@ useEffect(() => {
       setEasyTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
       setHardTasks((prev) => prev.filter((t) => !selectedTasks.some((s) => s.id === t.id)));
 
-      // SHOW APPROPRIATE SUCCESS MESSAGE
       if (requiresPhotoTasks.length > 0 && noPhotoTasks.length > 0) {
         showSuccessMessage(
           'Tasks Submitted!',
@@ -709,7 +676,6 @@ useEffect(() => {
       console.error('Error verifying tasks:', error);
       Alert.alert('Error', 'Something went wrong verifying tasks.');
     } finally {
-      // Hide loading indicator when verification is complete
       setIsVerifying(false);
     }
   };
@@ -755,7 +721,6 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
-      {/* SUCCESS POPUP USING ConfirmationPopup COMPONENT */}
       <ConfirmationPopup
         visible={showSuccessPopup}
         onConfirm={() => setShowSuccessPopup(false)}
@@ -765,12 +730,11 @@ useEffect(() => {
         type="success"
       />
 
-      {/* LOADING MODAL FOR VERIFICATION PROCESS */}
       <Modal
         transparent={true}
         animationType="fade"
         visible={isVerifying}
-        onRequestClose={() => {}} // Prevent closing by back button
+        onRequestClose={() => {}}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.loadingModal}>
@@ -924,7 +888,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   taskVerifyText: { color: '#131313', fontWeight: 'bold', fontSize: 16 },
-  // New styles for loading modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',

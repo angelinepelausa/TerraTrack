@@ -3,12 +3,11 @@ import { createUserDocument } from '../repositories/userRepository';
 
 export const signUpWithEmail = async (email, password, userData) => {
   try {
-    // Validate input data
+
     if (!email || !password || !userData || !userData.username) {
       throw new Error('Missing required fields');
     }
 
-    // Create auth user
     const userCredential = await auth().createUserWithEmailAndPassword(email, password);
     
     if (!userCredential || !userCredential.user) {
@@ -17,25 +16,21 @@ export const signUpWithEmail = async (email, password, userData) => {
 
     const userId = userCredential.user.uid;
 
-    // Create user document with only necessary data
     const userDocumentData = {
       username: userData.username,
       email: email,
       userId: userId
     };
 
-    // Wait a moment for auth to fully initialize
     await new Promise(resolve => setTimeout(resolve, 300));
 
     const result = await createUserDocument(userDocumentData);
 
     if (!result.success) {
-      // If document creation fails, delete the auth user to rollback
       await auth().currentUser?.delete();
       throw new Error(result.error || 'Failed to create user document');
     }
 
-    // Return the user credential
     return { 
       success: true, 
       user: userCredential.user,

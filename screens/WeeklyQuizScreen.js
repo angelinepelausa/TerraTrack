@@ -7,14 +7,12 @@ import { hasAttemptedQuiz, saveQuizAttempt } from '../repositories/quizAttemptsR
 import QuizResult from '../components/QuizResult';
 import { incrementWeeklyQuizFinished } from '../repositories/userStatsRepository';
 
-
-// ✅ Get Monday of current week (YYYY-MM-DD)
 const getMondayDate = () => {
   const today = new Date();
-  const day = today.getDay(); // 0=Sunday, 1=Monday
-  const diff = today.getDate() - day + (day === 0 ? -6 : 1); // adjust when Sunday
+  const day = today.getDay();
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(today.setDate(diff));
-  return monday.toISOString().split('T')[0]; // YYYY-MM-DD
+  return monday.toISOString().split('T')[0];
 };
 
 const WeeklyQuizScreen = ({ navigation }) => {
@@ -23,7 +21,7 @@ const WeeklyQuizScreen = ({ navigation }) => {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [alreadyAttempted, setAlreadyAttempted] = useState(false);
-  const [rewards, setRewards] = useState(null); // ✅ For QuizResult
+  const [rewards, setRewards] = useState(null);
 
   const mondayDate = getMondayDate();
 
@@ -129,10 +127,9 @@ const WeeklyQuizScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* HeaderRow has been completely removed */}
 
       <View style={styles.quizContainer}>
-        {/* Quiz Title fetched from Firestore */}
+
         <Text style={styles.quizTitle}>{quiz.title || 'Weekly Quiz'}</Text>
 
         <View style={styles.questionContainer}>

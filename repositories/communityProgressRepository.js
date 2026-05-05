@@ -85,7 +85,6 @@ export const getCommunityLeaderboard = async (yearQuarter = null) => {
     const contributorsMap = data.contributors || {};
     const rewards = data.rewards || {};
 
-    // Convert contributors map to array and populate user data
     const contributorsArray = await Promise.all(
       Object.entries(contributorsMap).map(async ([userId, points]) => {
         const { username, avatar } = await populateUserData(userId);
@@ -100,7 +99,7 @@ export const getCommunityLeaderboard = async (yearQuarter = null) => {
       })
     );
 
-    // Sort by points descending
+    // Sort by points pababa
     contributorsArray.sort((a, b) => b.terraPoints - a.terraPoints);
 
     // Assign ranks and rewards

@@ -1,4 +1,3 @@
-// screens/CommunityProgressScreen.js
 import React, { useState } from "react";
 import { View, ActivityIndicator, TouchableOpacity, Text, Modal, Image, Dimensions } from "react-native";
 import { scale } from "../utils/scaling";

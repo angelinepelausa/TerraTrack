@@ -1,4 +1,3 @@
-// components/CurrentProgressTab.js
 import React from "react";
 import { View, Text, Image, ScrollView } from "react-native";
 import { scale, vScale } from "../utils/scaling";
@@ -16,8 +15,7 @@ const CurrentProgressTab = ({ progressData, userContribution, recentActivity, ge
 
   const { title, description, current, goal, image } = progressData;
   const progressPercentage = goal > 0 ? (current / goal) * 100 : 0;
-  
-  // Helper function for proper pluralization
+
   const pluralize = (count, singular, plural) => {
     return count === 1 ? singular : plural;
   };

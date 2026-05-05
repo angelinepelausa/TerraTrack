@@ -22,7 +22,6 @@ const SplashScreen = ({ navigation }) => {
             navigation.replace('HomeScreen');
           }
         }
-        // else stay on splash/login screen
       } catch (err) {
         console.error('Error checking remembered user', err);
       }

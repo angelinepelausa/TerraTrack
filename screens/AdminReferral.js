@@ -1,4 +1,3 @@
-// screens/AdminReferral.js
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -106,7 +105,6 @@ const AdminReferral = () => {
     </View>
   );
 
-  // ✅ Updated to show labels above input fields
   const renderInputField = (label, value, onChange) => (
     <View style={styles.inputGroup}>
       <Text style={styles.inputLabel}>{label}</Text>
@@ -128,7 +126,6 @@ const AdminReferral = () => {
       </View>
 
       <View style={styles.content}>
-        {/* Rewards Table */}
         <Text style={styles.sectionHeader}>Rewards</Text>
         <View style={styles.rewardHeaderRow}>
           <Text style={[styles.rewardLabel, { flex: 1 }]}></Text>
@@ -141,8 +138,6 @@ const AdminReferral = () => {
         {renderRewardRow("Referrer", settings.referrer, (key, value) =>
           handleChange("referrer", value, key)
         )}
-
-        {/* Goals */}
         <Text style={[styles.sectionHeader, { marginTop: 25 }]}>Goals</Text>
         {renderInputField("Maximum Invites", settings.maxInvites, (text) =>
           handleChange("maxInvites", text)
@@ -194,7 +189,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  // ✅ Labeled input field styles
   inputGroup: {
     marginBottom: 16,
   },

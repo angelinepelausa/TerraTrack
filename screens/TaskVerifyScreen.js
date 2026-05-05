@@ -1,4 +1,3 @@
-// screens/TaskVerifyScreen.js
 import React, { useEffect, useState } from 'react';
 import { Text, View, StyleSheet, Image, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { scale, vScale } from '../utils/scaling';
@@ -30,7 +29,6 @@ const TaskVerifyScreen = ({ navigation }) => {
     }
   };
 
-  // Function to get the latest distribution run ID
   const getLatestDistributionRun = async () => {
     try {
       const distributionSnap = await firestore()
@@ -56,15 +54,12 @@ const TaskVerifyScreen = ({ navigation }) => {
     }
   };
 
-  // Function to get assigned verification tasks from latest distribution date, date-1, and date+1
   const getLatestAssignedVerificationTasks = async (userId) => {
     try {
       const latestDistribution = await getLatestDistributionRun();
       if (!latestDistribution) {
         return [];
       }
-
-      // Calculate the date range: previous day, current day, and next day
       const latestDate = new Date(latestDistribution.date);
       
       const previousDate = new Date(latestDate);
@@ -81,18 +76,13 @@ const TaskVerifyScreen = ({ navigation }) => {
       if (assignedVerificationsSnap.empty) {
         return [];
       }
-
       const latestTasks = [];
-      
-      // Dates to check: previous day, current distribution day, next day
       const datesToCheck = [previousDateStr, latestDistribution.date, nextDateStr];
       console.log("Looking for assigned tasks from dates:", datesToCheck);
 
-      // Process documents that match any of the date patterns (date_runId)
       for (const doc of assignedVerificationsSnap.docs) {
-        // Check if document starts with any of our target dates
         const docId = doc.id;
-        const docDate = docId.split('_')[0]; // Extract date part from "date_runId"
+        const docDate = docId.split('_')[0];
         
         if (datesToCheck.includes(docDate)) {
           const data = doc.data();
@@ -101,7 +91,6 @@ const TaskVerifyScreen = ({ navigation }) => {
             Object.keys(data).forEach(compositeKey => {
               const taskData = data[compositeKey];
               if (taskData && taskData.status === 'pending') {
-                // Extract ownerId and taskId from composite key (format: ownerId_taskId)
                 const [ownerId, taskId] = compositeKey.split('_');
                 
                 latestTasks.push({
@@ -125,7 +114,6 @@ const TaskVerifyScreen = ({ navigation }) => {
     }
   };
 
-  // Function to get submitted tasks from latest distribution date, date-1, and date+1
   const getLatestSubmittedTasks = async (userId) => {
     try {
       const latestDistribution = await getLatestDistributionRun();
@@ -133,7 +121,6 @@ const TaskVerifyScreen = ({ navigation }) => {
         return [];
       }
 
-      // Calculate the date range: previous day, current day, and next day
       const latestDate = new Date(latestDistribution.date);
       
       const previousDate = new Date(latestDate);
@@ -147,7 +134,6 @@ const TaskVerifyScreen = ({ navigation }) => {
       const userRef = firestore().collection('users').doc(userId);
       const latestTasks = [];
 
-      // Fetch from three dates: previous day, current day, and next day
       const datesToCheck = [previousDateStr, latestDistribution.date, nextDateStr];
       
       for (const date of datesToCheck) {
@@ -181,7 +167,6 @@ const TaskVerifyScreen = ({ navigation }) => {
     }
   };
 
-  // NEW: Alternative method - check global tasks_verification collection for latest dates
   const getGlobalSubmittedTasks = async (userId) => {
     try {
       const latestDistribution = await getLatestDistributionRun();
@@ -189,7 +174,6 @@ const TaskVerifyScreen = ({ navigation }) => {
         return [];
       }
 
-      // Calculate the date range: previous day, current day, and next day
       const latestDate = new Date(latestDistribution.date);
       
       const previousDate = new Date(latestDate);
@@ -209,8 +193,7 @@ const TaskVerifyScreen = ({ navigation }) => {
             .collection('tasks_verification')
             .doc(date)
             .collection('submitted');
-          
-          // Query for tasks submitted by this user with pending status
+
           const querySnap = await globalRef
             .where('userId', '==', userId)
             .where('status', '==', 'pending')
@@ -244,17 +227,12 @@ const TaskVerifyScreen = ({ navigation }) => {
   const loadTasks = async () => {
     setLoading(true);
     try {
-      // Get tasks only from latest distribution window
       const [submittedTasks, assignedTasks, globalSubmittedTasks] = await Promise.all([
         getLatestSubmittedTasks(user.uid),
         getLatestAssignedVerificationTasks(user.uid),
         getGlobalSubmittedTasks(user.uid)
       ]);
-      
-      // Combine submitted tasks from different sources
       const allSubmittedTasks = [...submittedTasks, ...globalSubmittedTasks];
-      
-      // Remove duplicates by id
       const uniqueSubmittedTasks = Array.from(
         new Map(allSubmittedTasks.map(task => [task.id, task])).values()
       );
@@ -289,7 +267,7 @@ const TaskVerifyScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Top Bar + Back */}
+
       <View style={styles.headerContainer}>
         <View style={styles.topBar}>
           <View style={styles.coinBox}>
@@ -305,7 +283,6 @@ const TaskVerifyScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Scrollable content */}
       <ScrollView 
         contentContainerStyle={styles.scrollContainer} 
         style={{ marginTop: vScale(150) }}
@@ -313,7 +290,7 @@ const TaskVerifyScreen = ({ navigation }) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
         }
       >
-        {/* My Submitted Tasks */}
+
         <Text style={styles.taskverText}>Task Verification</Text>
         <View style={styles.tasksContainer}>
           {mySubmittedTasks.length === 0 ? (
@@ -345,7 +322,6 @@ const TaskVerifyScreen = ({ navigation }) => {
           )}
         </View>
 
-        {/* Assigned Tasks */}
         <Text style={styles.vertaskText}>Verify Task</Text>
         <View style={styles.vertaskContainer}>
           {assignedTasks.length === 0 ? (

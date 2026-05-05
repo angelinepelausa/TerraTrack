@@ -1,17 +1,15 @@
-// services/moderationService.js
 import { moderationRepository } from "../repositories/moderationRepository";
-import auth from '@react-native-firebase/auth'; // FIXED: Remove curly braces
+import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 
 export const moderationService = {
   markAsSafe: async (itemId, reportData, adminId = null) => {
-    const currentAdminId = adminId || auth().currentUser?.uid; // FIXED: Now auth() will work
+    const currentAdminId = adminId || auth().currentUser?.uid;
     
     if (!currentAdminId) {
       throw new Error("Admin user not authenticated");
     }
 
-    // Update forReview status
     await moderationRepository.updatePostStatus(itemId, {
       status: "reviewed",
       actionTaken: "marked_safe",
@@ -19,7 +17,6 @@ export const moderationService = {
       reviewedAt: firestore.FieldValue.serverTimestamp()
     });
 
-    // Update community_progress
     await moderationRepository.updateCommunityProgress(
       reportData.quarter,
       reportData.itemId,
@@ -29,7 +26,6 @@ export const moderationService = {
       }
     );
 
-    // Log the action for accountability
     await moderationRepository.logModerationAction({
       itemId: reportData.itemId,
       reportId: itemId,
@@ -47,7 +43,7 @@ export const moderationService = {
   },
 
   suspendUser: async (itemId, reportData, adminId = null) => {
-    const currentAdminId = adminId || auth().currentUser?.uid; // FIXED: Now auth() will work
+    const currentAdminId = adminId || auth().currentUser?.uid;
     
     if (!currentAdminId) {
       throw new Error("Admin user not authenticated");
@@ -58,33 +54,31 @@ export const moderationService = {
       throw new Error("Target user ID not found");
     }
 
-    // Get current user data to determine suspend count
     const userData = await moderationRepository.getUserData(targetUserId);
     const currentSuspendCount = userData.suspendedCount || 0;
     const newSuspendCount = currentSuspendCount + 1;
 
-    // Determine suspension duration based on suspend count
     let suspensionDurationHours = 0;
     let userStatus = "active";
 
     switch (newSuspendCount) {
       case 1:
-        userStatus = "active"; // Warning only
+        userStatus = "active";
         break;
       case 2:
-        suspensionDurationHours = 24; // 1 day
+        suspensionDurationHours = 24;
         userStatus = "suspended";
         break;
       case 3:
-        suspensionDurationHours = 168; // 7 days
+        suspensionDurationHours = 168;
         userStatus = "suspended";
         break;
       case 4:
-        suspensionDurationHours = 720; // 30 days
+        suspensionDurationHours = 720;
         userStatus = "suspended";
         break;
       case 5:
-        userStatus = "banned"; // Permanent ban
+        userStatus = "banned";
         break;
       default:
         if (newSuspendCount > 5) {
@@ -93,7 +87,6 @@ export const moderationService = {
         break;
     }
 
-    // Calculate suspension end time
     const suspensionStart = firestore.FieldValue.serverTimestamp();
     let suspensionEnd = null;
     
@@ -103,7 +96,6 @@ export const moderationService = {
       suspensionEnd = firestore.Timestamp.fromDate(endTime);
     }
 
-    // Update forReview status
     await moderationRepository.updatePostStatus(itemId, {
       status: "reviewed",
       actionTaken: "user_suspended",
@@ -111,23 +103,20 @@ export const moderationService = {
       reviewedAt: firestore.FieldValue.serverTimestamp()
     });
 
-    // Delete from community_comments
     await moderationRepository.deleteFromCommunityProgress(
       reportData.quarter,
       reportData.itemId
     );
 
-    // Update user's suspension data
     await moderationRepository.updateUserSuspensionData(
       targetUserId,
       newSuspendCount,
       userStatus,
       suspensionStart,
       suspensionEnd,
-      reportData.reporters?.[0]?.category || "Violation" // Use first reporter's category as reason
+      reportData.reporters?.[0]?.category || "Violation"
     );
 
-    // Log the action for accountability
     await moderationRepository.logModerationAction({
       itemId: reportData.itemId,
       reportId: itemId,
@@ -148,7 +137,6 @@ export const moderationService = {
     });
   },
 
-  // Get moderation history for an item
   getModerationHistory: async (itemId) => {
     return await moderationRepository.getModerationActions(itemId);
   }

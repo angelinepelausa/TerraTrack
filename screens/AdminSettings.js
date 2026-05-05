@@ -1,4 +1,3 @@
-// screens/AdminSettings.js
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -99,12 +98,10 @@ const AdminSettings = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header aligned with content */}
       <View style={styles.headerWrapper}>
         <HeaderRow title="Settings" onBackPress={() => navigation.goBack()} />
       </View>
 
-      {/* Content */}
       <View style={styles.content}>
         <Text style={styles.label}>Email</Text>
         <TextInput
@@ -170,7 +167,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#131313" },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#131313" },
   headerWrapper: {
-    paddingHorizontal: 20, // same as content padding
+    paddingHorizontal: 20,
     paddingTop: 40,
   },
   content: { paddingHorizontal: 20, paddingTop: 20 },

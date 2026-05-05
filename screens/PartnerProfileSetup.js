@@ -27,8 +27,6 @@ const PartnerProfileSetup = ({ navigation }) => {
   const [logoUrl, setLogoUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
-  // Business Hours State
   const [businessHoursModal, setBusinessHoursModal] = useState(false);
   const [startHour, setStartHour] = useState('09');
   const [startMinute, setStartMinute] = useState('00');
@@ -37,8 +35,6 @@ const PartnerProfileSetup = ({ navigation }) => {
   const [endMinute, setEndMinute] = useState('00');
   const [endPeriod, setEndPeriod] = useState('PM');
   const [businessHours, setBusinessHours] = useState('');
-
-  // Time options - circular arrays
   const hours = ['12', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'];
   const minutes = ['00', '15', '30', '45'];
   const periods = ['AM', 'PM'];
@@ -79,7 +75,6 @@ const PartnerProfileSetup = ({ navigation }) => {
     setBusinessHoursModal(false);
   };
 
-  // Circular navigation functions
   const getNextItem = (array, current) => {
     const index = array.indexOf(current);
     return array[(index + 1) % array.length];
@@ -94,7 +89,6 @@ const PartnerProfileSetup = ({ navigation }) => {
     <View style={styles.timeSection}>
       <Text style={styles.timeSectionLabel}>{label}</Text>
       <View style={styles.timePickerCompact}>
-        {/* Hour */}
         <View style={styles.timeColumnCompact}>
           <TouchableOpacity 
             style={styles.timeArrow}
@@ -112,8 +106,6 @@ const PartnerProfileSetup = ({ navigation }) => {
         </View>
 
         <Text style={styles.timeSeparator}>:</Text>
-
-        {/* Minute */}
         <View style={styles.timeColumnCompact}>
           <TouchableOpacity 
             style={styles.timeArrow}
@@ -130,7 +122,6 @@ const PartnerProfileSetup = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Period */}
         <View style={styles.timeColumnCompact}>
           <TouchableOpacity 
             style={styles.timeArrow}
@@ -272,8 +263,6 @@ const PartnerProfileSetup = ({ navigation }) => {
             onChangeText={(value) => handleInputChange('address', value)}
           />
         </View>
-
-        {/* Business Hours Input */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Business Hours</Text>
           <TouchableOpacity 
@@ -300,7 +289,6 @@ const PartnerProfileSetup = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Business Hours Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -484,7 +472,6 @@ const styles = StyleSheet.create({
     fontSize: scale(16),
     fontWeight: '600',
   },
-  // Modal Styles
   modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -545,7 +532,6 @@ const styles = StyleSheet.create({
     fontSize: scale(16),
     fontWeight: '600',
   },
-  // Time Picker Styles
   timePickerContainer: {
     marginBottom: vScale(20),
   },

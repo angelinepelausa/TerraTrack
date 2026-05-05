@@ -321,7 +321,7 @@ export const adminUserRepository = {
         lastActionAt: firestore.FieldValue.serverTimestamp()
       });
 
-      // Log moderation action
+      // Log admion action
       await firestore().collection('moderationActions').add({
         targetUserId: userId,
         action: 'admin_activation',
@@ -338,7 +338,7 @@ export const adminUserRepository = {
     }
   },
 
-  // Get all user data at once
+  // Get all user data
   async getUserFullData(userId) {
     try {
       const [

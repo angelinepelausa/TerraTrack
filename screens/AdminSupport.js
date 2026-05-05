@@ -21,7 +21,6 @@ const AdminSupport = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // filter modal states
   const [filterVisible, setFilterVisible] = useState(false);
   const [filters, setFilters] = useState({ 
     category: null, 
@@ -46,7 +45,6 @@ const AdminSupport = () => {
       let data = await Promise.all(
         snapshot.docs.map(async (doc) => {
           const item = doc.data();
-          // Map userId → username
           let username = "Unknown User";
           if (item.originalData?.userId) {
             const userDoc = await firestore().collection("users").doc(item.originalData.userId).get();
@@ -58,13 +56,11 @@ const AdminSupport = () => {
             id: doc.id, 
             username, 
             ...item,
-            // Add helper fields for filtering
             firstCategory: item.reporters?.[0]?.category || "Unknown"
           };
         })
       );
 
-      // Apply filters on client side
       data = applyFilters(data, filters);
 
       setState(data);
@@ -78,7 +74,6 @@ const AdminSupport = () => {
     const applyFilters = (data, filters) => {
     let filteredData = [...data];
 
-    // Category (multi-select)
     if (filters.category && filters.category.length > 0) {
       filteredData = filteredData.filter(item =>
         item.reporters?.some(reporter =>
@@ -87,13 +82,11 @@ const AdminSupport = () => {
       );
     }
 
-    // Status (single-select)
     if (filters.status) {
       const statusLower = filters.status.toLowerCase();
       filteredData = filteredData.filter(item => item.status?.toLowerCase() === statusLower);
     }
 
-    // Sort by createdAt
     filteredData.sort((a, b) => {
       const dateA = a.createdAt?.toDate?.() || new Date(0);
       const dateB = b.createdAt?.toDate?.() || new Date(0);
@@ -110,7 +103,6 @@ const AdminSupport = () => {
   const getFilteredData = () => {
     const data = posts;
     
-    // Apply search filter
     return data.filter((item) =>
       (item.username || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.firstCategory || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -134,7 +126,6 @@ const AdminSupport = () => {
         placeholder="Search reports"
       />
 
-      {/* Filter Status Display */}
       {(filters.category || filters.status) && (
         <View style={styles.filterStatus}>
           <Text style={styles.filterStatusText}>
@@ -177,7 +168,6 @@ const AdminSupport = () => {
         />
       )}
 
-      {/* Report Filter Modal */}
       <ReportFilterModal
         visible={filterVisible}
         onClose={() => setFilterVisible(false)}

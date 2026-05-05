@@ -40,13 +40,10 @@ const ShopScreen = () => {
   const [avatarDropdownOpen, setAvatarDropdownOpen] = useState(false);
   const [voucherDropdownOpen, setVoucherDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const [selectedAvatar, setSelectedAvatar] = useState(null);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [avatarModalVisible, setAvatarModalVisible] = useState(false);
   const [voucherModalVisible, setVoucherModalVisible] = useState(false);
-
-  // 🆕 SIMPLIFIED CONFIRMATION POPUP STATE
   const [showPopup, setShowPopup] = useState(false);
   const [popupConfig, setPopupConfig] = useState({
     title: '',
@@ -71,7 +68,6 @@ const ShopScreen = () => {
     applyVoucherFilter();
   }, [voucherFilter, allVouchers, userVouchers]);
 
-  // 🆕 SINGLE POPUP FUNCTION
   const showMessage = (title, message, type = 'success') => {
     setPopupConfig({
       title,
@@ -178,13 +174,11 @@ const ShopScreen = () => {
   };
 
   const handleAvatarPress = (avatar) => {
-    // 🆕 CHECK IF USER ALREADY OWNS THIS AVATAR
     if (purchasedIds.includes(avatar.id)) {
       showMessage('Avatar Owned', `You already own the "${avatar.name}" avatar!`, 'success');
       return;
     }
-    
-    // 🆕 CHECK IF USER HAS ENOUGH COINS
+
     if (avatar.terracoin > terraCoins) {
       showMessage(
         'Insufficient Coins', 
@@ -202,7 +196,6 @@ const ShopScreen = () => {
     const isPurchased = isVoucherPurchased(voucher.id);
     const isClaimed = isVoucherClaimed(voucher.id);
 
-    // 🆕 SHOW DIFFERENT MESSAGES BASED ON STATUS
     if (isClaimed) {
       showMessage('Voucher Claimed', 'This voucher has already been claimed and used.', 'success');
       return;
@@ -217,7 +210,6 @@ const ShopScreen = () => {
       return;
     }
 
-    // 🆕 CHECK IF USER HAS ENOUGH COINS FOR NEW PURCHASE
     if (voucher.terraCoinCost > terraCoins) {
       showMessage(
         'Insufficient Coins', 
@@ -240,7 +232,6 @@ const ShopScreen = () => {
     return userVouchers.some(v => v.id === voucherId);
   };
 
-  // 🆕 HANDLE PURCHASE SUCCESS
   const handlePurchaseSuccess = (itemName, itemType) => {
     fetchTerraCoins();
     fetchAvatarsAndPurchases();
@@ -510,7 +501,6 @@ const ShopScreen = () => {
           )}
         </View>
 
-        {/* 🆕 ADDED: SMALL TEXT SECTION */}
         <View style={styles.smallTextContainer}>
           <Text style={styles.smallText}>
             To earn more Terra Coins, complete tasks, read materials, and answer quizzes.
@@ -518,7 +508,6 @@ const ShopScreen = () => {
         </View>
       </View>
 
-      {/* 🆕 BUY MODALS */}
       <BuyAvatar
         visible={avatarModalVisible}
         avatar={selectedAvatar}
@@ -542,7 +531,6 @@ const ShopScreen = () => {
         }}
       />
 
-      {/* 🆕 SINGLE CONFIRMATION POPUP */}
       <ConfirmationPopup
         visible={showPopup}
         title={popupConfig.title}
@@ -555,7 +543,6 @@ const ShopScreen = () => {
   );
 };
 
-// 🆕 ADD OWNED BADGE STYLES AND NEW SMALL TEXT SECTION STYLES
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313' },
   topBar: {
@@ -626,7 +613,6 @@ const styles = StyleSheet.create({
   unclaimedText: { color: '#FFFFFF', fontSize: 10, fontWeight: 'bold', fontFamily: 'DMSans-Bold' },
   emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
   emptyText: { color: '#999999', fontSize: 16, fontFamily: 'DMSans-Regular' },
-  // 🆕 NEW SMALL TEXT SECTION STYLES
   smallTextContainer: {
     marginTop: 10,
     padding: 12,

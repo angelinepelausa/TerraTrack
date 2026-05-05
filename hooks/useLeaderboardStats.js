@@ -95,7 +95,6 @@ export const useLeaderboardStats = (userId) => {
     let bestRankCount = 0;
     let bestDateId = null;
 
-    // Sort documents by date (newest first)
     const sortedDocs = leaderboardDocs.docs.sort((a, b) => {
       const dateA = parseResultIdToDate(a.id)?.getTime() || 0;
       const dateB = parseResultIdToDate(b.id)?.getTime() || 0;
@@ -119,12 +118,11 @@ export const useLeaderboardStats = (userId) => {
           
           let rank = typeof data.rank === 'number' ? data.rank : parseInt(data.rank, 10);
 
-          // Validate rank
           if (rank != null && !isNaN(rank) && rank > 0) {
             total += 1;
             console.log('Valid rank found:', rank, 'in', doc.id);
 
-            // Update best rank logic
+
             if (rank < best) {
               best = rank;
               bestRankCount = 1;
@@ -132,7 +130,7 @@ export const useLeaderboardStats = (userId) => {
               console.log('New best rank:', best);
             } else if (rank === best) {
               bestRankCount += 1;
-              // Keep the most recent date for the best rank
+
               const currentDate = parseResultIdToDate(doc.id);
               const existingDate = parseResultIdToDate(bestDateId);
               if (!existingDate || (currentDate && currentDate > existingDate)) {
@@ -154,7 +152,7 @@ export const useLeaderboardStats = (userId) => {
       }
     }
 
-    // If no valid ranks were found, reset best to null
+
     if (best === Number.POSITIVE_INFINITY) {
       best = null;
     }

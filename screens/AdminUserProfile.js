@@ -17,7 +17,6 @@ import { ChartSection } from "../components/ChartSection";
 import { useChartData } from "../hooks/useChartData";
 import { scale } from "../utils/scaling";
 
-// Suspension Modal Component
 const SuspensionModal = ({ visible, onClose, onConfirm }) => {
   const [selectedDuration, setSelectedDuration] = useState('1');
 
@@ -72,7 +71,6 @@ const SuspensionModal = ({ visible, onClose, onConfirm }) => {
   );
 };
 
-// Tab Components
 const ProfileTab = ({ 
     userDetails, 
     onBanUser, 
@@ -90,7 +88,6 @@ const ProfileTab = ({
     setSelectedCategory 
 }) => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-        {/* Basic Information */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Information</Text>
             <View style={styles.infoGrid}>
@@ -103,7 +100,6 @@ const ProfileTab = ({
             </View>
         </View>
 
-        {/* Stats */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Progress & Stats</Text>
             <View style={styles.statsGrid}>
@@ -115,7 +111,6 @@ const ProfileTab = ({
             </View>
         </View>
 
-        {/* Chart */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Environmental Impact</Text>
             <ChartSection
@@ -132,7 +127,6 @@ const ProfileTab = ({
             />
         </View>
 
-        {/* Admin Actions */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Admin Actions</Text>
             <View style={styles.actionButtons}>
@@ -157,7 +151,6 @@ const ProfileTab = ({
 
 const PreferencesTab = ({ userDetails }) => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-        {/* Lifestyle */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Lifestyle Preferences</Text>
             <View style={styles.preferenceCards}>
@@ -166,7 +159,6 @@ const PreferencesTab = ({ userDetails }) => (
             </View>
         </View>
 
-        {/* Diet */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Diet Preferences</Text>
             {userDetails.preferences?.dietType?.length > 0 ? (
@@ -182,7 +174,6 @@ const PreferencesTab = ({ userDetails }) => (
             )}
         </View>
 
-        {/* Energy */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Energy Control</Text>
             {userDetails.preferences?.energyControl?.length > 0 ? (
@@ -198,7 +189,6 @@ const PreferencesTab = ({ userDetails }) => (
             )}
         </View>
 
-        {/* Transportation */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Transportation</Text>
             {userDetails.preferences?.transportationOptions?.length > 0 ? (
@@ -218,7 +208,6 @@ const PreferencesTab = ({ userDetails }) => (
 
 const AchievementsTab = ({ userDetails }) => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-        {/* Badges */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Badges ({userDetails.unlockedBadges?.length || 0})</Text>
             {userDetails.unlockedBadges?.length > 0 ? (
@@ -243,7 +232,6 @@ const AchievementsTab = ({ userDetails }) => (
             )}
         </View>
 
-        {/* Avatars */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Avatars ({userDetails.purchasedAvatars?.length || 0})</Text>
             {userDetails.purchasedAvatars && userDetails.purchasedAvatars.length > 0 ? (
@@ -268,7 +256,6 @@ const AchievementsTab = ({ userDetails }) => (
             )}
         </View>
 
-        {/* Invites */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Invites ({userDetails.invites?.length || 0})</Text>
             {userDetails.invites?.length > 0 ? (
@@ -305,7 +292,6 @@ const AchievementsTab = ({ userDetails }) => (
     </ScrollView>
 );
 
-// Reusable Components
 const InfoRow = ({ label, value }) => (
     <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>{label}</Text>
@@ -333,7 +319,6 @@ const EmptyState = ({ text }) => (
     </View>
 );
 
-// Main Component
 const AdminUserProfile = () => {
     const navigation = useNavigation();
     const route = useRoute();
@@ -344,14 +329,12 @@ const AdminUserProfile = () => {
     const [activeTab, setActiveTab] = useState("profile");
     const [showSuspensionModal, setShowSuspensionModal] = useState(false);
     
-    // Chart state management
     const [dropdownOpen, setDropdownOpen] = useState({ year: false, category: false });
     const [years, setYears] = useState([]);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
     const [selectedCategory, setSelectedCategory] = useState('Total');
     const categories = ['Total', 'Diet', 'Transport', 'Energy'];
     
-    // Use the chart hook
     const { chartData, chartLoading } = useChartData(userId, selectedYear, selectedCategory, userDetails);
 
     useEffect(() => {
@@ -364,7 +347,6 @@ const AdminUserProfile = () => {
             const userData = await adminUserRepository.getUserFullData(userId);
             setUserDetails(userData);
             
-            // Set available years for chart dropdown
             if (userData.footprints) {
                 const availableYears = [
                     ...new Set(Object.keys(userData.footprints).map(key => key.split('-')[0]))
@@ -502,7 +484,6 @@ const AdminUserProfile = () => {
 
     return (
         <View style={styles.container}>
-            {/* Header */}
             <View style={styles.headerContainer}>
                 <HeaderRow
                     title="User Profile"
@@ -510,7 +491,6 @@ const AdminUserProfile = () => {
                 />
             </View>
 
-            {/* User Header Card */}
             <View style={styles.userHeaderCard}>
                 <Image
                     source={
@@ -534,7 +514,6 @@ const AdminUserProfile = () => {
                 </View>
             </View>
 
-            {/* Tabs */}
             <View style={styles.tabsContainer}>
                 {["profile", "preferences", "achievements"].map((tab) => (
                     <TouchableOpacity
@@ -550,12 +529,10 @@ const AdminUserProfile = () => {
                 ))}
             </View>
 
-            {/* Tab Content */}
             <View style={styles.contentContainer}>
                 {renderTabContent()}
             </View>
 
-            {/* Suspension Modal */}
             <SuspensionModal
                 visible={showSuspensionModal}
                 onClose={() => setShowSuspensionModal(false)}
@@ -579,8 +556,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-    
-    // User Header Card
     userHeaderCard: {
         flexDirection: "row",
         alignItems: "center",
@@ -632,9 +607,7 @@ const styles = StyleSheet.create({
         color: "#FFFFFF",
         textTransform: "uppercase",
         letterSpacing: 0.5,
-    },
-    
-    // Tabs
+    },   
     tabsContainer: {
         flexDirection: "row",
         backgroundColor: "#1E1E1E",
@@ -672,8 +645,6 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: scale(2),
         borderTopRightRadius: scale(2),
     },
-    
-    // Content
     contentContainer: {
         flex: 1,
         marginHorizontal: scale(16),
@@ -682,8 +653,6 @@ const styles = StyleSheet.create({
     tabContent: {
         flex: 1,
     },
-    
-    // Sections
     section: {
         backgroundColor: "#1E1E1E",
         borderRadius: scale(16),
@@ -698,8 +667,6 @@ const styles = StyleSheet.create({
         color: "#FFFFFF",
         marginBottom: scale(20),
     },
-    
-    // Info Grid
     infoGrid: {
         gap: scale(12),
     },
@@ -725,8 +692,6 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingLeft: scale(12),
     },
-    
-    // Stats Grid
     statsGrid: {
         flexDirection: "row",
         flexWrap: "wrap",
@@ -752,8 +717,6 @@ const styles = StyleSheet.create({
         color: "#888",
         textAlign: "center",
     },
-    
-    // Action Buttons
     actionButtons: {
         flexDirection: "row",
         gap: scale(12),
@@ -779,8 +742,6 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#FFFFFF",
     },
-    
-    // Preferences
     preferenceCards: {
         gap: scale(12),
     },
@@ -800,8 +761,6 @@ const styles = StyleSheet.create({
         color: "#FFFFFF",
         fontWeight: "600",
     },
-    
-    // Tags
     tagContainer: {
         flexDirection: "row",
         flexWrap: "wrap",
@@ -818,8 +777,6 @@ const styles = StyleSheet.create({
         color: "#FFFFFF",
         fontWeight: "500",
     },
-    
-    // Empty State
     emptyState: {
         padding: scale(40),
         alignItems: "center",
@@ -829,14 +786,10 @@ const styles = StyleSheet.create({
         color: "#888",
         fontStyle: "italic",
     },
-    
-    // Horizontal Scroll
     horizontalScroll: {
         marginHorizontal: scale(-20),
         paddingHorizontal: scale(20),
     },
-    
-    // Badges & Avatars
     badgeCard: {
         alignItems: "center",
         marginRight: scale(16),
@@ -873,8 +826,6 @@ const styles = StyleSheet.create({
         textAlign: "center",
         fontWeight: "500",
     },
-    
-    // Invites
     invitesList: {
         gap: scale(12),
     },
@@ -931,8 +882,6 @@ const styles = StyleSheet.create({
         fontSize: scale(11),
         color: "#888",
     },
-    
-    // Modal Styles
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0, 0, 0, 0.8)",

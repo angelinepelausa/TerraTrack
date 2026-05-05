@@ -20,7 +20,6 @@ const ManualVerificationScreen = () => {
         return;
       }
 
-      // 1. Find the voucher purchase with this code
       const voucherQuery = await firestore()
         .collection('voucher_purchases')
         .where('voucherCode', '==', manualCode.trim().toUpperCase())
@@ -35,13 +34,11 @@ const ManualVerificationScreen = () => {
       const voucherDoc = voucherQuery.docs[0];
       const voucherData = voucherDoc.data();
 
-      // 2. Check if this partner owns this voucher
       if (voucherData.partnerId !== user.uid) {
         Alert.alert('Invalid', 'This voucher is not for your business');
         return;
       }
 
-      // 3. Update the voucher status to claimed
       await firestore()
         .collection('voucher_purchases')
         .doc(voucherDoc.id)
@@ -53,14 +50,12 @@ const ManualVerificationScreen = () => {
           claimedDate: new Date(),
         });
 
-      // 4. Also update the user's purchase record
       const userPurchaseRef = firestore()
         .collection('users')
         .doc(voucherData.userId)
         .collection('purchases')
         .doc('vouchers');
 
-      // Get current user purchases and update the specific voucher
       const userPurchaseDoc = await userPurchaseRef.get();
       if (userPurchaseDoc.exists) {
         const purchases = userPurchaseDoc.data().list || [];

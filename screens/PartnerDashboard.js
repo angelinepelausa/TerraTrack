@@ -3,10 +3,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { scale, vScale } from '../utils/scaling';
-
-// Import the screens you already have
 import VoucherStatsScreen from './VoucherStatsScreen';
-import ManualVerificationScreen from './ManualVerificationScreen'; // Updated import
+import ManualVerificationScreen from './ManualVerificationScreen';
 import PartnerProfileScreen from './PartnerProfileScreen';
 
 const Tab = createBottomTabNavigator();

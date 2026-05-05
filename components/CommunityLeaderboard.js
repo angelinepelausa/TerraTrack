@@ -71,7 +71,6 @@ const CommunityLeaderboard = ({
 
   const RankedAvatar = ({ user, currentUserId, avatarSize, rankCircleSize }) => {
     const isCurrentUser = user.id === currentUserId;
-    // Use avatar URL from community data structure
     const avatarUrl = user.avatarUrl || user.avatar || null;
     
     return (

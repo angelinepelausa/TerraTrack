@@ -230,7 +230,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
       return Alert.alert('Error', 'Please fill all required fields.');
     }
 
-    // Double-check if quarter is disabled
     if (isQuarterDisabled(quarter) && !isEditing) {
       return Alert.alert('Error', 'This quarter is not available for creation.');
     }
@@ -242,7 +241,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
         uploadedImageUrl = await uploadImageToCloudinary(imageUri);
       }
 
-      // Basic payload with only the fields being edited
       const payload = {
         yearQuarter: `${year}-${quarter}`,
         title,
@@ -261,7 +259,6 @@ const AddCommunityProgress = ({ navigation, route }) => {
           }},
         ]);
       } else {
-        // For new entries, calculate startDate and endDate
         const [yearStr, quarterStr] = payload.yearQuarter.split('-');
         const yearNum = parseInt(yearStr);
         let startMonth = 0;

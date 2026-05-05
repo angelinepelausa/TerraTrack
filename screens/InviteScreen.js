@@ -22,7 +22,6 @@ const InviteScreen = ({ navigation }) => {
     goalWeeklyQuiz: 0
   });
 
-  // Popup states
   const [showCopyPopup, setShowCopyPopup] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [showErrorPopup, setShowErrorPopup] = useState(false);
@@ -230,7 +229,6 @@ const InviteScreen = ({ navigation }) => {
         {error && <Text style={styles.errorText}>{error}</Text>}
       </ScrollView>
 
-      {/* Copy Confirmation Popup */}
       <ConfirmationPopup
         visible={showCopyPopup}
         onConfirm={() => setShowCopyPopup(false)}
@@ -241,7 +239,6 @@ const InviteScreen = ({ navigation }) => {
         type="success"
       />
 
-      {/* Success Popup */}
       <ConfirmationPopup
         visible={showSuccessPopup}
         onConfirm={() => setShowSuccessPopup(false)}
@@ -252,7 +249,6 @@ const InviteScreen = ({ navigation }) => {
         type="success"
       />
 
-      {/* Error Popup */}
       <ConfirmationPopup
         visible={showErrorPopup}
         onConfirm={() => setShowErrorPopup(false)}
@@ -265,8 +261,6 @@ const InviteScreen = ({ navigation }) => {
     </View>
   );
 };
-
-// ... (styles remain the same)
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#131313', paddingTop: vScale(40) },

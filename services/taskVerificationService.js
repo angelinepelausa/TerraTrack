@@ -1,7 +1,6 @@
 import { taskVerificationRepository } from '../repositories/taskVerificationRepository';
 
 export const taskVerificationService = {
-  // Get all task verification data for user
   getUserTaskVerificationData: async (userId) => {
     const today = new Date().toISOString().split("T")[0];
 
@@ -28,7 +27,6 @@ export const taskVerificationService = {
     }
   },
 
-  // Process verification result
   processVerification: async (verifierUid, ownerUid, taskId, result, notes = '') => {
     const today = new Date().toISOString().split("T")[0];
 
@@ -49,7 +47,6 @@ export const taskVerificationService = {
     }
   },
 
-  // Validate task verification (business logic)
   validateVerification: (task, result, notes) => {
     const errors = [];
 

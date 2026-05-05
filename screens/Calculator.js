@@ -11,18 +11,14 @@ const Calculator = ({ navigation }) => {
   const [answers, setAnswers] = useState({});
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // States for error handling with ConfirmationPopup
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Build dynamic steps array
   const steps = useMemo(() => {
     let baseSteps = [];
     calculatorBaseQuestions.forEach(q => {
       baseSteps.push(q);
 
-      // If the user answered this and it's multi-select with follow-ups
       if (answers[q.id] && q.type === 'multi' && q.followUps) {
         answers[q.id].forEach(selected => {
           q.followUps.forEach(fu => {
@@ -110,19 +106,16 @@ const Calculator = ({ navigation }) => {
     try {
       const results = await saveCarbonFootprint(answers);
 
-      // Check if coming from onboarding and should show walkthrough
       const fromOnboarding = navigation.getState().routes.find(
         route => route.name === 'Calculator'
       )?.params?.fromOnboarding;
 
       if (fromOnboarding) {
-        // First time user: Go to ResultsScreen first, then HomeScreen with walkthrough
         navigation.navigate('ResultsScreen', { 
           results,
-          showWalkthrough: true // Pass flag to ResultsScreen
+          showWalkthrough: true
         });
       } else {
-        // Returning user: Just go to ResultsScreen
         navigation.navigate('ResultsScreen', { results });
       }
     } catch (error) {
@@ -202,8 +195,6 @@ const Calculator = ({ navigation }) => {
         onStepPress={handleStepPress}
         answers={answers}
       />
-
-      {/* Error ConfirmationPopup */}
       <ConfirmationPopup
         visible={showErrorPopup}
         title="Error"

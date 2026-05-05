@@ -4,7 +4,7 @@ import { scale, vScale } from '../utils/scaling';
 import { onboardingQuestions, REFERRAL_STEP } from '../services/onboardingService';
 import OptionButton from '../components/OptionButton';
 import ProgressIndicator from '../components/ProgressIndicator';
-import ConfirmationPopup from '../components/ConfirmationPopup'; // Import the ConfirmationPopup
+import ConfirmationPopup from '../components/ConfirmationPopup';
 import { onboardingRepository, saveOnboardingPreferences } from '../repositories/onboardingRepository';
 import { useAuth } from '../context/AuthContext';
 import firestore from '@react-native-firebase/firestore';
@@ -16,8 +16,7 @@ const OnboardingScreen = ({ navigation }) => {
   const [referralCode, setReferralCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCarbonFootprintScreen, setShowCarbonFootprintScreen] = useState(false);
-  
-  // States for ConfirmationPopup (only for errors)
+
   const [showInvalidCodePopup, setShowInvalidCodePopup] = useState(false);
   const [showSubmitErrorPopup, setShowSubmitErrorPopup] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -71,13 +70,11 @@ const OnboardingScreen = ({ navigation }) => {
       const preferences = formatAnswersForFirestore();
       await saveOnboardingPreferences(preferences);
 
-      // Mark user as completed onboarding in Firestore
       await firestore().collection('users').doc(user.uid).update({
         onboardingCompleted: true,
-        hasSeenHomeWalkthrough: false // Reset this so walkthrough shows after calculator
+        hasSeenHomeWalkthrough: false
       });
 
-      // Show the "Almost there!" screen (no popup for success)
       setShowCarbonFootprintScreen(true);
     } catch (error) {
       console.error('Submission error:', error);
@@ -97,7 +94,7 @@ const OnboardingScreen = ({ navigation }) => {
     if ((isMultiSelect && currentAnswer.length === 0) ||
       (!isMultiSelect && !currentAnswer)) {
       setErrorMessage('Please select at least one option');
-      setShowInvalidCodePopup(true); // Reusing the popup for validation errors
+      setShowInvalidCodePopup(true);
       return;
     }
 
@@ -261,7 +258,6 @@ const OnboardingScreen = ({ navigation }) => {
         />
       )}
 
-      {/* Confirmation Popups - ONLY FOR ERRORS */}
       <ConfirmationPopup
         visible={showInvalidCodePopup}
         title="Error"

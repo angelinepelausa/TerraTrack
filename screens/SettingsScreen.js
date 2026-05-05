@@ -27,8 +27,6 @@ const SettingsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState(null);
-  
-  // Confirmation Popup States
   const [showPopup, setShowPopup] = useState(false);
   const [popupTitle, setPopupTitle] = useState("");
   const [popupMessage, setPopupMessage] = useState("");
@@ -157,7 +155,6 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Confirmation Popup */}
       <ConfirmationPopup
         visible={showPopup}
         onConfirm={() => setShowPopup(false)}
@@ -167,13 +164,11 @@ const SettingsScreen = ({ navigation }) => {
         type={popupType}
       />
 
-      {/* Header Row with Back Button */}
       <HeaderRow 
         title="Edit Profile" 
         onBackPress={() => navigation.goBack()} 
       />
 
-      {/* Avatar */}
       <TouchableOpacity onPress={() => setAvatarModalVisible(true)} style={styles.avatarWrapper}>
         {avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={styles.avatar} />
@@ -190,11 +185,8 @@ const SettingsScreen = ({ navigation }) => {
         onSelect={handleAvatarSelect}
       />
 
-      {/* Account Information Section */}
       <View style={styles.settingsSection}>
         <Text style={styles.sectionTitle}>Account Information</Text>
-        
-        {/* Email */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -204,7 +196,6 @@ const SettingsScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Username */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Username</Text>
           <TextInput
@@ -216,7 +207,6 @@ const SettingsScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Password */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>New Password</Text>
           <TextInput
@@ -244,7 +234,6 @@ const SettingsScreen = ({ navigation }) => {
         ) : null}
       </View>
 
-      {/* Preferences Section */}
       <View style={styles.settingsSection}>
         <Text style={styles.sectionTitle}>Preferences</Text>
         
@@ -258,7 +247,6 @@ const SettingsScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Action Buttons */}
       <View style={styles.settingsSection}>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
           {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}

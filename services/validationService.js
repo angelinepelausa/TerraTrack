@@ -1,21 +1,18 @@
 export const validateSignUp = (formData) => {
   const errors = {};
 
-  // Email validation
   if (!formData.email) {
     errors.email = 'Email is required';
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
     errors.email = 'Invalid email format';
   }
 
-  // Username validation
   if (!formData.username) {
     errors.username = 'Username is required';
   } else if (formData.username.length < 3) {
     errors.username = 'Username must be at least 3 characters';
   }
 
-  // Password validation
   if (!formData.password) {
     errors.password = 'Password is required';
   } else if (
@@ -26,7 +23,6 @@ export const validateSignUp = (formData) => {
       'Password must be at least 8 characters and include uppercase, lowercase, number, and special character';
   }
 
-  // Confirm password
   if (formData.password !== formData.confirmPassword) {
     errors.confirmPassword = 'Passwords do not match';
   }

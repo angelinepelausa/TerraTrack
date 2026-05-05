@@ -39,7 +39,6 @@ const FilterModal = ({ visible, onClose }) => {
     setShowFromPicker(Platform.OS === "ios");
     if (selectedDate) {
       setFromDate(selectedDate);
-      // If toDate is before fromDate, reset toDate
       if (toDate && selectedDate > toDate) {
         setToDate(null);
       }

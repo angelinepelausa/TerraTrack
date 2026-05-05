@@ -6,7 +6,6 @@ import { scale, vScale } from "../utils/scaling";
 const RecentActivityItem = ({ activity, currentUserId }) => {
   const navigation = useNavigation();
 
-  // Navigate based on user
   const handleUserPress = (activity) => {
     if (activity.userId === currentUserId) {
       navigation.navigate("ProfileScreen", { userId: activity.userId });
@@ -19,29 +18,21 @@ const RecentActivityItem = ({ activity, currentUserId }) => {
     if (!timestamp) return "Recently";
     
     let date;
-    
-    // Handle Firestore timestamp objects
+
     if (timestamp && typeof timestamp.toDate === 'function') {
-      // It's a Firestore timestamp 
       date = timestamp.toDate();
     } else if (timestamp && timestamp.seconds) {
-      // It's a Firestore timestamp with seconds property
       date = new Date(timestamp.seconds * 1000);
     } else if (timestamp instanceof Date) {
-      // Already a Date object
       date = timestamp;
     } else if (typeof timestamp === 'string') {
-      // ISO string
       date = new Date(timestamp);
     } else if (typeof timestamp === 'number') {
-      // Unix timestamp in milliseconds
       date = new Date(timestamp);
     } else {
-      // Unknown format, return default
       return "Recently";
     }
-    
-    // Check if date is valid
+
     if (!date || isNaN(date.getTime())) {
       return "Recently";
     }

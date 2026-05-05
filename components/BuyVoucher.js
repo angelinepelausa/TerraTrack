@@ -70,7 +70,6 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
     try {
       const userId = auth().currentUser.uid;
 
-      // Run transaction to deduct TerraCoins and update voucher quantity
       const userRef = firestore().collection("users").doc(userId);
       const voucherRef = firestore().collection('vouchers').doc(voucher.id);
 
@@ -83,25 +82,21 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
           throw new Error("Not enough TerraCoins");
         }
 
-        // Check if voucher still available
         const currentAvailable = voucherDoc.data()?.availableQuantity || 0;
         if (currentAvailable <= 0) {
           throw new Error("Voucher is no longer available");
         }
 
-        // 1. Deduct coins from user
         transaction.update(userRef, {
           terraCoins: currentCoins - voucher.terraCoinCost
         });
 
-        // 2. Update global voucher quantity
         transaction.update(voucherRef, {
           availableQuantity: firestore.FieldValue.increment(-1),
           usedCount: firestore.FieldValue.increment(1)
         });
       });
 
-      // 3. ADD THE VOUCHER TO USER'S PURCHASES AND GLOBAL COLLECTION
       const voucherPurchaseData = {
         id: voucher.id,
         voucherId: voucher.voucherId,
@@ -230,7 +225,7 @@ const BuyVoucher = ({ visible, voucher, isPurchased, onClose, onPurchaseSuccess 
               </View>
 
               <ScrollView style={styles.confirmationContent}>
-                {/* Store Info */}
+
                 <View style={styles.storePreview}>
                   {voucher.partnerLogo ? (
                     <Image source={{ uri: voucher.partnerLogo }} style={styles.confirmationStoreImage} />

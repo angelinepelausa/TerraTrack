@@ -27,7 +27,6 @@ export const getLeaderboardConfig = async () => {
   return snapshot.data();
 };
 
-// Save or update pending config
 export const saveOrUpdatePendingConfig = async (rewards) => {
   const currentConfig = await getLeaderboardConfig();
   const pendingConfig = currentConfig.pendingConfig
@@ -37,12 +36,11 @@ export const saveOrUpdatePendingConfig = async (rewards) => {
   await CONFIG_DOC.set({ pendingConfig }, { merge: true });
 };
 
-// Delete pending config
 export const deletePendingConfig = async () => {
   await CONFIG_DOC.set({ pendingConfig: null }, { merge: true });
 };
 
-// Get leaderboard top users
+// leaderboard top users
 export const getLeaderboard = async (limit = 10) => {
   const snapshot = await firestore()
     .collection('users')
@@ -68,7 +66,7 @@ export const getLeaderboard = async (limit = 10) => {
   return leaderboard;
 };
 
-// Get user rank
+// user rank
 export const getUserRank = async (userId) => {
   const snapshot = await firestore()
     .collection('users')
@@ -91,7 +89,7 @@ export const getUserRank = async (userId) => {
   return allUsers.find(user => user.id === userId) || null;
 };
 
-// Get all users with rank
+// all users with rank
 export const getAllUsers = async () => {
   const snapshot = await firestore()
     .collection('users')
@@ -113,7 +111,6 @@ export const getAllUsers = async () => {
   );
 };
 
-// Add rewards to user
 export const addUserRewards = async (userId, terraCoins, terraPoints) => {
   try {
     const userRef = firestore().collection('users').doc(userId);
@@ -128,7 +125,7 @@ export const addUserRewards = async (userId, terraCoins, terraPoints) => {
   }
 };
 
-// Distribute leaderboard rewards
+// Distribute rewards
 export const distributeLeaderboardRewards = async (config) => {
   try {
     const allUsers = await getAllUsers();
@@ -206,7 +203,6 @@ export const distributeLeaderboardRewards = async (config) => {
   }
 };
 
-// Apply pending config if needed
 export const applyPendingConfigIfNeeded = async () => {
   const { start: currentStart } = computeWeeklyCycle(); 
   const config = await getLeaderboardConfig();
@@ -249,7 +245,7 @@ export const applyPendingConfigIfNeeded = async () => {
   };
 };
 
-// Get last reward of a user
+// last reward
 export const getUserLastReward = async (userId) => {
   try {
     if (!userId) return null;
@@ -283,7 +279,7 @@ export const getUserLastReward = async (userId) => {
   }
 };
 
-// Get last cycle summary
+// last cycle
 export const getLastCycleSummary = async () => {
   try {
     const { start: currentStart } = computeWeeklyCycle();
@@ -301,7 +297,7 @@ export const getLastCycleSummary = async () => {
   }
 };
 
-// Get user's leaderboard history
+// Leaderboard history user
 export const getUserLeaderboardHistory = async (userId) => {
   try {
     const snapshot = await firestore().collection("leaderboard").orderBy("cycleEnd", "desc").get();

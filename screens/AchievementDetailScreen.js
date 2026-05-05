@@ -34,7 +34,6 @@ const AchievementDetailScreen = ({ route, navigation }) => {
         .doc('stats')
         .get();
 
-      // Always set stats, even if document doesn't exist
       const statsData = statsDoc.exists
         ? statsDoc.data()
         : {
@@ -48,27 +47,23 @@ const AchievementDetailScreen = ({ route, navigation }) => {
       const unlocked = await badgesRepository.getUnlockedBadgesForUser(user.uid);
       setUnlockedBadges(unlocked);
 
-      // For New User category, don't fetch next badge
       if (currentBadge.category.toLowerCase() === 'new user') {
         setNextBadge(null);
         setLoading(false);
         return;
       }
 
-      // Get all badges in the current badge's category, sorted by targetNumber
       const categoryBadges = await badgesRepository.getBadgesByCategorySorted(currentBadge.category);
       setAllCategoryBadges(categoryBadges);
 
-      // Find the current badge's position and get the next one
       const currentIndex = categoryBadges.findIndex(
         badge => badge.id === currentBadge.id
       );
 
       if (currentIndex !== -1 && currentIndex < categoryBadges.length - 1) {
-        // Next badge is the one with the next higher targetNumber
         setNextBadge(categoryBadges[currentIndex + 1]);
       } else {
-        setNextBadge(null); // No next badge (this is the highest tier)
+        setNextBadge(null);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -81,7 +76,6 @@ const AchievementDetailScreen = ({ route, navigation }) => {
     navigation.goBack();
   };
 
-  // Show loading while fetching data
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -90,7 +84,6 @@ const AchievementDetailScreen = ({ route, navigation }) => {
     );
   }
 
-  // Handle case where currentBadge is missing
   if (!currentBadge) {
     return (
       <View style={styles.container}>
@@ -107,7 +100,6 @@ const AchievementDetailScreen = ({ route, navigation }) => {
     );
   }
 
-  // Always ensure stats exists with default values
   const safeStats = stats || {
     educationalMaterialsRead: 0,
     weeklyQuizFinished: 0,
@@ -116,7 +108,6 @@ const AchievementDetailScreen = ({ route, navigation }) => {
 
   const isNewUserBadge = currentBadge.category.toLowerCase() === 'new user';
 
-  // For New User badges, we don't need progress calculations
   if (isNewUserBadge) {
     return (
       <View style={styles.container}>
@@ -177,11 +168,9 @@ const AchievementDetailScreen = ({ route, navigation }) => {
     const isNextBadgeClaimed = unlockedBadges[nextBadge.id];
     
     if (isNextBadgeClaimed) {
-      // If next badge is already claimed, show it as completed
       nextBadgeDisplayValue = nextBadge.targetNumber;
       remainingForNext = 0;
     } else {
-      // If next badge is not claimed, calculate remaining properly
       nextBadgeDisplayValue = Math.min(userValue, nextBadge.targetNumber);
       remainingForNext = Math.max(nextBadge.targetNumber - userValue, 0);
     }
@@ -368,14 +357,11 @@ const styles = StyleSheet.create({
     color: '#AAAAAA',
     textAlign: 'center',
   },
-
-  // New User specific styles - simplified
   welcomeSection: {
     backgroundColor: '#2A2A2A',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    // Removed the green border on the side
   },
   welcomeTitle: {
     fontSize: 18,
@@ -407,7 +393,6 @@ const styles = StyleSheet.create({
     color: '#BBBBBB',
     textAlign: 'center',
   },
-
   nextSection: {
     marginBottom: 24,
   },

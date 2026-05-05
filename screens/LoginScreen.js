@@ -84,7 +84,6 @@ const LoginScreen = ({ navigation }) => {
     } catch (error) {
       let errorMsg = 'Something went wrong';
       
-      // Handle specific Firebase auth errors
       switch (error.code) {
         case 'auth/invalid-email':
           errorMsg = 'Please enter a valid email address';
@@ -182,7 +181,6 @@ const LoginScreen = ({ navigation }) => {
         </Text>
       </View>
 
-      {/* Error Popup */}
       <ConfirmationPopup
         visible={showErrorPopup}
         onConfirm={() => setShowErrorPopup(false)}

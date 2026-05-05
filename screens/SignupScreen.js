@@ -16,14 +16,12 @@ const SignUpScreen = ({ navigation }) => {
   const [errorMessages, setErrorMessages] = useState({});
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-
-  // States for toggling password visibility
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleInputChange = (name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
+
     if (errorMessages[name]) {
       setErrorMessages(prev => ({ ...prev, [name]: '' }));
     }
@@ -36,11 +34,9 @@ const SignUpScreen = ({ navigation }) => {
 
   setLoading(true);
   
-  // Extract only the data we need
   const { email, password, username } = formData;
 
   try {
-    // Create account in Firebase Auth and Firestore
     const authResult = await signUpWithEmail(email, password, { username });
     
     if (!authResult.success) {
@@ -59,24 +55,19 @@ const SignUpScreen = ({ navigation }) => {
       return;
     }
 
-    // Verify that we have a user object with uid
     if (!authResult.user || !authResult.user.uid) {
       setErrorMessages({ general: 'Failed to create user account. Please try again.' });
       setLoading(false);
       return;
     }
 
-    // Award the welcome badge to the new user
     try {
       const badgeId = "8HxNEC8FmZoszwYMRWbM";
-      
-      // Use your existing badgesRepository to unlock the badge
       await badgesRepository.unlockBadgeForUser(authResult.user.uid, badgeId);
       
       console.log('Welcome badge awarded to user:', authResult.user.uid);
     } catch (badgeError) {
       console.error('Error awarding badge:', badgeError);
-      // Don't block the signup flow if badge assignment fails
     }
 
     setShowSuccess(true);
@@ -122,7 +113,6 @@ const SignUpScreen = ({ navigation }) => {
         Create an account to start maximizing{"\n"}your environmental impact!
       </Text>
 
-      {/* Email */}
       <TextInput
         style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
         placeholder="Email"
@@ -134,7 +124,6 @@ const SignUpScreen = ({ navigation }) => {
       />
       {errorMessages.email && <Text style={styles.errorText}>{errorMessages.email}</Text>}
 
-      {/* Username */}
       <TextInput
         style={[styles.input, { width: inputWidth, height: inputHeight, fontSize: scale(14) }]}
         placeholder="Username"
@@ -145,7 +134,6 @@ const SignUpScreen = ({ navigation }) => {
       />
       {errorMessages.username && <Text style={styles.errorText}>{errorMessages.username}</Text>}
 
-      {/* Password with toggle */}
       <View style={[styles.input, styles.passwordContainer, { width: inputWidth, height: inputHeight }]}>
         <TextInput
           style={styles.passwordInput}
@@ -161,7 +149,6 @@ const SignUpScreen = ({ navigation }) => {
       </View>
       {errorMessages.password && <Text style={styles.errorText}>{errorMessages.password}</Text>}
 
-      {/* Confirm Password with toggle */}
       <View style={[styles.input, styles.passwordContainer, { width: inputWidth, height: inputHeight }]}>
         <TextInput
           style={styles.passwordInput}
@@ -181,7 +168,6 @@ const SignUpScreen = ({ navigation }) => {
         <Text style={[styles.errorText, { textAlign: 'center', marginTop: vScale(10) }]}>{errorMessages.general}</Text>
       )}
 
-      {/* Sign Up Button */}
       <TouchableOpacity
         style={[styles.button, { width: inputWidth, height: inputHeight, marginTop: vScale(20) }, loading && styles.disabledButton]}
         onPress={handleSignUp}
@@ -194,7 +180,6 @@ const SignUpScreen = ({ navigation }) => {
         )}
       </TouchableOpacity>
 
-      {/* Login Link */}
       <View style={[styles.loginTextContainer, { marginTop: vScale(30) }]}>
         <Text style={[styles.loginPrompt, { fontSize: scale(13) }]}>Already have an account? </Text>
         <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')}>

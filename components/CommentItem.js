@@ -1,4 +1,3 @@
-// components/CommentItem.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -21,7 +20,7 @@ import ConfirmationPopup from "./ConfirmationPopup";
 const getYearQuarter = () => {
   const now = new Date();
   const year = now.getFullYear();
-  const quarter = Math.floor(now.getMonth() / 3) + 1; // 1–4
+  const quarter = Math.floor(now.getMonth() / 3) + 1;
   return `${year}-Q${quarter}`;
 };
 
@@ -37,7 +36,6 @@ const ReplyItem = ({ reply, commentRef, currentUserId, onDeleteReply, commentId 
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   useEffect(() => {
-    // Check if this reply is hidden for this user
     let mounted = true;
     const checkHiddenStatus = async () => {
       if (currentUserId) {

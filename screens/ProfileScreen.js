@@ -37,8 +37,6 @@ const ProfileScreen = () => {
     saveDisplayedBadges,
     toggleBadgeSelection
   } = useBadges(userId);
-  
-  // IMPORTANT: Use the updated useChartData with all returned properties
   const { 
     chartData, 
     chartLoading, 
@@ -129,8 +127,6 @@ const ProfileScreen = () => {
           onSelect={handleAvatarSelect}
         />
       )}
-
-      {/* Updated ChartSection with all required props */}
       <ChartSection
         chartData={chartData}
         chartLoading={chartLoading}
